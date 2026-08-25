@@ -160,16 +160,15 @@ Aplikasi akan berjalan di `http://localhost:3000`
 Sistem menggunakan jurusan (program/studi) dan kelas dihitung otomatis berdasarkan tahun pelajaran.
 
 ### Jurusan Tersedia
-- **TKJ** (Teknik Komputer dan Jaringan): TKJ 1, TKJ 2, TKJ 3
-- **TO** (Teknik Otomotif): TO 1, TO 2, TO 3
-- **DPIB** (Desain Pemodelan dan Informasi Bangunan): DPIB 1, DPIB 2, DPIB 3
-- **TBSM** (Teknik Bisnis dan Sepeda Motor): TBSM 1, TBSM 2, TBSM 3
+- **TKJ** (Teknik Komputer dan Jaringan): TKJ 1, TKJ 2
+- **DPIB** (Desain, Pemodelan, dan Informasi Bangunan): DPIB 1, DPIB 2
+- **TKR** (Teknik Kendaraan Ringan): TKR 1, TKR 2
 
 ### Kelas Otomatis
 Kelas (X, XI, XII) dihitung otomatis berdasarkan tahun pelajaran saat siswa masuk:
-- **Tahun 1**: Kelas X (contoh: X TKJ 1)
-- **Tahun 2**: Kelas XI (contoh: XI TKJ 1)
-- **Tahun 3**: Kelas XII (contoh: XII TKJ 1)
+- **Tahun 1**: Kelas X (contoh: X TKJ 1, X TKJ 2)
+- **Tahun 2**: Kelas XI (contoh: XI TKJ 1, XI TKJ 2)
+- **Tahun 3**: Kelas XII (contoh: XII TKJ 1, XII TKJ 2)
 - **Tahun 4+**: Lulus (is_graduated = 1)
 
 ## Struktur Project

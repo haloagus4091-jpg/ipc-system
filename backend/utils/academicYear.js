@@ -117,7 +117,7 @@ function getClassInfo(enrollmentYear) {
 /**
  * Calculate full class name (X/XI/XII + jurusan)
  * @param {string} enrollmentYear - Academic year when student enrolled (YYYY-YYYY)
- * @param {string} jurusan - Student program/stream (e.g., "TKJ 1", "TO 2")
+ * @param {string} jurusan - Student program/stream (e.g., "TKJ 1", "DPIB 2", "TKR 1")
  * @returns {string|null} - Full class name (e.g., "X TKJ 1") or null if graduated
  */
 function calculateFullClass(enrollmentYear, jurusan) {

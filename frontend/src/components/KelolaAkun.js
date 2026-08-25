@@ -625,15 +625,15 @@ function KelolaAkun() {
                   <input type="text" value={formData.nisn || ''} onChange={(e) => setFormData({...formData, nisn: e.target.value})} required />
                 </div>
                 <div className="form-group">
-                  <label>Jurusan</label>
+                  <label>Kelas</label>
                   <select value={formData.jurusan || ''} onChange={(e) => setFormData({...formData, jurusan: e.target.value})} required>
-                    <option value="">Pilih Jurusan</option>
+                    <option value="">Pilih Kelas</option>
                     <option value="TKJ 1">TKJ 1</option>
                     <option value="TKJ 2">TKJ 2</option>
-                    <option value="TO 1">TO 1</option>
-                    <option value="TO 2">TO 2</option>
                     <option value="DPIB 1">DPIB 1</option>
                     <option value="DPIB 2">DPIB 2</option>
+                    <option value="TKR 1">TKR 1</option>
+                    <option value="TKR 2">TKR 2</option>
                   </select>
                   <small style={{ color: '#666', fontSize: '12px' }}>Kelas akan dihitung otomatis berdasarkan tahun pelajaran</small>
                 </div>
@@ -893,15 +893,15 @@ function KelolaAkun() {
                     <input type="text" value={formData.nisn || ''} onChange={(e) => setFormData({...formData, nisn: e.target.value})} required />
                   </div>
                   <div className="form-group">
-                    <label>Jurusan</label>
+                    <label>Kelas</label>
                     <select value={formData.jurusan || ''} onChange={(e) => setFormData({...formData, jurusan: e.target.value})} required>
-                      <option value="">Pilih Jurusan</option>
+                      <option value="">Pilih Kelas</option>
                       <option value="TKJ 1">TKJ 1</option>
                       <option value="TKJ 2">TKJ 2</option>
-                      <option value="TO 1">TO 1</option>
-                      <option value="TO 2">TO 2</option>
                       <option value="DPIB 1">DPIB 1</option>
                       <option value="DPIB 2">DPIB 2</option>
+                      <option value="TKR 1">TKR 1</option>
+                      <option value="TKR 2">TKR 2</option>
                     </select>
                     <small style={{ color: '#666', fontSize: '12px' }}>Kelas akan dihitung otomatis berdasarkan tahun pelajaran</small>
                   </div>
