@@ -81,10 +81,14 @@ const saveFileLocally = (filePath) => {
 router.post('/prestasi/submit', auth, checkInputAccess('prestasi'), upload.single('foto'), async (req, res) => {
     try {
         const userRole = req.user.role;
-        const { nama, nis, jenis, nama_lomba, kelas, pembina, grha, juara, kategori } = req.body;
+        const { nama, nis, jenis, nama_lomba, pembina, grha, juara, kategori } = req.body;
         const userId = await resolveStudentIdByNis(nis, req.user.id);
         let fotoPath = req.file ? saveFileLocally(req.file.path) : null;
         console.log('Prestasi - Using local path:', fotoPath);
+        
+        // Get student's calculated class from database
+        const [studentData] = await db.query('SELECT kelas FROM users WHERE id = ?', [userId]);
+        const calculatedClass = studentData[0]?.kelas || '';
         
         // SUPERADMIN: Direct submit to main table
         if (userRole === 'superadmin') {
@@ -104,7 +108,7 @@ router.post('/prestasi/submit', auth, checkInputAccess('prestasi'), upload.singl
                 `INSERT INTO prestasi 
                 (user_id, nama, nis, jenis, nama_lomba, kelas, pembina, grha, juara, kategori, foto, point, status) 
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'approved')`,
-                [userId, nama, nis, jenis, nama_lomba, kelas, pembina, grha, juara, kategori, finalFotoPath, point]
+                [userId, nama, nis, jenis, nama_lomba, calculatedClass, pembina, grha, juara, kategori, finalFotoPath, point]
             );
             
             await applyIpcChange(userId, 'prestasi', point, `Prestasi: ${nama_lomba} - ${juara} ${kategori}`);
@@ -122,7 +126,7 @@ router.post('/prestasi/submit', auth, checkInputAccess('prestasi'), upload.singl
             `INSERT INTO prestasi_approvals
             (user_id, nama, nis, jenis, nama_lomba, kelas, pembina, grha, juara, kategori, foto_path)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-            [userId, nama, nis, jenis, nama_lomba, kelas, pembina, grha, juara, kategori, fotoPath]
+            [userId, nama, nis, jenis, nama_lomba, calculatedClass, pembina, grha, juara, kategori, fotoPath]
         );
 
         // Create notification for superadmin only
@@ -151,12 +155,16 @@ router.post('/prestasi/submit', auth, checkInputAccess('prestasi'), upload.singl
 router.post('/pelanggaran/submit', auth, checkInputAccess('pelanggaran'), upload.single('foto'), async (req, res) => {
     try {
         const userRole = req.user.role;
-        const { nama, nis, kelas, grha, keterangan, jenis_pelanggaran } = req.body;
+        const { nama, nis, grha, keterangan, jenis_pelanggaran } = req.body;
         const userId = await resolveStudentIdByNis(nis, req.user.id);
         let foto_path = req.file ? saveFileLocally(req.file.path) : null;
         console.log('Pelanggaran - Using local path:', foto_path);
         console.log('Pelanggaran - Superadmin direct submission');
         const point = calculatePelanggaranPoints(jenis_pelanggaran);
+        
+        // Get student's calculated class from database
+        const [studentData] = await db.query('SELECT kelas FROM users WHERE id = ?', [userId]);
+        const calculatedClass = studentData[0]?.kelas || '';
         
         // Move photo to organized folder if exists
         let finalFotoPath = foto_path;
@@ -171,7 +179,7 @@ router.post('/pelanggaran/submit', auth, checkInputAccess('pelanggaran'), upload
             `INSERT INTO pelanggaran 
             (user_id, nama, nis, kelas, grha, keterangan, foto, jenis_pelanggaran, point_dikurangi, status) 
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'approved')`,
-            [userId, nama, nis, kelas, grha, keterangan, finalFotoPath, jenis_pelanggaran, point]
+            [userId, nama, nis, calculatedClass, grha, keterangan, finalFotoPath, jenis_pelanggaran, point]
         );
         
         await applyIpcChange(userId, 'pelanggaran', point, `Pelanggaran: ${jenis_pelanggaran}`);
@@ -192,10 +200,14 @@ router.post('/pelanggaran/submit', auth, checkInputAccess('pelanggaran'), upload
 router.post('/event/submit', auth, checkInputAccess('event'), upload.single('foto'), async (req, res) => {
     try {
         const userRole = req.user.role;
-        const { nama, nis, kelas, grha, pembina, nama_event, tingkat } = req.body;
+        const { nama, nis, grha, pembina, nama_event, tingkat } = req.body;
         const userId = await resolveStudentIdByNis(nis, req.user.id);
         let foto_path = req.file ? saveFileLocally(req.file.path) : null;
         console.log('Event - Using local path:', foto_path);
+        
+        // Get student's calculated class from database
+        const [studentData] = await db.query('SELECT kelas FROM users WHERE id = ?', [userId]);
+        const calculatedClass = studentData[0]?.kelas || '';
         
         // SUPERADMIN: Direct submit to main table
         if (userRole === 'superadmin') {
@@ -215,7 +227,7 @@ router.post('/event/submit', auth, checkInputAccess('event'), upload.single('fot
                 `INSERT INTO event 
                 (user_id, nama, nis, kelas, grha, nama_event, tingkat, foto, point, status) 
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'approved')`,
-                [userId, nama, nis, kelas, grha, nama_event, tingkat, finalFotoPath, point]
+                [userId, nama, nis, calculatedClass, grha, nama_event, tingkat, finalFotoPath, point]
             );
             
             await applyIpcChange(userId, 'event', point, `Event: ${nama_event} - ${tingkat}`);
@@ -262,10 +274,14 @@ router.post('/event/submit', auth, checkInputAccess('event'), upload.single('fot
 router.post('/organisasi/submit', auth, checkInputAccess('organisasi'), upload.single('foto'), async (req, res) => {
     try {
         const userRole = req.user.role;
-        const { nama, nis, kelas, grha, pembina, jabatan_organisasi, kategori_organisasi } = req.body;
+        const { nama, nis, grha, pembina, jabatan_organisasi, kategori_organisasi } = req.body;
         const userId = await resolveStudentIdByNis(nis, req.user.id);
         let foto_path = req.file ? saveFileLocally(req.file.path) : null;
         console.log('Organisasi - Using local path:', foto_path);
+        
+        // Get student's calculated class from database
+        const [studentData] = await db.query('SELECT kelas FROM users WHERE id = ?', [userId]);
+        const calculatedClass = studentData[0]?.kelas || '';
         
         // SUPERADMIN: Direct submit to main table
         if (userRole === 'superadmin') {
@@ -285,7 +301,7 @@ router.post('/organisasi/submit', auth, checkInputAccess('organisasi'), upload.s
                 `INSERT INTO organisasi 
                 (user_id, nama, nis, kelas, grha, jabatan_organisasi, foto, kategori_organisasi, point, status) 
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'approved')`,
-                [userId, nama, nis, kelas, grha, jabatan_organisasi, finalFotoPath, kategori_organisasi, point]
+                [userId, nama, nis, calculatedClass, grha, jabatan_organisasi, finalFotoPath, kategori_organisasi, point]
             );
             
             await applyIpcChange(
@@ -308,7 +324,7 @@ router.post('/organisasi/submit', auth, checkInputAccess('organisasi'), upload.s
             `INSERT INTO organisasi_approvals
             (user_id, nama, nis, kelas, grha, pembina, jabatan_organisasi, kategori_organisasi, foto_path)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-            [userId, nama, nis, kelas, grha, pembina, jabatan_organisasi, kategori_organisasi, foto_path]
+            [userId, nama, nis, calculatedClass, grha, pembina, jabatan_organisasi, kategori_organisasi, foto_path]
         );
 
         // Create notification for superadmin only
@@ -337,10 +353,14 @@ router.post('/organisasi/submit', auth, checkInputAccess('organisasi'), upload.s
 router.post('/kepanitiaan/submit', auth, checkInputAccess('kepanitiaan'), upload.single('foto'), async (req, res) => {
     try {
         const userRole = req.user.role;
-        const { nama, nis, kelas, grha, pembina, jabatan_kepanitiaan, kategori_kepanitiaan } = req.body;
+        const { nama, nis, grha, pembina, jabatan_kepanitiaan, kategori_kepanitiaan } = req.body;
         const userId = await resolveStudentIdByNis(nis, req.user.id);
         let foto_path = req.file ? saveFileLocally(req.file.path) : null;
         console.log('Kepanitiaan - Using local path:', foto_path);
+        
+        // Get student's calculated class from database
+        const [studentData] = await db.query('SELECT kelas FROM users WHERE id = ?', [userId]);
+        const calculatedClass = studentData[0]?.kelas || '';
         
         // SUPERADMIN: Direct submit to main table
         if (userRole === 'superadmin') {
@@ -360,7 +380,7 @@ router.post('/kepanitiaan/submit', auth, checkInputAccess('kepanitiaan'), upload
                 `INSERT INTO kepanitiaan 
                 (user_id, nama, nis, kelas, grha, jabatan_kepanitiaan, foto, kategori_kepanitiaan, point, status) 
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'approved')`,
-                [userId, nama, nis, kelas, grha, jabatan_kepanitiaan, finalFotoPath, kategori_kepanitiaan, point]
+                [userId, nama, nis, calculatedClass, grha, jabatan_kepanitiaan, finalFotoPath, kategori_kepanitiaan, point]
             );
             
             await applyIpcChange(
@@ -383,7 +403,7 @@ router.post('/kepanitiaan/submit', auth, checkInputAccess('kepanitiaan'), upload
             `INSERT INTO kepanitiaan_approvals
             (user_id, nama, nis, kelas, grha, pembina, jabatan_kepanitiaan, kategori_kepanitiaan, foto_path)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-            [userId, nama, nis, kelas, grha, pembina, jabatan_kepanitiaan, kategori_kepanitiaan, foto_path]
+            [userId, nama, nis, calculatedClass, grha, pembina, jabatan_kepanitiaan, kategori_kepanitiaan, foto_path]
         );
 
         // Create notification for superadmin only

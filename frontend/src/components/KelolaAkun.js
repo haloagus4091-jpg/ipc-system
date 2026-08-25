@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import * as XLSX from 'xlsx';
 import StudentDetail from './StudentDetail';
-import { KELAS_OPTIONS, applyKelasChange } from '../utils/kelasJurusan';
+import { KELAS_OPTIONS } from '../utils/kelasJurusan';
 import { GRHA_OPTIONS, getRowField, normalizeGrha } from '../utils/excelImport';
 
 function KelolaAkun() {
@@ -29,6 +29,9 @@ function KelolaAkun() {
   const [showImportModal, setShowImportModal] = useState(false);
   const [importModalType, setImportModalType] = useState('');
   const [showEditBiodataModal, setShowEditBiodataModal] = useState(false);
+  const [showClassValidationModal, setShowClassValidationModal] = useState(false);
+  const [validationResults, setValidationResults] = useState(null);
+  const [validatingClasses, setValidatingClasses] = useState(false);
 
   const grhaOptions = GRHA_OPTIONS;
 
@@ -204,8 +207,9 @@ function KelolaAkun() {
         nama: user.nama,
         nis: user.nis,
         nisn: user.nisn,
-        kelas: user.kelas,
-        grha: user.grha
+        jurusan: user.jurusan,
+        grha: user.grha,
+        tahun_pelajaran: user.tahun_pelajaran
       });
     } else if (user.role === 'guru') {
       setFormData({
@@ -273,13 +277,26 @@ function KelolaAkun() {
         try {
           if (importType === 'siswa') {
             // Import student
-            const kelas = getRowField(row, 'kelas', 'Kelas');
+            const jurusan = getRowField(row, 'jurusan', 'Jurusan');
+            const tahunPelajaran = getRowField(row, 'tahun_pelajaran', 'Tahun Pelajaran', 'TahunPelajaran');
+            
+            // Validate tahun_pelajaran format
+            if (!tahunPelajaran || !/^\d{4}-\d{4}$/.test(tahunPelajaran)) {
+              results.push({
+                status: 'error',
+                name: row.nama || row.Nama || 'Unknown',
+                error: 'Tahun pelajaran tidak valid. Format harus YYYY-YYYY (contoh: 2024-2025)'
+              });
+              continue;
+            }
+            
             const studentData = {
               nama: getRowField(row, 'nama', 'Nama'),
               nis: getRowField(row, 'nis', 'NIS'),
               nisn: getRowField(row, 'nisn', 'NISN'),
-              kelas,
+              jurusan,
               grha: normalizeGrha(getRowField(row, 'grha', 'Grha', 'Gra', 'GRHA')),
+              tahun_pelajaran: tahunPelajaran,
               password: getRowField(row, 'password', 'Password') || '123456'
             };
 
@@ -323,9 +340,10 @@ function KelolaAkun() {
   };
 
   const downloadTemplate = (type) => {
+    const currentYear = new Date().getFullYear();
     const templateData = type === 'siswa'
       ? [
-          { Nama: '', NIS: '', NISN: '', Kelas: 'X TKJ 1', Grha: '', Password: '123456' }
+          { Nama: '', NIS: '', NISN: '', Jurusan: 'TKJ 1', Grha: '', TahunPelajaran: `${currentYear}-${currentYear + 1}`, Password: '123456' }
         ]
       : [
           { Nama: '', NIP: '', Detail: '', NoHP: '', Password: '123456' }
@@ -335,6 +353,44 @@ function KelolaAkun() {
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Template');
     XLSX.writeFile(wb, `template_${type}.xlsx`);
+  };
+
+  const handleValidateClasses = async () => {
+    setValidatingClasses(true);
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.get('/academic-year/validate-classes', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setValidationResults(response.data);
+      setShowClassValidationModal(true);
+    } catch (error) {
+      console.error('Error validating classes:', error);
+      alert('Gagal memvalidasi kelas');
+    } finally {
+      setValidatingClasses(false);
+    }
+  };
+
+  const handleFixDiscrepancies = async (dryRun = false) => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.post('/academic-year/fix-discrepancies', 
+        { dryRun },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      
+      if (dryRun) {
+        alert(`Preview: ${response.data.discrepanciesFound} discrepancies found. Run again without dryRun to fix.`);
+      } else {
+        alert(`Berhasil memperbaiki ${response.data.fixedCount} siswa`);
+        // Re-validate to show updated results
+        await handleValidateClasses();
+      }
+    } catch (error) {
+      console.error('Error fixing discrepancies:', error);
+      alert('Gagal memperbaiki discrepancies');
+    }
   };
 
   if (loading) {
@@ -379,6 +435,9 @@ function KelolaAkun() {
         {/* Import from Excel - only for superadmin */}
         {userRole === 'superadmin' && (
           <>
+            <button className="btn btn-warning" onClick={handleValidateClasses} disabled={validatingClasses} style={{ marginRight: '10px' }}>
+              {validatingClasses ? 'Memvalidasi...' : 'Validasi Kelas'}
+            </button>
             <button className="btn btn-info" onClick={() => { setShowImportModal(true); setImportModalType('siswa'); setExcelFile(null); setImportResults([]); }} style={{ marginRight: '10px' }}>
               📥 Import Siswa
             </button>
@@ -496,7 +555,14 @@ function KelolaAkun() {
                   <td>{user.nis || user.nip || '-'}</td>
                   {userRole !== 'guru' && <td>{user.nisn || '-'}</td>}
                   <td><span className={`badge badge-${user.role === 'superadmin' ? 'danger' : user.role === 'guru' ? 'warning' : 'info'}`}>{user.role}</span></td>
-                  <td>{user.kelas || '-'}</td>
+                  <td>
+                    {user.is_graduated ? (
+                      <span style={{ color: '#999', fontStyle: 'italic' }}>{user.kelas || '-'}</span>
+                    ) : (
+                      user.kelas || '-'
+                    )}
+                    {user.is_graduated && <span className="badge badge-secondary" style={{ marginLeft: '5px' }}>Lulus</span>}
+                  </td>
                   <td>{user.ipc_total ?? 0}</td>
                   <td>
                     {userRole === 'superadmin' && user.role !== 'superadmin' && (
@@ -559,11 +625,17 @@ function KelolaAkun() {
                   <input type="text" value={formData.nisn || ''} onChange={(e) => setFormData({...formData, nisn: e.target.value})} required />
                 </div>
                 <div className="form-group">
-                  <label>Kelas</label>
-                  <select value={formData.kelas || ''} onChange={(e) => setFormData(prev => applyKelasChange(prev, e.target.value))} required>
-                    <option value="">Pilih Kelas</option>
-                    {KELAS_OPTIONS.map(k => <option key={k} value={k}>{k}</option>)}
+                  <label>Jurusan</label>
+                  <select value={formData.jurusan || ''} onChange={(e) => setFormData({...formData, jurusan: e.target.value})} required>
+                    <option value="">Pilih Jurusan</option>
+                    <option value="TKJ 1">TKJ 1</option>
+                    <option value="TKJ 2">TKJ 2</option>
+                    <option value="TO 1">TO 1</option>
+                    <option value="TO 2">TO 2</option>
+                    <option value="DPIB 1">DPIB 1</option>
+                    <option value="DPIB 2">DPIB 2</option>
                   </select>
+                  <small style={{ color: '#666', fontSize: '12px' }}>Kelas akan dihitung otomatis berdasarkan tahun pelajaran</small>
                 </div>
                 <div className="form-group">
                   <label>Grha</label>
@@ -573,6 +645,25 @@ function KelolaAkun() {
                       <option key={grha} value={grha}>{grha}</option>
                     ))}
                   </select>
+                </div>
+                <div className="form-group">
+                  <label>Tahun Pelajaran (Masuk)</label>
+                  <select value={formData.tahun_pelajaran || ''} onChange={(e) => setFormData({...formData, tahun_pelajaran: e.target.value})} required>
+                    <option value="">Pilih Tahun Pelajaran</option>
+                    {(() => {
+                      const currentYear = new Date().getFullYear();
+                      const options = [];
+                      for (let i = -5; i <= 5; i++) {
+                        const startYear = currentYear + i;
+                        const endYear = startYear + 1;
+                        options.push(`${startYear}-${endYear}`);
+                      }
+                      return options.map(year => (
+                        <option key={year} value={year}>{year}</option>
+                      ));
+                    })()}
+                  </select>
+                  <small style={{ color: '#666', fontSize: '12px' }}>Tahun pelajaran saat siswa pertama kali masuk sekolah</small>
                 </div>
                 <div className="form-group">
                   <label>Password</label>
@@ -676,6 +767,97 @@ function KelolaAkun() {
         </div>
       )}
 
+      {/* Class Validation Modal */}
+      {showClassValidationModal && validationResults && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0,0,0,0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000
+        }}>
+          <div className="card" style={{ width: 800, maxWidth: '90%', maxHeight: '90vh', overflowY: 'auto' }}>
+            <h3>Validasi Kelas</h3>
+            <button className="btn btn-danger" onClick={() => { setShowClassValidationModal(false); setValidationResults(null); }} style={{ marginBottom: '10px' }}>Tutup</button>
+
+            <div style={{ marginBottom: '20px' }}>
+              <div style={{ display: 'flex', gap: '20px', marginBottom: '15px' }}>
+                <div style={{ flex: 1, padding: '10px', backgroundColor: '#d4edda', borderRadius: '4px' }}>
+                  <strong>Total Siswa:</strong> {validationResults.totalStudents}
+                </div>
+                <div style={{ flex: 1, padding: '10px', backgroundColor: '#d4edda', borderRadius: '4px' }}>
+                  <strong>Valid:</strong> {validationResults.validCount}
+                </div>
+                <div style={{ flex: 1, padding: '10px', backgroundColor: validationResults.discrepancyCount > 0 ? '#f8d7da' : '#d4edda', borderRadius: '4px' }}>
+                  <strong>Discrepancies:</strong> {validationResults.discrepancyCount}
+                </div>
+              </div>
+
+              {validationResults.discrepancyCount > 0 && (
+                <div style={{ marginBottom: '15px' }}>
+                  <button 
+                    className="btn btn-info" 
+                    onClick={() => handleFixDiscrepancies(true)}
+                    style={{ marginRight: '10px' }}
+                  >
+                    Preview Perbaikan
+                  </button>
+                  <button 
+                    className="btn btn-success" 
+                    onClick={() => handleFixDiscrepancies(false)}
+                  >
+                    Perbaiki Sekarang
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {validationResults.discrepancies.length > 0 ? (
+              <div>
+                <h4>Discrepancies ({validationResults.discrepancies.length})</h4>
+                <div style={{ maxHeight: '400px', overflowY: 'auto', border: '1px solid #ddd', borderRadius: '4px' }}>
+                  <table className="table" style={{ fontSize: '12px' }}>
+                    <thead>
+                      <tr>
+                        <th>Nama</th>
+                        <th>NIS</th>
+                        <th>Tipe</th>
+                        <th>Expected</th>
+                        <th>Actual</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {validationResults.discrepancies.map((discrepancy, index) => (
+                        <tr key={index}>
+                          <td>{discrepancy.nama}</td>
+                          <td>{discrepancy.nis}</td>
+                          <td>
+                            <span className={`badge badge-${discrepancy.discrepancyType === 'graduation_status' ? 'danger' : 'warning'}`}>
+                              {discrepancy.discrepancyType === 'graduation_status' ? 'Graduation' : 'Class'}
+                            </span>
+                          </td>
+                          <td>{discrepancy.expectedValue}</td>
+                          <td>{discrepancy.actualValue}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            ) : (
+              <div style={{ padding: '20px', backgroundColor: '#d4edda', borderRadius: '4px', textAlign: 'center' }}>
+                <strong>✅ Semua kelas valid!</strong>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Edit Biodata Modal */}
       {showEditBiodataModal && (
         <div style={{
@@ -711,11 +893,17 @@ function KelolaAkun() {
                     <input type="text" value={formData.nisn || ''} onChange={(e) => setFormData({...formData, nisn: e.target.value})} required />
                   </div>
                   <div className="form-group">
-                    <label>Kelas</label>
-                    <select value={formData.kelas || ''} onChange={(e) => setFormData(prev => applyKelasChange(prev, e.target.value))} required>
-                      <option value="">Pilih Kelas</option>
-                      {KELAS_OPTIONS.map(k => <option key={k} value={k}>{k}</option>)}
+                    <label>Jurusan</label>
+                    <select value={formData.jurusan || ''} onChange={(e) => setFormData({...formData, jurusan: e.target.value})} required>
+                      <option value="">Pilih Jurusan</option>
+                      <option value="TKJ 1">TKJ 1</option>
+                      <option value="TKJ 2">TKJ 2</option>
+                      <option value="TO 1">TO 1</option>
+                      <option value="TO 2">TO 2</option>
+                      <option value="DPIB 1">DPIB 1</option>
+                      <option value="DPIB 2">DPIB 2</option>
                     </select>
+                    <small style={{ color: '#666', fontSize: '12px' }}>Kelas akan dihitung otomatis berdasarkan tahun pelajaran</small>
                   </div>
                   <div className="form-group">
                     <label>Grha</label>
@@ -725,6 +913,25 @@ function KelolaAkun() {
                         <option key={grha} value={grha}>{grha}</option>
                       ))}
                     </select>
+                  </div>
+                  <div className="form-group">
+                    <label>Tahun Pelajaran (Masuk)</label>
+                    <select value={formData.tahun_pelajaran || ''} onChange={(e) => setFormData({...formData, tahun_pelajaran: e.target.value})} required>
+                      <option value="">Pilih Tahun Pelajaran</option>
+                      {(() => {
+                        const currentYear = new Date().getFullYear();
+                        const options = [];
+                        for (let i = -5; i <= 5; i++) {
+                          const startYear = currentYear + i;
+                          const endYear = startYear + 1;
+                          options.push(`${startYear}-${endYear}`);
+                        }
+                        return options.map(year => (
+                          <option key={year} value={year}>{year}</option>
+                        ));
+                      })()}
+                    </select>
+                    <small style={{ color: '#666', fontSize: '12px' }}>Tahun pelajaran saat siswa pertama kali masuk sekolah</small>
                   </div>
                 </>
               ) : (

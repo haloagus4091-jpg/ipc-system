@@ -244,6 +244,8 @@ function ApprovalsV2() {
                     <small>
                       {item.nama_baru !== item.nama_lama && <div>Nama: {item.nama_lama} → {item.nama_baru}</div>}
                       {item.kelas_baru !== item.kelas_lama && <div>Kelas: {item.kelas_lama} → {item.kelas_baru}</div>}
+                      {item.jurusan_baru !== item.jurusan_lama && <div>Jurusan: {item.jurusan_lama} → {item.jurusan_baru}</div>}
+                      {item.tahun_pelajaran_baru !== item.tahun_pelajaran_lama && <div>Tahun Pelajaran: {item.tahun_pelajaran_lama} → {item.tahun_pelajaran_baru}</div>}
                       {item.grha_baru !== item.grha_lama && <div>Grha: {item.grha_lama} → {item.grha_baru}</div>}
                     </small>
                   </td>

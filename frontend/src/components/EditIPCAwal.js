@@ -30,7 +30,15 @@ function EditIPCAwal() {
   };
 
   const getStudentsByGrade = (grade) => {
-    return students.filter(student => student.kelas && student.kelas.startsWith(grade));
+    // Handle both Roman numerals (X, XI, XII) and Arabic numerals (10, 11, 12)
+    return students.filter(student => {
+      if (!student.kelas) return false;
+      const classPrefix = student.kelas.split(' ')[0]; // Get the class level (X, XI, XII)
+      return classPrefix === grade || 
+             (grade === '10' && classPrefix === 'X') ||
+             (grade === '11' && classPrefix === 'XI') ||
+             (grade === '12' && classPrefix === 'XII');
+    });
   };
 
   const handleSelectAll = (grade) => {

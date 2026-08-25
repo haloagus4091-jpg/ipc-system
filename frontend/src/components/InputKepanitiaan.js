@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { KELAS_OPTIONS, applyKelasChange } from '../utils/kelasJurusan';
 import EditModal from './EditModal';
 import useEditModal from '../hooks/useEditModal';
 import API_BASE_URL from '../config';
@@ -112,11 +111,7 @@ function InputKepanitiaan() {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    if (name === 'kelas') {
-      setFormData(prev => applyKelasChange(prev, value));
-    } else {
-      setFormData({ ...formData, [name]: value });
-    }
+    setFormData({ ...formData, [name]: value });
 
     // Auto-fill student data when NIS is entered
     if (name === 'nis' && value.length >= 1) {
@@ -412,12 +407,17 @@ function InputKepanitiaan() {
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
           <div className="form-group">
             <label>Kelas</label>
-            <select name="kelas" value={formData.kelas} onChange={handleChange} required disabled={isAutoFilled} style={{ backgroundColor: isAutoFilled ? '#f0f0f0' : '' }}>
-              <option value="">Pilih Kelas</option>
-              {KELAS_OPTIONS.map(kelas => (
-                <option key={kelas} value={kelas}>{kelas}</option>
-              ))}
-            </select>
+            <input 
+              type="text" 
+              name="kelas" 
+              value={formData.kelas} 
+              onChange={handleChange} 
+              disabled 
+              style={{ backgroundColor: '#f0f0f0', cursor: 'not-allowed' }}
+              placeholder="Auto-filled from student data"
+              required
+            />
+            <small style={{ color: '#666', fontSize: '12px' }}>Auto-filled from student data</small>
           </div>
           <div className="form-group">
             <label>Grha</label>
@@ -493,15 +493,14 @@ function InputKepanitiaan() {
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
           <div className="form-group">
             <label>Kelas</label>
-            <select 
+            <input 
+              type="text" 
               value={editModal.editFormData.kelas || ''} 
               onChange={(e) => editModal.setEditFormData({ ...editModal.editFormData, kelas: e.target.value })}
-            >
-              <option value="">Pilih Kelas</option>
-              {KELAS_OPTIONS.map(kelas => (
-                <option key={kelas} value={kelas}>{kelas}</option>
-              ))}
-            </select>
+              disabled
+              style={{ backgroundColor: '#f0f0f0', cursor: 'not-allowed' }}
+            />
+            <small style={{ color: '#666', fontSize: '12px' }}>Auto-filled from student data</small>
           </div>
         </div>
 

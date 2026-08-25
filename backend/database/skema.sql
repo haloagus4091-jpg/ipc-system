@@ -17,6 +17,7 @@ CREATE TABLE users (
     role ENUM('superadmin', 'guru', 'siswa') NOT NULL,
     kelas VARCHAR(50),
     grha VARCHAR(50),
+    jurusan VARCHAR(50) DEFAULT NULL COMMENT 'Student program/stream (e.g., TKJ 1, TO 2)',
     wali_kelas VARCHAR(50),
     ipc_total INT DEFAULT 80,
     ipc_awal INT DEFAULT 80,
@@ -24,6 +25,8 @@ CREATE TABLE users (
     no_hp VARCHAR(20),
     detail VARCHAR(100),
     foto VARCHAR(255),
+    tahun_pelajaran VARCHAR(9) DEFAULT NULL COMMENT 'Academic year when student first enrolled (YYYY-YYYY format)',
+    is_graduated TINYINT(1) DEFAULT 0 COMMENT 'Whether student has graduated (0=active, 1=graduated)',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
@@ -340,11 +343,15 @@ CREATE TABLE biodata_update_approvals (
     nis_baru VARCHAR(20),
     nisn_baru VARCHAR(20),
     kelas_baru VARCHAR(50),
+    jurusan_baru VARCHAR(50) DEFAULT NULL COMMENT 'New jurusan value',
+    tahun_pelajaran_baru VARCHAR(9) DEFAULT NULL COMMENT 'New tahun_pelajaran value',
     grha_baru VARCHAR(50),
     nama_lama VARCHAR(100),
     nis_lama VARCHAR(20),
     nisn_lama VARCHAR(20),
     kelas_lama VARCHAR(50),
+    jurusan_lama VARCHAR(50) DEFAULT NULL COMMENT 'Old jurusan value',
+    tahun_pelajaran_lama VARCHAR(9) DEFAULT NULL COMMENT 'Old tahun_pelajaran value',
     grha_lama VARCHAR(50),
     requested_by INT NOT NULL,
     pembina_status ENUM('pending', 'approved', 'rejected') DEFAULT 'pending',
@@ -367,6 +374,8 @@ CREATE TABLE student_creation_approvals (
     nisn VARCHAR(20) NOT NULL,
     kelas VARCHAR(50) NOT NULL,
     grha VARCHAR(50),
+    jurusan VARCHAR(50) DEFAULT NULL COMMENT 'Student program/stream (e.g., TKJ 1, TO 2)',
+    tahun_pelajaran VARCHAR(9) DEFAULT NULL COMMENT 'Academic year when student first enrolled (YYYY-YYYY format)',
     password VARCHAR(255) NOT NULL,
     requested_by INT NOT NULL,
     superadmin_status ENUM('pending', 'approved', 'rejected') DEFAULT 'pending',
@@ -443,6 +452,11 @@ CREATE INDEX idx_organisasi_status ON organisasi_approvals(pembina_status, super
 -- Indexes for Notifications
 CREATE INDEX idx_notifications_user ON notifications(user_id);
 CREATE INDEX idx_notifications_read ON notifications(user_id, is_read);
+
+-- Indexes for Academic Year System
+CREATE INDEX idx_is_graduated ON users(is_graduated);
+CREATE INDEX idx_tahun_pelajaran ON users(tahun_pelajaran);
+CREATE INDEX idx_jurusan ON users(jurusan);
 
 -- ==================== DEFAULT DATA ====================
 

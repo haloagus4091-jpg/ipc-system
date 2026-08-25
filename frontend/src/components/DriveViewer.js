@@ -19,12 +19,18 @@ function DriveViewer() {
   const [studentsData, setStudentsData] = useState({});
 
   const kelasOptions = [
-    'X TKJ 1', 'X TKJ 2', 'X TO 1', 'X TO 2',
-    'X DPIB 1', 'X DPIB 2',
-    'XI TKJ 1', 'XI TKJ 2', 'XI TO 1', 'XI TO 2',
-    'XI DPIB 1', 'XI DPIB 2',
-    'XII TKJ 1', 'XII TKJ 2', 'XII TO 1', 'XII TO 2',
-    'XII DPIB 1', 'XII DPIB 2'
+    'X TKJ 1', 'X TKJ 2', 'X TKJ 3',
+    'X TO 1', 'X TO 2', 'X TO 3',
+    'X DPIB 1', 'X DPIB 2', 'X DPIB 3',
+    'X TBSM 1', 'X TBSM 2', 'X TBSM 3',
+    'XI TKJ 1', 'XI TKJ 2', 'XI TKJ 3',
+    'XI TO 1', 'XI TO 2', 'XI TO 3',
+    'XI DPIB 1', 'XI DPIB 2', 'XI DPIB 3',
+    'XI TBSM 1', 'XI TBSM 2', 'XI TBSM 3',
+    'XII TKJ 1', 'XII TKJ 2', 'XII TKJ 3',
+    'XII TO 1', 'XII TO 2', 'XII TO 3',
+    'XII DPIB 1', 'XII DPIB 2', 'XII DPIB 3',
+    'XII TBSM 1', 'XII TBSM 2', 'XII TBSM 3'
   ];
 
   const grhaOptions = [
