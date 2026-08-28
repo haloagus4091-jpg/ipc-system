@@ -556,12 +556,14 @@ function KelolaAkun() {
                   {userRole !== 'guru' && <td>{user.nisn || '-'}</td>}
                   <td><span className={`badge badge-${user.role === 'superadmin' ? 'danger' : user.role === 'guru' ? 'warning' : 'info'}`}>{user.role}</span></td>
                   <td>
-                    {user.is_graduated ? (
-                      <span style={{ color: '#999', fontStyle: 'italic' }}>{user.kelas || '-'}</span>
-                    ) : (
-                      user.kelas || '-'
-                    )}
-                    {user.is_graduated && <span className="badge badge-secondary" style={{ marginLeft: '5px' }}>Lulus</span>}
+                    <>
+                      {user.is_graduated ? (
+                        <span style={{ color: '#999', fontStyle: 'italic' }}>{user.kelas || '-'}</span>
+                      ) : (
+                        user.kelas || '-'
+                      )}
+                      { /* user.is_graduated && <span className="badge badge-secondary" style={{ marginLeft: '5px' }}>Lulus</span> */}
+                    </>
                   </td>
                   <td>{user.ipc_total ?? 0}</td>
                   <td>
