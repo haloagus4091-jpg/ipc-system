@@ -20,6 +20,15 @@ router.get('/stats', auth, async (req, res) => {
             GROUP BY grha
         `);
         
+        // Total by kelas
+        const [byKelas] = await db.query(`
+            SELECT kelas, COUNT(*) as count 
+            FROM users 
+            WHERE role = 'siswa' AND kelas IS NOT NULL AND is_graduated = 0
+            GROUP BY kelas
+            ORDER BY kelas
+        `);
+        
         // Total prestasi akademik
         const [prestasiAkademik] = await db.query(`
             SELECT COUNT(*) as count 
@@ -46,24 +55,15 @@ router.get('/stats', auth, async (req, res) => {
         // Total pelanggaran
         const [totalPelanggaran] = await db.query("SELECT COUNT(*) as count FROM pelanggaran WHERE status = 'approved'");
 
-        // Total by kelas
-        const [byKelas] = await db.query(`
-            SELECT kelas, COUNT(*) as count 
-            FROM users 
-            WHERE role = 'siswa' AND kelas IS NOT NULL AND is_graduated = 0
-            GROUP BY kelas
-            ORDER BY kelas
-        `);
-
         res.json({
             total_students: totalStudents[0].count,
             total_teachers: totalTeachers[0].count,
             by_grha: byGrha,
+            by_kelas: byKelas,
             prestasi_akademik: prestasiAkademik[0].count,
             prestasi_nonakademik: prestasiNonAkademik[0].count,
             pelanggaran_by_grha: pelanggaranByGrha,
-            total_pelanggaran: totalPelanggaran[0].count,
-            by_kelas: byKelas
+            total_pelanggaran: totalPelanggaran[0].count
         });
     } catch (error) {
         console.error(error);

@@ -5,7 +5,7 @@ const helmet = require('helmet');
 // Rate limiting for login attempts
 const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 5, // limit each IP to 5 login attempts per windowMs
+  max: 15, // limit each IP to 5 login attempts per windowMs
   message: {
     message: 'Too many login attempts, please try again after 15 minutes'
   },
