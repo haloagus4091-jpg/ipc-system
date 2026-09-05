@@ -10,7 +10,6 @@ import InputEvent from './components/InputEvent';
 import InputPelanggaran from './components/InputPelanggaran';
 import InputPerilaku from './components/InputPerilaku';
 import KelolaAkun from './components/KelolaAkun';
-import KelolaSiswa from './components/KelolaSiswa';
 import IzinAkun from './components/IzinAkun';
 import EditIPCAwal from './components/EditIPCAwal';
 import Leaderboard from './components/Leaderboard';
@@ -152,11 +151,6 @@ function App() {
         <Route path="/edit-ipc-awal" element={
           <ProtectedRoute allowedRoles={['superadmin']}>
             {(user) => <MainLayout user={user}><EditIPCAwal /></MainLayout>}
-          </ProtectedRoute>
-        } />
-        <Route path="/kelola-siswa" element={
-          <ProtectedRoute allowedRoles={['guru']}>
-            {(user) => <MainLayout user={user}><KelolaSiswa /></MainLayout>}
           </ProtectedRoute>
         } />
         <Route path="/izin-akun" element={
