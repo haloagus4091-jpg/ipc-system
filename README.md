@@ -2,7 +2,7 @@
 
 Sistem Indeks Prestasi dan Karakter untuk sekolah dengan fitur lengkap untuk mengelola prestasi, organisasi, event, pelanggaran, dan perilaku siswa.
 
-## Tampilan Aplikasi
+## Tampilan Web 
 
 <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; margin: 20px 0;">
 
