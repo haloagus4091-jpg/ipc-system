@@ -112,6 +112,7 @@ router.put('/:id/approve', auth, async (req, res) => {
         // Update status and photo path
         await db.query('UPDATE kepanitiaan SET status = ?, foto = ? WHERE id = ?', ['approved', newFotoPath, kepanitiaanId]);
         
+        // Update user IPC (can go negative due to pelanggaran, can recover with kepanitiaan)
         const [user] = await db.query('SELECT ipc_total FROM users WHERE id = ?', [kepanitiaanData.user_id]);
         const ipcSebelum = user[0].ipc_total;
         const ipcSesudah = ipcSebelum + kepanitiaanData.point;

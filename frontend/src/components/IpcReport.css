@@ -178,6 +178,12 @@
   color: #000;
 }
 
+.point-value.total-minus {
+  font-size: 18px;
+  color: #dc2626;
+  font-weight: bold;
+}
+
 /* Signatures */
 .signatures {
   display: flex;

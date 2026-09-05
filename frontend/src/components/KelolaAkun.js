@@ -769,7 +769,14 @@ function KelolaAkun() {
                       </td>
                     </>
                   )}
-                  <td>{user.ipc_total ?? 0}</td>
+                  <td>
+                    <span style={{ 
+                      color: (user.ipc_total ?? 0) < 0 ? '#dc2626' : 'inherit',
+                      fontWeight: (user.ipc_total ?? 0) < 0 ? 'bold' : 'normal'
+                    }}>
+                      {(user.ipc_total ?? 0) < 0 ? `${user.ipc_total ?? 0} (MINUS)` : (user.ipc_total ?? 0)}
+                    </span>
+                  </td>
                   <td>
                     {userRole === 'superadmin' && user.role !== 'superadmin' && (
                       <>

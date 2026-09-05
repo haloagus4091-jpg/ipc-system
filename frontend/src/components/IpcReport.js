@@ -82,6 +82,17 @@ function IpcReport({ studentId, onClose }) {
     return total;
   };
 
+  // Use the calculated total from breakdown for consistency
+  const calculatedTotal = calculateTotal();
+
+  // Format total with negative indicator
+  const formatTotal = (value) => {
+    if (value < 0) {
+      return `${value} (MINUS)`;
+    }
+    return value;
+  };
+
   const handlePrint = () => {
     window.print();
   };
@@ -94,7 +105,7 @@ function IpcReport({ studentId, onClose }) {
     return <div className="card">Data tidak tersedia</div>;
   }
 
-  const total = calculateTotal();
+  const total = calculatedTotal;
 
   return (
     <div className="ipc-report-container">
@@ -243,7 +254,7 @@ function IpcReport({ studentId, onClose }) {
 
               <tr className="total-row">
                 <td><strong>TOTAL POINT IPC</strong></td>
-                <td className="point-value total"><strong>{total}</strong></td>
+                <td className={`point-value total ${total < 0 ? 'total-minus' : ''}`}><strong>{formatTotal(total)}</strong></td>
               </tr>
             </tbody>
           </table>

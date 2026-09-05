@@ -16,7 +16,7 @@ const getTeacherWaliKelasClass = async (guruId) => {
     return assignment.length > 0 ? assignment[0].kelas : null;
 };
 
-// Get all students for reports (grouped by class)
+// Get all students for reports (grouped by class) with full IPC breakdown
 router.get('/students', auth, async (req, res) => {
     try {
         let query = `
@@ -65,14 +65,30 @@ router.get('/students', auth, async (req, res) => {
             return student;
         });
         
-        res.json(studentsWithCalculatedClass);
+        // Get full IPC breakdown for each student to ensure synchronization
+        const studentsWithBreakdown = await Promise.all(
+            studentsWithCalculatedClass.map(async (student) => {
+                const cardData = await buildIpcCardBreakdown(student.id);
+                if (cardData) {
+                    return {
+                        ...student,
+                        points: cardData.points,
+                        ipc_total: cardData.ipc_total,
+                        breakdown_total: cardData.breakdown_total
+                    };
+                }
+                return student;
+            })
+        );
+        
+        res.json(studentsWithBreakdown);
     } catch (error) {
         console.error('Error fetching students for reports:', error);
         res.status(500).json({ message: 'Server error' });
     }
 });
 
-// Get students filtered by class
+// Get students filtered by class with full IPC breakdown
 router.get('/students/class/:kelas', auth, async (req, res) => {
     try {
         const { kelas } = req.params;
@@ -107,7 +123,23 @@ router.get('/students/class/:kelas', auth, async (req, res) => {
             return student;
         });
         
-        res.json(studentsWithCalculatedClass);
+        // Get full IPC breakdown for each student to ensure synchronization
+        const studentsWithBreakdown = await Promise.all(
+            studentsWithCalculatedClass.map(async (student) => {
+                const cardData = await buildIpcCardBreakdown(student.id);
+                if (cardData) {
+                    return {
+                        ...student,
+                        points: cardData.points,
+                        ipc_total: cardData.ipc_total,
+                        breakdown_total: cardData.breakdown_total
+                    };
+                }
+                return student;
+            })
+        );
+        
+        res.json(studentsWithBreakdown);
     } catch (error) {
         console.error('Error fetching students by class:', error);
         res.status(500).json({ message: 'Server error' });
@@ -138,7 +170,7 @@ router.get('/statistics', auth, async (req, res) => {
     }
 });
 
-// Get class IPC report (students sorted by NIS with IPC totals)
+// Get class IPC report (students sorted by NIS with IPC totals and full breakdown)
 router.get('/class-ipc/:kelas', auth, async (req, res) => {
     try {
         const { kelas } = req.params;
@@ -182,7 +214,23 @@ router.get('/class-ipc/:kelas', auth, async (req, res) => {
             return student;
         });
         
-        res.json(studentsWithCalculatedClass);
+        // Get full IPC breakdown for each student to ensure synchronization
+        const studentsWithBreakdown = await Promise.all(
+            studentsWithCalculatedClass.map(async (student) => {
+                const cardData = await buildIpcCardBreakdown(student.id);
+                if (cardData) {
+                    return {
+                        ...student,
+                        points: cardData.points,
+                        ipc_total: cardData.ipc_total,
+                        breakdown_total: cardData.breakdown_total
+                    };
+                }
+                return student;
+            })
+        );
+        
+        res.json(studentsWithBreakdown);
     } catch (error) {
         console.error('Error fetching class IPC report:', error);
         res.status(500).json({ message: 'Server error' });

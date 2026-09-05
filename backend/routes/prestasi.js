@@ -126,7 +126,7 @@ router.put('/:id/approve', auth, async (req, res) => {
         // Update status and photo path
         await db.query('UPDATE prestasi SET status = ?, foto = ? WHERE id = ?', ['approved', newFotoPath, prestasiId]);
         
-        // Update user IPC
+        // Update user IPC (can go negative due to pelanggaran, can recover with prestasi)
         const [user] = await db.query('SELECT ipc_total FROM users WHERE id = ?', [prestasiData.user_id]);
         const ipcSebelum = user[0].ipc_total;
         const ipcSesudah = ipcSebelum + prestasiData.point;

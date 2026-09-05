@@ -73,6 +73,8 @@ router.post('/bulk-update-ipc-awal', auth, superAdminOnly, async (req, res) => {
         if (Number.isNaN(parsedAwal) || parsedAwal < 0) {
             return res.status(400).json({ message: 'IPC awal harus angka valid (min 0)' });
         }
+        
+        // Note: IPC awal should stay >= 0, but IPC total can go negative due to pelanggaran
 
         const results = [];
         

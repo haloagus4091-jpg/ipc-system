@@ -26,10 +26,8 @@ async function applyIpcChange(userId, jenis, pointChange, keterangan) {
     }
 
     const ipcSebelum = user[0].ipc_total;
-    let ipcBaru = ipcSebelum + pointChange;
-    if (ipcBaru < 0) {
-        ipcBaru = 0;
-    }
+    // Allow negative IPC values - remove the minimum constraint
+    const ipcBaru = ipcSebelum + pointChange;
 
     await db.query('UPDATE users SET ipc_total = ? WHERE id = ?', [ipcBaru, userId]);
     await db.query(

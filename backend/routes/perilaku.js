@@ -242,6 +242,7 @@ router.put('/:id', auth, async (req, res) => {
             const ipcSebelum = userBefore[0].ipc_total;
             const ipcSesudah = ipcSebelum + pointDiff;
             
+            // Update user IPC (can go negative due to pelanggaran, can recover with perilaku)
             await db.query('UPDATE users SET ipc_total = ? WHERE id = ?', [ipcSesudah, perilakuData.user_id]);
             
             await db.query(

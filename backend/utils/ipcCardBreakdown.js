@@ -58,22 +58,22 @@ function addPerilakuPoints(points, karakterSiswa) {
 }
 
 function calculateBreakdownTotal(points) {
-    let total = points.point_awal;
-    total += points.prestasi_akademik;
-    total += points.prestasi_nonakademik;
-    total += points.tanggung_jawab;
-    total += points.disiplin;
-    total += points.kepedulian;
-    total += points.kemandirian;
-    total += points.spiritual;
-    total += points.kejujuran;
-    total += points.kepercayaan_diri;
-    total += points.organisasi;
-    total += points.kepanitiaan;
-    total += points.event;
-    total -= points.pelanggaran_ringan;
-    total -= points.pelanggaran_sedang;
-    total -= points.pelanggaran_berat;
+    let total = points.point_awal || 80;
+    total += points.prestasi_akademik || 0;
+    total += points.prestasi_nonakademik || 0;
+    total += points.tanggung_jawab || 0;
+    total += points.disiplin || 0;
+    total += points.kepedulian || 0;
+    total += points.kemandirian || 0;
+    total += points.spiritual || 0;
+    total += points.kejujuran || 0;
+    total += points.kepercayaan_diri || 0;
+    total += points.organisasi || 0;
+    total += points.kepanitiaan || 0;
+    total += points.event || 0;
+    total -= points.pelanggaran_ringan || 0;
+    total -= points.pelanggaran_sedang || 0;
+    total -= points.pelanggaran_berat || 0;
     return total;
 }
 
@@ -152,7 +152,7 @@ async function buildIpcCardBreakdown(userId) {
     return {
         student,
         points,
-        ipc_total: student.ipc_total ?? breakdownTotal,
+        ipc_total: breakdownTotal, // Always use calculated breakdown total for consistency
         breakdown_total: breakdownTotal
     };
 }

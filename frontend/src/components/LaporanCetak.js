@@ -152,26 +152,47 @@ function LaporanCetak({ user }) {
       doc.setFont('times', 'bold');
       doc.text(`Kelas: ${selectedClass}`, 20, 75);
 
-      // Prepare table data
-      const tableData = students.map((student, index) => [
-        index + 1,
-        student.nis || '-',
-        student.nama || '-',
-        student.jurusan || '-',
-        student.tahun_pelajaran || '-',
-        student.ipc_total || student.ipc_awal || 0
-      ]);
+      // Prepare table data with full breakdown
+      const tableData = students.map((student, index) => {
+        const points = student.points || {};
+        const total = student.ipc_total || student.ipc_awal || 0;
+        
+        return [
+          index + 1,
+          student.nis || '-',
+          student.nama || '-',
+          student.jurusan || '-',
+          student.tahun_pelajaran || '-',
+          points.point_awal || student.ipc_awal || 80,
+          points.prestasi_akademik || 0,
+          points.prestasi_nonakademik || 0,
+          points.tanggung_jawab || 0,
+          points.disiplin || 0,
+          points.kepedulian || 0,
+          points.kemandirian || 0,
+          points.spiritual || 0,
+          points.kejujuran || 0,
+          points.kepercayaan_diri || 0,
+          points.organisasi || 0,
+          points.kepanitiaan || 0,
+          points.event || 0,
+          points.pelanggaran_ringan || 0,
+          points.pelanggaran_sedang || 0,
+          points.pelanggaran_berat || 0,
+          total < 0 ? `${total} (MINUS)` : total
+        ];
+      });
 
-      // Add table
+      // Add table with full breakdown columns
       autoTable(doc, {
         startY: 80,
-        head: [['No', 'NIS', 'Nama', 'Jurusan', 'Tahun Pelajaran', 'Total IPC']],
+        head: [['No', 'NIS', 'Nama', 'Jurusan', 'Tahun', 'Awal', 'Pres.Ak', 'Pres.Non', 'Tang.Jawab', 'Disiplin', 'Kepedulian', 'Mandiri', 'Spiritual', 'Jujur', 'Perc.Diri', 'Org', 'Kepan', 'Event', 'Pel.Ringan', 'Pel.Sedang', 'Pel.Berat', 'Total']],
         body: tableData,
         theme: 'grid',
         styles: {
           font: 'times',
-          fontSize: 8,
-          cellPadding: 2,
+          fontSize: 6,
+          cellPadding: 1,
           lineColor: [0, 0, 0],
           lineWidth: 0.1,
           textColor: [0, 0, 0]
@@ -180,18 +201,44 @@ function LaporanCetak({ user }) {
           fillColor: [240, 240, 240],
           fontStyle: 'bold',
           halign: 'center',
-          fontSize: 8,
+          fontSize: 6,
           textColor: [0, 0, 0]
         },
         columnStyles: {
-          0: { cellWidth: 12, halign: 'center' },
-          1: { cellWidth: 20, halign: 'center' },
-          2: { cellWidth: 'auto' },
-          3: { cellWidth: 18, halign: 'center' },
-          4: { cellWidth: 22, halign: 'center' },
-          5: { cellWidth: 18, halign: 'center' }
+          0: { cellWidth: 8, halign: 'center' },
+          1: { cellWidth: 15, halign: 'center' },
+          2: { cellWidth: 25 },
+          3: { cellWidth: 12, halign: 'center' },
+          4: { cellWidth: 12, halign: 'center' },
+          5: { cellWidth: 8, halign: 'center' },
+          6: { cellWidth: 8, halign: 'center' },
+          7: { cellWidth: 8, halign: 'center' },
+          8: { cellWidth: 8, halign: 'center' },
+          9: { cellWidth: 8, halign: 'center' },
+          10: { cellWidth: 8, halign: 'center' },
+          11: { cellWidth: 8, halign: 'center' },
+          12: { cellWidth: 8, halign: 'center' },
+          13: { cellWidth: 8, halign: 'center' },
+          14: { cellWidth: 8, halign: 'center' },
+          15: { cellWidth: 8, halign: 'center' },
+          16: { cellWidth: 8, halign: 'center' },
+          17: { cellWidth: 8, halign: 'center' },
+          18: { cellWidth: 8, halign: 'center' },
+          19: { cellWidth: 8, halign: 'center' },
+          20: { cellWidth: 8, halign: 'center' },
+          21: { cellWidth: 12, halign: 'center', fontStyle: 'bold' }
         },
-        margin: { left: 20, right: 20, top: 10, bottom: 20 }
+        margin: { left: 10, right: 10, top: 10, bottom: 20 },
+        didParseCell: function(data) {
+          // Style negative values in red with MINUS indicator
+          if (data.section === 'body' && data.column.index === 21) {
+            const cellValue = data.cell.raw;
+            if (typeof cellValue === 'string' && cellValue.includes('MINUS')) {
+              data.cell.styles.textColor = [255, 0, 0];
+              data.cell.styles.fontStyle = 'bold';
+            }
+          }
+        }
       });
 
       // Signatures
@@ -275,7 +322,7 @@ function LaporanCetak({ user }) {
           doc.addPage();
         }
 
-        const { student, wali, points, ipcTotal } = cardData;
+        const { student, wali, points, ipc_total } = cardData;
         const breakdown = points || {
           point_awal: student?.ipc_awal ?? 80,
           prestasi_akademik: 0,
@@ -295,7 +342,36 @@ function LaporanCetak({ user }) {
           pelanggaran_berat: 0
         };
 
-        const total = ipcTotal ?? student?.ipc_total ?? breakdown.point_awal;
+        // Calculate total from breakdown to ensure synchronization
+        const calculateTotalFromBreakdown = (breakdown) => {
+          let total = breakdown.point_awal || 80;
+          total += breakdown.prestasi_akademik || 0;
+          total += breakdown.prestasi_nonakademik || 0;
+          total += breakdown.tanggung_jawab || 0;
+          total += breakdown.disiplin || 0;
+          total += breakdown.kepedulian || 0;
+          total += breakdown.kemandirian || 0;
+          total += breakdown.spiritual || 0;
+          total += breakdown.kejujuran || 0;
+          total += breakdown.kepercayaan_diri || 0;
+          total += breakdown.organisasi || 0;
+          total += breakdown.kepanitiaan || 0;
+          total += breakdown.event || 0;
+          total -= breakdown.pelanggaran_ringan || 0;
+          total -= breakdown.pelanggaran_sedang || 0;
+          total -= breakdown.pelanggaran_berat || 0;
+          return total;
+        };
+
+        const total = ipc_total ?? student?.ipc_total ?? calculateTotalFromBreakdown(breakdown);
+
+        // Format total with negative indicator
+        const formatTotal = (value) => {
+          if (value < 0) {
+            return `${value} (MINUS)`;
+          }
+          return value;
+        };
 
         // Header Image
         try {
@@ -346,7 +422,7 @@ function LaporanCetak({ user }) {
         doc.text(wali?.nama || 'Wali Kelas Belum Ditentukan', 20 + 20, yPos);
 
         // Right column
-        yPos = 72;
+        yPos = 70;
         const rightX = doc.internal.pageSize.getWidth() - 65;
         doc.setFont('times', 'bold');
         doc.text('Kelas:', rightX, yPos);
@@ -370,6 +446,12 @@ function LaporanCetak({ user }) {
         doc.text('Tahun Pelajaran:', rightX, yPos);
         doc.setFont('times', 'normal');
         doc.text(student?.tahun_pelajaran || '-', rightX + 25, yPos);
+        
+        // Add more spacing before table to prevent overlap
+        yPos += 10;
+        doc.setDrawColor(200, 200, 200);
+        doc.setLineWidth(0.3);
+        doc.line(20, yPos, doc.internal.pageSize.getWidth() - 20, yPos);
 
         // Table using jspdf-autotable
         const tableData = [
@@ -396,11 +478,11 @@ function LaporanCetak({ user }) {
           ['1. Ringan', breakdown.pelanggaran_ringan],
           ['2. Sedang', breakdown.pelanggaran_sedang],
           ['3. Berat', breakdown.pelanggaran_berat],
-          ['TOTAL POINT IPC', total]
+          ['TOTAL POINT IPC', formatTotal(total)]
         ];
 
         autoTable(doc, {
-          startY: 85,
+          startY: 95,
           head: [['Point IPC', 'Point']],
           body: tableData,
           theme: 'grid',
@@ -629,7 +711,7 @@ function LaporanCetak({ user }) {
         ) : (
           <>
             <p style={{ marginBottom: '14px', color: 'var(--text-secondary)', fontSize: '14px' }}>
-              Format cetak menampilkan daftar semua siswa dalam kelas dengan NIS, Nama, dan Total IPC (diurutkan berdasarkan NIS).
+              Format cetak menampilkan daftar semua siswa dalam kelas dengan breakdown lengkap: Point Awal, Prestasi (Akademik/Non-Akademik), Perkembangan Karakter (7 aspek), Organisasi, Kepanitiaan, Event, Pelanggaran (Ringan/Sedang/Berat), dan Total IPC (diurutkan berdasarkan NIS).
             </p>
 
             <div className="ipc-print-toolbar">

@@ -108,8 +108,12 @@ function StudentDetail({ student, onClose }) {
                                     </p>
                                     <p style={{ margin: '8px 0 0 0' }}>
                                         <strong>IPC:</strong>{' '}
-                                        <span style={{ fontSize: 20, color: '#3498db', fontWeight: 'bold' }}>
-                                            {student.ipc_total ?? 0}
+                                        <span style={{ 
+                                            fontSize: 20, 
+                                            color: (student.ipc_total ?? 0) < 0 ? '#dc2626' : '#3498db', 
+                                            fontWeight: 'bold' 
+                                        }}>
+                                            {(student.ipc_total ?? 0) < 0 ? `${student.ipc_total ?? 0} (MINUS)` : (student.ipc_total ?? 0)}
                                         </span>
                                     </p>
                                 </div>

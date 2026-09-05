@@ -137,6 +137,7 @@ function WaliKelas() {
   };
 
   const getIpcColor = (ipc) => {
+    if (ipc < 0) return '#dc2626'; // Red for negative values
     if (ipc >= 90) return 'var(--success-color)';
     if (ipc >= 80) return '#17a2b8';
     if (ipc >= 70) return 'var(--warning-color)';
@@ -844,7 +845,7 @@ function WaliKelas() {
                           borderRadius: '20px',
                           fontWeight: '600'
                         }}>
-                          {student.ipc_total || 80}
+                          {(student.ipc_total || 80) < 0 ? `${student.ipc_total || 80} (MINUS)` : (student.ipc_total || 80)}
                         </span>
                       </td>
                       <td style={{ textAlign: 'center' }}>
