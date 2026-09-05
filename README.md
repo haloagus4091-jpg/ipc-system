@@ -2,6 +2,29 @@
 
 Sistem Indeks Prestasi dan Karakter untuk sekolah dengan fitur lengkap untuk mengelola prestasi, organisasi, event, pelanggaran, dan perilaku siswa.
 
+## Tampilan Aplikasi
+
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; margin: 20px 0;">
+
+### Dashboard
+<p style="text-align: center; font-weight: bold; margin-bottom: 10px;">Dashboard Utama</p>
+<img src="screenshots/dashboard.png" alt="Dashboard" style="width: 100%; height: auto; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1);">
+
+
+### Kelola Akun
+<p style="text-align: center; font-weight: bold; margin-bottom: 10px;">Kelola Akun</p>
+<img src="screenshots/kelolaakun.png" alt="Kelola Akun" style="width: 100%; height: auto; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1);">
+
+### Laporan & Cetak
+<p style="text-align: center; font-weight: bold; margin-bottom: 10px;">Laporan & Cetak</p>
+<img src="screenshots/laporancetak.png" alt="Laporan Cetak" style="width: 100%; height: auto; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1);">
+
+### Individual Point Card
+<p style="text-align: center; font-weight: bold; margin-bottom: 10px;">Individual Point Card</p>
+<img src="screenshots/individual.png" alt="IPC Card" style="width: 100%; height: auto; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1);">
+
+</div>
+
 ## Fitur Utama
 
 ### Input Data
