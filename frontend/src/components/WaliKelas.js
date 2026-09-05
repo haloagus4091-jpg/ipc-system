@@ -12,6 +12,9 @@ function WaliKelas() {
   const [showClassDetail, setShowClassDetail] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState(null);
   const [showStudentDetail, setShowStudentDetail] = useState(false);
+  const [showMismatches, setShowMismatches] = useState(false);
+  const [mismatches, setMismatches] = useState(null);
+  const [loadingMismatches, setLoadingMismatches] = useState(false);
   const [formData, setFormData] = useState({
     guru_id: '',
     kelas: '',
@@ -114,6 +117,23 @@ function WaliKelas() {
   const handleViewStudentDetail = (student) => {
     setSelectedStudent(student);
     setShowStudentDetail(true);
+  };
+
+  const handleCheckMismatches = async () => {
+    setLoadingMismatches(true);
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.get('/wali-kelas/class-mismatches', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setMismatches(response.data);
+      setShowMismatches(true);
+    } catch (error) {
+      console.error('Error checking mismatches:', error);
+      alert('Gagal mengecek ketidaksesuaian kelas');
+    } finally {
+      setLoadingMismatches(false);
+    }
   };
 
   const getIpcColor = (ipc) => {
@@ -385,6 +405,14 @@ function WaliKelas() {
           <button className="btn btn-primary" onClick={() => setShowForm(true)}>
             + Assign Wali Kelas Baru
           </button>
+          <button 
+            className="btn btn-warning" 
+            onClick={handleCheckMismatches}
+            disabled={loadingMismatches}
+            style={{ marginLeft: '10px' }}
+          >
+            {loadingMismatches ? 'Mengecek...' : '🔍 Cek Ketidaksesuaian Kelas'}
+          </button>
         </div>
 
         {showForm && (
@@ -452,6 +480,124 @@ function WaliKelas() {
                 Simpan Assignment
               </button>
             </form>
+          </div>
+        )}
+
+        {/* Class Mismatches Modal */}
+        {showMismatches && mismatches && (
+          <div style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0,0,0,0.5)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000,
+            padding: '20px'
+          }}>
+            <div style={{
+              backgroundColor: 'white',
+              borderRadius: '15px',
+              padding: '30px',
+              maxWidth: '900px',
+              width: '100%',
+              maxHeight: '90vh',
+              overflowY: 'auto'
+            }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                <h3 style={{ margin: 0 }}>🔍 Ketidaksesuaian Kelas</h3>
+                <button
+                  onClick={() => setShowMismatches(false)}
+                  className="btn btn-danger"
+                  style={{ padding: '8px 16px' }}
+                >
+                  Tutup
+                </button>
+              </div>
+
+              <div style={{ marginBottom: '20px' }}>
+                <div style={{ 
+                  display: 'grid', 
+                  gridTemplateColumns: 'repeat(2, 1fr)',
+                  gap: '15px',
+                  marginBottom: '15px'
+                }}>
+                  <div style={{ 
+                    padding: '15px', 
+                    backgroundColor: '#e3f2fd', 
+                    borderRadius: '8px',
+                    textAlign: 'center'
+                  }}>
+                    <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#1976d2' }}>
+                      {mismatches.totalStudents}
+                    </div>
+                    <div style={{ fontSize: '12px', color: '#666' }}>Total Siswa Aktif</div>
+                  </div>
+                  <div style={{ 
+                    padding: '15px', 
+                    backgroundColor: mismatches.mismatchCount > 0 ? '#ffebee' : '#e8f5e9', 
+                    borderRadius: '8px',
+                    textAlign: 'center'
+                  }}>
+                    <div style={{ fontSize: '24px', fontWeight: 'bold', color: mismatches.mismatchCount > 0 ? '#c62828' : '#2e7d32' }}>
+                      {mismatches.mismatchCount}
+                    </div>
+                    <div style={{ fontSize: '12px', color: '#666' }}>Siswa Kelas Tidak Sesuai</div>
+                  </div>
+                </div>
+
+                {mismatches.mismatchCount > 0 ? (
+                  <div style={{ marginBottom: '15px' }}>
+                    <p style={{ color: '#666', fontSize: '14px', marginBottom: '10px' }}>
+                      Siswa-siswa berikut memiliki kelas yang tidak sesuai dengan perhitungan otomatis berdasarkan tahun pelajaran:
+                    </p>
+                    <div style={{ overflowX: 'auto', maxHeight: '400px', overflowY: 'auto' }}>
+                      <table className="table" style={{ fontSize: '12px' }}>
+                        <thead>
+                          <tr style={{ backgroundColor: '#f8f9fa' }}>
+                            <th style={{ padding: '8px', textAlign: 'left' }}>Nama</th>
+                            <th style={{ padding: '8px', textAlign: 'left' }}>NIS</th>
+                            <th style={{ padding: '8px', textAlign: 'left' }}>Kelas Saat Ini</th>
+                            <th style={{ padding: '8px', textAlign: 'left' }}>Kelas Sesuai Tahun</th>
+                            <th style={{ padding: '8px', textAlign: 'left' }}>Tahun Pelajaran</th>
+                            <th style={{ padding: '8px', textAlign: 'left' }}>Jurusan</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {mismatches.mismatches.map((mismatch, index) => (
+                            <tr key={index} style={{ backgroundColor: index % 2 === 0 ? '#fff' : '#f8f9fa' }}>
+                              <td style={{ padding: '8px' }}>{mismatch.nama}</td>
+                              <td style={{ padding: '8px' }}>{mismatch.nis}</td>
+                              <td style={{ padding: '8px', color: '#c62828', fontWeight: 'bold' }}>{mismatch.current_kelas}</td>
+                              <td style={{ padding: '8px', color: '#2e7d32', fontWeight: 'bold' }}>{mismatch.expected_kelas}</td>
+                              <td style={{ padding: '8px' }}>{mismatch.tahun_pelajaran}</td>
+                              <td style={{ padding: '8px' }}>{mismatch.jurusan}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                    <div style={{ marginTop: '15px', padding: '10px', backgroundColor: '#fff3cd', borderRadius: '4px', fontSize: '12px' }}>
+                      <strong>💡 Solusi:</strong> Gunakan fitur "Validasi Kelas" di halaman Kelola Akun untuk memperbaiki ketidaksesuaian ini secara otomatis.
+                    </div>
+                  </div>
+                ) : (
+                  <div style={{ 
+                    padding: '20px', 
+                    backgroundColor: '#e8f5e9', 
+                    borderRadius: '8px',
+                    textAlign: 'center',
+                    color: '#2e7d32'
+                  }}>
+                    <div style={{ fontSize: '48px', marginBottom: '10px' }}>✅</div>
+                    <strong>Semua siswa memiliki kelas yang sesuai dengan perhitungan tahun pelajaran!</strong>
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
         )}
 

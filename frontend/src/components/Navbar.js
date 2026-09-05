@@ -51,7 +51,7 @@ function Navbar({ user, onLogout, isMobileMenuOpen, toggleMobileMenu }) {
     { path: '/wali-kelas', label: 'Manajemen Wali Kelas', show: user?.role === 'superadmin' },
     { path: '/wali-kelas-guru', label: 'Wali Kelas', show: user?.role === 'guru' && user?.wali_kelas },
     { path: '/leaderboard', label: 'Peringkat', show: true },
-    { path: '/laporan-cetak', label: 'Laporan & Cetak', show: user?.role === 'superadmin' || user?.role === 'guru' },
+    { path: '/laporan-cetak', label: 'Laporan & Cetak', show: user?.role === 'superadmin' || (user?.role === 'guru' && user?.wali_kelas) },
     { path: '/profile', label: 'Profile', show: true }
   ];
 

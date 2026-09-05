@@ -15,7 +15,9 @@ function KelolaAkun() {
   const [filters, setFilters] = useState({
     role: '',
     kelas: '',
-    grha: ''
+    grha: '',
+    jurusan: '',
+    tahun_pelajaran: ''
   });
   const [excelFile, setExcelFile] = useState(null);
   const [importing, setImporting] = useState(false);
@@ -39,6 +41,8 @@ function KelolaAkun() {
     if (filters.role && user.role !== filters.role) return false;
     if (filters.kelas && user.kelas !== filters.kelas) return false;
     if (filters.grha && user.grha !== filters.grha) return false;
+    if (filters.jurusan && user.jurusan !== filters.jurusan) return false;
+    if (filters.tahun_pelajaran && user.tahun_pelajaran !== filters.tahun_pelajaran) return false;
     return true;
   });
 
@@ -47,7 +51,7 @@ function KelolaAkun() {
   };
 
   const resetFilters = () => {
-    setFilters({ role: '', kelas: '', grha: '' });
+    setFilters({ role: '', kelas: '', grha: '', jurusan: '', tahun_pelajaran: '' });
   };
 
   useEffect(() => {
@@ -276,26 +280,77 @@ function KelolaAkun() {
       for (const row of jsonData) {
         try {
           if (importType === 'siswa') {
+            // Skip rows without nama (might be header or empty)
+            const nama = getRowField(row, 'nama', 'Nama');
+            if (!nama) {
+              continue;
+            }
+
             // Import student
             const jurusan = getRowField(row, 'jurusan', 'Jurusan');
             const tahunPelajaran = getRowField(row, 'tahun_pelajaran', 'Tahun Pelajaran', 'TahunPelajaran');
+            
+            // Validate jurusan
+            const validJurusanOptions = ['TKJ 1', 'TKJ 2', 'DPIB 1', 'DPIB 2', 'TKR 1', 'TKR 2'];
+            if (!jurusan || !validJurusanOptions.includes(jurusan)) {
+              results.push({
+                status: 'error',
+                name: nama,
+                error: `Jurusan tidak valid. Gunakan: ${validJurusanOptions.join(', ')}`
+              });
+              continue;
+            }
             
             // Validate tahun_pelajaran format
             if (!tahunPelajaran || !/^\d{4}-\d{4}$/.test(tahunPelajaran)) {
               results.push({
                 status: 'error',
-                name: row.nama || row.Nama || 'Unknown',
+                name: nama,
                 error: 'Tahun pelajaran tidak valid. Format harus YYYY-YYYY (contoh: 2024-2025)'
               });
               continue;
             }
+
+            // Calculate expected class for better feedback
+            const currentYear = new Date().getFullYear();
+            const currentMonth = new Date().getMonth();
+            const currentAcademicYear = currentMonth >= 6 
+              ? `${currentYear}-${currentYear + 1}` 
+              : `${currentYear - 1}-${currentYear}`;
+            
+            const [enrollStart] = tahunPelajaran.split('-').map(Number);
+            const [currentStart] = currentAcademicYear.split('-').map(Number);
+            const yearsSinceEnrollment = currentStart - enrollStart;
+            
+            let classLevel = '';
+            let statusText = '';
+            
+            switch (yearsSinceEnrollment) {
+              case 0: 
+                classLevel = 'X'; 
+                statusText = 'Kelas X';
+                break;
+              case 1: 
+                classLevel = 'XI'; 
+                statusText = 'Kelas XI';
+                break;
+              case 2: 
+                classLevel = 'XII'; 
+                statusText = 'Kelas XII';
+                break;
+              default: 
+                classLevel = 'Lulus';
+                statusText = 'Sudah Lulus';
+            }
+            
+            const expectedClass = classLevel === 'Lulus' ? 'Lulus' : `${classLevel} ${jurusan}`;
             
             const studentData = {
-              nama: getRowField(row, 'nama', 'Nama'),
+              nama: nama,
               nis: getRowField(row, 'nis', 'NIS'),
               nisn: getRowField(row, 'nisn', 'NISN'),
               jurusan,
-              grha: normalizeGrha(getRowField(row, 'grha', 'Grha', 'Gra', 'GRHA')),
+              grha: normalizeGrha(getRowField(row, 'grha', 'Grha', 'Gra', 'GRHA')) || 'Airsanya',
               tahun_pelajaran: tahunPelajaran,
               password: getRowField(row, 'password', 'Password') || '123456'
             };
@@ -303,7 +358,14 @@ function KelolaAkun() {
             await axios.post('/users/create-student', studentData, {
               headers: { Authorization: `Bearer ${token}` }
             });
-            results.push({ status: 'success', name: studentData.nama, type: 'siswa' });
+            results.push({ 
+              status: 'success', 
+              name: studentData.nama, 
+              type: 'siswa',
+              expectedClass: expectedClass,
+              statusText: statusText,
+              tahunPelajaran: tahunPelajaran
+            });
           } else {
             // Import teacher
             const teacherData = {
@@ -341,18 +403,84 @@ function KelolaAkun() {
 
   const downloadTemplate = (type) => {
     const currentYear = new Date().getFullYear();
-    const templateData = type === 'siswa'
-      ? [
-          { Nama: '', NIS: '', NISN: '', Jurusan: 'TKJ 1', Grha: '', TahunPelajaran: `${currentYear}-${currentYear + 1}`, Password: '123456' }
-        ]
-      : [
-          { Nama: '', NIP: '', Detail: '', NoHP: '', Password: '123456' }
-        ];
+    const currentMonth = new Date().getMonth();
+    const currentAcademicYear = currentMonth >= 6 
+      ? `${currentYear}-${currentYear + 1}` 
+      : `${currentYear - 1}-${currentYear}`;
+    
+    if (type === 'siswa') {
+      // Create multiple example rows for different class levels
+      // Menggunakan tahun pelajaran dari 2024-2025 sampai 2030-2031
+      const templateData = [
+        { 
+          Nama: 'Contoh Siswa X', 
+          NIS: '12345', 
+          NISN: '1234567890', 
+          Jurusan: 'TKJ 1', 
+          Grha: 'Airsanya', 
+          TahunPelajaran: currentAcademicYear, 
+          Password: '123456',
+          Keterangan: 'Akan masuk kelas X (tahun masuk sama dengan tahun ajaran saat ini)'
+        },
+        { 
+          Nama: 'Contoh Siswa XI', 
+          NIS: '12346', 
+          NISN: '1234567891', 
+          Jurusan: 'TKJ 2', 
+          Grha: 'Daksina', 
+          TahunPelajaran: `${currentYear - 1}-${currentYear}`, 
+          Password: '123456',
+          Keterangan: 'Akan masuk kelas XI (tahun masuk 1 tahun sebelumnya)'
+        },
+        { 
+          Nama: 'Contoh Siswa XII', 
+          NIS: '12347', 
+          NISN: '1234567892', 
+          Jurusan: 'DPIB 1', 
+          Grha: 'Genya', 
+          TahunPelajaran: `${currentYear - 2}-${currentYear - 1}`, 
+          Password: '123456',
+          Keterangan: 'Akan masuk kelas XII (tahun masuk 2 tahun sebelumnya)'
+        },
+        { 
+          Nama: 'Contoh Siswa Lulus', 
+          NIS: '12348', 
+          NISN: '1234567893', 
+          Jurusan: 'TKR 1', 
+          Grha: 'Madhya', 
+          TahunPelajaran: `${currentYear - 3}-${currentYear - 2}`, 
+          Password: '123456',
+          Keterangan: 'Sudah lulus (tidak akan muncul di kelas aktif)'
+        }
+      ];
 
-    const ws = XLSX.utils.json_to_sheet(templateData);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'Template');
-    XLSX.writeFile(wb, `template_${type}.xlsx`);
+      const ws = XLSX.utils.json_to_sheet(templateData);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, 'Template');
+      
+      // Set column widths
+      ws['!cols'] = [
+        { wch: 25 }, // Nama
+        { wch: 10 }, // NIS
+        { wch: 15 }, // NISN
+        { wch: 10 }, // Jurusan
+        { wch: 12 }, // Grha
+        { wch: 15 }, // TahunPelajaran
+        { wch: 12 }, // Password
+        { wch: 60 }  // Keterangan
+      ];
+      
+      XLSX.writeFile(wb, 'template_siswa.xlsx');
+    } else {
+      const templateData = [
+        { Nama: '', NIP: '', Detail: '', NoHP: '', Password: '123456' }
+      ];
+
+      const ws = XLSX.utils.json_to_sheet(templateData);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, 'Template');
+      XLSX.writeFile(wb, 'template_guru.xlsx');
+    }
   };
 
   const handleValidateClasses = async () => {
@@ -490,6 +618,46 @@ function KelolaAkun() {
               {grhaOptions.map(grha => <option key={grha} value={grha}>{grha}</option>)}
             </select>
           </div>
+          {userRole === 'superadmin' && (
+            <>
+              <div style={{ flex: '1', minWidth: '150px' }}>
+                <label>Jurusan</label>
+                <select
+                  value={filters.jurusan}
+                  onChange={(e) => handleFilterChange('jurusan', e.target.value)}
+                  className="form-control"
+                >
+                  <option value="">Semua Jurusan</option>
+                  <option value="TKJ 1">TKJ 1</option>
+                  <option value="TKJ 2">TKJ 2</option>
+                  <option value="DPIB 1">DPIB 1</option>
+                  <option value="DPIB 2">DPIB 2</option>
+                  <option value="TKR 1">TKR 1</option>
+                  <option value="TKR 2">TKR 2</option>
+                </select>
+              </div>
+              <div style={{ flex: '1', minWidth: '150px' }}>
+                <label>Tahun Pelajaran</label>
+                <select
+                  value={filters.tahun_pelajaran}
+                  onChange={(e) => handleFilterChange('tahun_pelajaran', e.target.value)}
+                  className="form-control"
+                >
+                  <option value="">Semua Tahun</option>
+                  {(() => {
+                    // Opsi tahun pelajaran dari 2024-2025 sampai 2030-2031
+                    const options = [];
+                    for (let year = 2024; year <= 2030; year++) {
+                      options.push(`${year}-${year + 1}`);
+                    }
+                    return options.map(year => (
+                      <option key={year} value={year}>{year}</option>
+                    ));
+                  })()}
+                </select>
+              </div>
+            </>
+          )}
           <button className="btn btn-secondary" onClick={resetFilters}>Reset</button>
         </div>
       </div>
@@ -532,6 +700,12 @@ function KelolaAkun() {
                 {userRole !== 'guru' && <th>NISN</th>}
                 <th>Role</th>
                 <th>Kelas</th>
+                {userRole === 'superadmin' && (
+                  <>
+                    <th>Jurusan</th>
+                    <th>Tahun Pelajaran</th>
+                  </>
+                )}
                 <th>IPC Total</th>
                 <th>Aksi</th>
               </tr>
@@ -565,6 +739,36 @@ function KelolaAkun() {
                       { /* user.is_graduated && <span className="badge badge-secondary" style={{ marginLeft: '5px' }}>Lulus</span> */}
                     </>
                   </td>
+                  {userRole === 'superadmin' && (
+                    <>
+                      <td>
+                        {user.jurusan ? (
+                          <span style={{ 
+                            fontSize: '11px',
+                            backgroundColor: '#fff3e0',
+                            color: '#e65100',
+                            padding: '2px 6px',
+                            borderRadius: '4px'
+                          }}>
+                            {user.jurusan}
+                          </span>
+                        ) : '-'}
+                      </td>
+                      <td>
+                        {user.tahun_pelajaran ? (
+                          <span style={{ 
+                            fontSize: '11px',
+                            backgroundColor: '#e3f2fd',
+                            color: '#1976d2',
+                            padding: '2px 6px',
+                            borderRadius: '4px'
+                          }}>
+                            {user.tahun_pelajaran}
+                          </span>
+                        ) : '-'}
+                      </td>
+                    </>
+                  )}
                   <td>{user.ipc_total ?? 0}</td>
                   <td>
                     {userRole === 'superadmin' && user.role !== 'superadmin' && (
@@ -653,12 +857,10 @@ function KelolaAkun() {
                   <select value={formData.tahun_pelajaran || ''} onChange={(e) => setFormData({...formData, tahun_pelajaran: e.target.value})} required>
                     <option value="">Pilih Tahun Pelajaran</option>
                     {(() => {
-                      const currentYear = new Date().getFullYear();
+                      // Opsi tahun pelajaran dari 2024-2025 sampai 2030-2031
                       const options = [];
-                      for (let i = -5; i <= 5; i++) {
-                        const startYear = currentYear + i;
-                        const endYear = startYear + 1;
-                        options.push(`${startYear}-${endYear}`);
+                      for (let year = 2024; year <= 2030; year++) {
+                        options.push(`${year}-${year + 1}`);
                       }
                       return options.map(year => (
                         <option key={year} value={year}>{year}</option>
@@ -667,6 +869,89 @@ function KelolaAkun() {
                   </select>
                   <small style={{ color: '#666', fontSize: '12px' }}>Tahun pelajaran saat siswa pertama kali masuk sekolah</small>
                 </div>
+
+                {/* Preview Kelas */}
+                {formData.tahun_pelajaran && formData.jurusan && (
+                  <div className="form-group" style={{
+                    background: '#e3f2fd',
+                    padding: '12px',
+                    borderRadius: '4px',
+                    border: '1px solid #2196f3'
+                  }}>
+                    <strong style={{ color: '#1976d2', display: 'block', marginBottom: '5px' }}>
+                      📚 Preview Kelas yang Akan Dibuat:
+                    </strong>
+                    <div style={{ fontSize: '16px', fontWeight: 'bold', color: '#0d47a1' }}>
+                      {(() => {
+                        const currentYear = new Date().getFullYear();
+                        const currentMonth = new Date().getMonth();
+                        const currentAcademicYear = currentMonth >= 6 
+                          ? `${currentYear}-${currentYear + 1}` 
+                          : `${currentYear - 1}-${currentYear}`;
+                        
+                        const [enrollStart] = formData.tahun_pelajaran.split('-').map(Number);
+                        const [currentStart] = currentAcademicYear.split('-').map(Number);
+                        const yearsSinceEnrollment = currentStart - enrollStart;
+                        
+                        let classLevel = '';
+                        let statusColor = '#0d47a1';
+                        let statusText = '';
+                        
+                        switch (yearsSinceEnrollment) {
+                          case 0: 
+                            classLevel = 'X'; 
+                            statusText = 'Kelas X (Tahun Pertama)';
+                            break;
+                          case 1: 
+                            classLevel = 'XI'; 
+                            statusText = 'Kelas XI (Tahun Kedua)';
+                            break;
+                          case 2: 
+                            classLevel = 'XII'; 
+                            statusText = 'Kelas XII (Tahun Ketiga)';
+                            break;
+                          default: 
+                            classLevel = 'Lulus';
+                            statusColor = '#c62828';
+                            statusText = 'SUDAH LULUS';
+                        }
+                        
+                        if (classLevel === 'Lulus') {
+                          return (
+                            <div>
+                              <span style={{ color: statusColor, fontSize: '18px' }}>
+                                {classLevel}
+                              </span>
+                              <div style={{ fontSize: '12px', color: '#666', marginTop: '5px' }}>
+                                {statusText} - Siswa tidak akan muncul di kelas aktif
+                              </div>
+                            </div>
+                          );
+                        }
+                        
+                        return (
+                          <div>
+                            <span style={{ color: statusColor, fontSize: '18px' }}>
+                              {classLevel} {formData.jurusan}
+                            </span>
+                            <div style={{ fontSize: '12px', color: '#666', marginTop: '5px' }}>
+                              {statusText}
+                            </div>
+                          </div>
+                        );
+                      })()}
+                    </div>
+                    <small style={{ color: '#666', fontSize: '11px' }}>
+                      Kelas dihitung otomatis berdasarkan tahun pelajaran masuk dan tahun ajaran saat ini ({(() => {
+                        const currentYear = new Date().getFullYear();
+                        const currentMonth = new Date().getMonth();
+                        return currentMonth >= 6 
+                          ? `${currentYear}-${currentYear + 1}` 
+                          : `${currentYear - 1}-${currentYear}`;
+                      })()})
+                    </small>
+                  </div>
+                )}
                 <div className="form-group">
                   <label>Password</label>
                   <input type="password" value={formData.password || ''} onChange={(e) => setFormData({...formData, password: e.target.value})} required />
@@ -735,10 +1020,19 @@ function KelolaAkun() {
               />
               <div style={{ fontSize: '12px', color: '#666', marginBottom: '10px' }}>
                 {importModalType === 'siswa' ? (
-                  <strong>Format Siswa:</strong>
+                  <div>
+                    <strong>Format Siswa:</strong> nama, nis, nisn, jurusan, grha, tahun_pelajaran, password
+                    <br />
+                    <small style={{ color: '#1976d2' }}>
+                      💡 Kelas akan dihitung otomatis berdasarkan tahun_pelajaran dan jurusan. 
+                      Download template untuk melihat contoh.
+                    </small>
+                  </div>
                 ) : (
-                  <strong>Format Guru:</strong>
-                )} {importModalType === 'siswa' ? 'nama, nis, nisn, kelas, grha, password' : 'nama, nip, jabatan, no_hp, password'}
+                  <div>
+                    <strong>Format Guru:</strong> nama, nip, detail, no_hp, password
+                  </div>
+                )}
               </div>
               <button
                 className="btn btn-primary"
@@ -750,19 +1044,49 @@ function KelolaAkun() {
             </div>
 
             {importResults.length > 0 && (
-              <div style={{ maxHeight: '200px', overflowY: 'auto', border: '1px solid #ddd', padding: '10px', borderRadius: '4px' }}>
+              <div style={{ maxHeight: '300px', overflowY: 'auto', border: '1px solid #ddd', padding: '10px', borderRadius: '4px' }}>
                 <h5>Import Results:</h5>
-                {importResults.map((result, index) => (
-                  <div key={index} style={{ 
-                    padding: '5px', 
-                    marginBottom: '5px', 
-                    backgroundColor: result.status === 'success' ? '#d4edda' : '#f8d7da',
-                    borderRadius: '4px',
-                    fontSize: '12px'
-                  }}>
-                    {result.status === 'success' ? '✅' : '❌'} {result.name} ({result.type}) - {result.status === 'error' ? result.error : 'Success'}
-                  </div>
-                ))}
+                <table className="table" style={{ fontSize: '12px' }}>
+                  <thead>
+                    <tr>
+                      <th style={{ padding: '5px' }}>Nama</th>
+                      <th style={{ padding: '5px' }}>Kelas</th>
+                      <th style={{ padding: '5px' }}>Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {importResults.map((result, index) => (
+                      <tr key={index}>
+                        <td style={{ padding: '5px' }}>
+                          {result.status === 'success' ? '✅' : '❌'} {result.name}
+                        </td>
+                        <td style={{ padding: '5px' }}>
+                          {result.status === 'success' && result.expectedClass ? (
+                            <div>
+                              <span style={{ 
+                                backgroundColor: result.expectedClass === 'Lulus' ? '#ffebee' : '#e3f2fd',
+                                color: result.expectedClass === 'Lulus' ? '#c62828' : '#1976d2',
+                                padding: '2px 6px',
+                                borderRadius: '4px',
+                                fontSize: '11px',
+                                fontWeight: 'bold',
+                                display: 'block'
+                              }}>
+                                {result.expectedClass}
+                              </span>
+                              <small style={{ fontSize: '10px', color: '#666' }}>
+                                {result.statusText}
+                              </small>
+                            </div>
+                          ) : '-'}
+                        </td>
+                        <td style={{ padding: '5px' }}>
+                          {result.status === 'error' ? result.error : 'Berhasil'}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
             )}
           </div>

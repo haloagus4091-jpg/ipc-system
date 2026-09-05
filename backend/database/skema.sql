@@ -3,6 +3,9 @@
 -- This file contains all tables: users, permissions, prestasi, organisasi, event, pelanggaran, perilaku, 
 -- activity_logs, ipc_history, wali_kelas_assignment, approvals, notifications, drive_links, input_access_control
 
+-- Disable foreign key checks to allow dropping tables in any order
+SET FOREIGN_KEY_CHECKS=0;
+
 -- ==================== CORE TABLES ====================
 
 -- Users Table
@@ -413,7 +416,7 @@ CREATE TABLE input_access_control (
     id INT AUTO_INCREMENT PRIMARY KEY,
     control_type ENUM('global', 'role') NOT NULL,
     role_target ENUM('siswa', 'guru', 'all') DEFAULT 'all',
-    jenis_input ENUM('prestasi', 'organisasi', 'event', 'pelanggaran', 'perilaku', 'all') NOT NULL,
+    jenis_input ENUM('prestasi', 'organisasi', 'kepanitiaan', 'event', 'pelanggaran', 'perilaku', 'all') NOT NULL,
     is_enabled BOOLEAN DEFAULT TRUE,
     updated_by INT NOT NULL,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -477,3 +480,6 @@ INSERT INTO input_access_control (control_type, role_target, jenis_input, is_ena
 ('global', 'all', 'event', TRUE, 1),
 ('global', 'all', 'pelanggaran', TRUE, 1),
 ('global', 'all', 'perilaku', TRUE, 1);
+
+-- Re-enable foreign key checks
+SET FOREIGN_KEY_CHECKS=1;

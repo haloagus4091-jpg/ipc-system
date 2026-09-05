@@ -54,6 +54,37 @@ router.get('/stats', auth, async (req, res) => {
         
         // Total pelanggaran
         const [totalPelanggaran] = await db.query("SELECT COUNT(*) as count FROM pelanggaran WHERE status = 'approved'");
+        
+        // Total organisasi
+        const [totalOrganisasi] = await db.query("SELECT COUNT(*) as count FROM organisasi WHERE status = 'approved'");
+        
+        // Total kepanitiaan
+        const [totalKepanitiaan] = await db.query("SELECT COUNT(*) as count FROM kepanitiaan WHERE status = 'approved'");
+        
+        // Total event
+        const [totalEvent] = await db.query("SELECT COUNT(*) as count FROM event WHERE status = 'approved'");
+        
+        // Total perilaku
+        const [totalPerilaku] = await db.query("SELECT COUNT(*) as count FROM perilaku WHERE status = 'approved'");
+        
+        // IPC Statistics
+        const [ipcStats] = await db.query(`
+            SELECT 
+                AVG(ipc_total) as rata_rata,
+                MAX(ipc_total) as tertinggi,
+                MIN(ipc_total) as terendah
+            FROM users 
+            WHERE role = 'siswa' AND is_graduated = 0 AND ipc_total IS NOT NULL
+        `);
+        
+        // Siswa dengan IPC tertinggi
+        const [topIpcStudents] = await db.query(`
+            SELECT id, nama, nis, kelas, grha, ipc_total 
+            FROM users 
+            WHERE role = 'siswa' AND is_graduated = 0 AND ipc_total IS NOT NULL
+            ORDER BY ipc_total DESC 
+            LIMIT 5
+        `);
 
         res.json({
             total_students: totalStudents[0].count,
@@ -63,7 +94,17 @@ router.get('/stats', auth, async (req, res) => {
             prestasi_akademik: prestasiAkademik[0].count,
             prestasi_nonakademik: prestasiNonAkademik[0].count,
             pelanggaran_by_grha: pelanggaranByGrha,
-            total_pelanggaran: totalPelanggaran[0].count
+            total_pelanggaran: totalPelanggaran[0].count,
+            total_organisasi: totalOrganisasi[0].count,
+            total_kepanitiaan: totalKepanitiaan[0].count,
+            total_event: totalEvent[0].count,
+            total_perilaku: totalPerilaku[0].count,
+            ipc_stats: {
+                rata_rata: Math.round(ipcStats[0].rata_rata || 0),
+                tertinggi: ipcStats[0].tertinggi || 0,
+                terendah: ipcStats[0].terendah || 0
+            },
+            top_ipc_students: topIpcStudents
         });
     } catch (error) {
         console.error(error);

@@ -60,9 +60,9 @@ router.get('/class-statistics', auth, superAdminOnly, async (req, res) => {
             classes.map(async (cls) => {
                 // Get students in this class
                 const [students] = await db.query(`
-                    SELECT id, nama, nis, nisn, grha, ipc_total, foto
+                    SELECT id, nama, nis, nisn, grha, ipc_total, foto, tahun_pelajaran, jurusan
                     FROM users 
-                    WHERE role = 'siswa' AND kelas = ?
+                    WHERE role = 'siswa' AND kelas = ? AND (is_graduated = 0 OR is_graduated IS NULL)
                     ORDER BY nama ASC
                 `, [cls.kelas]);
 
@@ -179,9 +179,9 @@ router.get('/my-class', auth, teacherOnly, async (req, res) => {
         const [students] = await db.query(`
             SELECT 
                 u.id, u.nama, u.nis, u.nisn, u.grha, u.ipc_total, u.ipc_awal,
-                u.alamat, u.no_hp, u.wali_kelas, u.foto, u.created_at
+                u.alamat, u.no_hp, u.wali_kelas, u.foto, u.created_at, u.tahun_pelajaran, u.jurusan
             FROM users u
-            WHERE u.role = 'siswa' AND u.kelas = ?
+            WHERE u.role = 'siswa' AND u.kelas = ? AND (u.is_graduated = 0 OR u.is_graduated IS NULL)
             ORDER BY u.nama ASC
         `, [kelas]);
 
@@ -312,6 +312,49 @@ router.post('/', auth, superAdminOnly, async (req, res) => {
         });
     } catch (error) {
         console.error(error);
+        res.status(500).json({ message: 'Server error' });
+    }
+});
+
+// Get students with class mismatches (for debugging)
+router.get('/class-mismatches', auth, superAdminOnly, async (req, res) => {
+    try {
+        const { calculateFullClass } = require('../utils/academicYear');
+        
+        // Get all students
+        const [students] = await db.query(`
+            SELECT id, nama, nis, nisn, kelas, tahun_pelajaran, jurusan, is_graduated
+            FROM users 
+            WHERE role = 'siswa' AND (is_graduated = 0 OR is_graduated IS NULL)
+        `);
+        
+        const mismatches = [];
+        
+        for (const student of students) {
+            if (student.tahun_pelajaran && student.jurusan) {
+                const calculatedClass = calculateFullClass(student.tahun_pelajaran, student.jurusan);
+                
+                if (calculatedClass && calculatedClass !== student.kelas) {
+                    mismatches.push({
+                        id: student.id,
+                        nama: student.nama,
+                        nis: student.nis,
+                        current_kelas: student.kelas,
+                        expected_kelas: calculatedClass,
+                        tahun_pelajaran: student.tahun_pelajaran,
+                        jurusan: student.jurusan
+                    });
+                }
+            }
+        }
+        
+        res.json({
+            totalStudents: students.length,
+            mismatchCount: mismatches.length,
+            mismatches
+        });
+    } catch (error) {
+        console.error('Error fetching class mismatches:', error);
         res.status(500).json({ message: 'Server error' });
     }
 });

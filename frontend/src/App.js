@@ -195,8 +195,14 @@ function App() {
           </ProtectedRoute>
         } />
         <Route path="/laporan-cetak" element={
-          <ProtectedRoute allowedRoles={['superadmin', 'guru']}>
-            {(user) => <MainLayout user={user}><LaporanCetak user={user} /></MainLayout>}
+          <ProtectedRoute>
+            {(user) => {
+              // Allow superadmin always, but for guru only if they are wali kelas
+              if (user.role === 'superadmin' || (user.role === 'guru' && user.wali_kelas)) {
+                return <MainLayout user={user}><LaporanCetak user={user} /></MainLayout>;
+              }
+              return <MainLayout user={user}><Dashboard /></MainLayout>;
+            }}
           </ProtectedRoute>
         } />
       </Routes>
