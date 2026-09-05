@@ -157,6 +157,34 @@ router.get('/class-statistics', auth, superAdminOnly, async (req, res) => {
     }
 });
 
+// Get wali kelas info by class (for PDF generation)
+router.get('/class/:kelas', auth, async (req, res) => {
+    try {
+        const { kelas } = req.params;
+
+        const [waliData] = await db.query(`
+            SELECT u.nama, u.nip
+            FROM wali_kelas_assignment wka
+            JOIN users u ON wka.guru_id = u.id
+            WHERE wka.kelas = ? AND wka.tahun_ajaran = YEAR(CURDATE())
+            ORDER BY wka.id DESC
+            LIMIT 1
+        `, [kelas]);
+
+        if (waliData.length === 0) {
+            return res.json({ nama: null, nip: null });
+        }
+
+        res.json({
+            nama: waliData[0].nama,
+            nip: waliData[0].nip
+        });
+    } catch (error) {
+        console.error('Error fetching wali kelas by class:', error);
+        res.status(500).json({ message: 'Server error' });
+    }
+});
+
 // Get my class info (Teacher - wali kelas)
 router.get('/my-class', auth, teacherOnly, async (req, res) => {
     try {

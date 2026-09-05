@@ -66,7 +66,7 @@ function IpcPrintSheet({ student, wali, points, ipcTotal, printDate = new Date()
           </div>
           <div className="info-row">
             <span className="info-label">Wali Kelas:</span>
-            <span className="info-value">{wali?.nama || 'Putu Andika Wirasatriya, S.Pd.'}</span>
+            <span className="info-value">{wali?.nama || 'Wali Kelas Belum Ditentukan'}</span>
           </div>
         </div>
         <div className="info-column-right">
@@ -205,8 +205,8 @@ function IpcPrintSheet({ student, wali, points, ipcTotal, printDate = new Date()
           <p>Kubutambahan, {formatPrintDate(printDate)}</p>
           <p className="signature-title">Wali Kelas</p>
           <div className="signature-space"></div>
-          <p className="signature-name">{wali?.nama || 'Putu Andika Wirasatriya, S.Pd.'}</p>
-          <p className="signature-nip">NIP. {wali?.nip || '19980913 202321 1 004'}</p>
+          <p className="signature-name">{wali?.nama || 'Wali Kelas Belum Ditentukan'}</p>
+          <p className="signature-nip">{wali?.nip ? `NIP. ${wali.nip}` : ''}</p>
         </div>
       </section>
     </div>

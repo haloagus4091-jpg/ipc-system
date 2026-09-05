@@ -107,13 +107,27 @@ function LaporanCetak({ user }) {
     }
   };
 
-  const generateClassReportPdf = (students) => {
+  const generateClassReportPdf = async (students) => {
     try {
       const doc = new jsPDF({
         orientation: 'portrait',
         unit: 'mm',
         format: 'a4'
       });
+
+      // Fetch wali kelas data for this class
+      let waliKelasData = { nama: 'Putu Andika Wirasatriya, S.Pd.', nip: '19980913 202321 1 004' };
+      try {
+        const token = localStorage.getItem('token');
+        const response = await axios.get(`/wali-kelas/class/${selectedClass}`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        if (response.data && response.data.nama) {
+          waliKelasData = response.data;
+        }
+      } catch (error) {
+        console.log('Could not fetch wali kelas data, using default');
+      }
 
       // Header Image
       try {
@@ -204,12 +218,12 @@ function LaporanCetak({ user }) {
       doc.setFont('times', 'bold');
       doc.setFontSize(9);
       doc.text('Ketut Susila Widiarsana, S.Pd., M.Pd.', leftSigX, sigY + 20);
-      doc.text('Putu Andika Wirasatriya, S.Pd.', rightSigX, sigY + 20);
+      doc.text(waliKelasData.nama, rightSigX, sigY + 20);
 
       doc.setFont('times', 'normal');
       doc.setFontSize(8);
       doc.text('NIP.  19831101 200803 1 001', leftSigX, sigY + 25);
-      doc.text('NIP. 19980913 202321 1 004', rightSigX, sigY + 25);
+      doc.text(`NIP. ${waliKelasData.nip}`, rightSigX, sigY + 25);
 
       return doc.output('blob');
     } catch (e) {
@@ -329,7 +343,7 @@ function LaporanCetak({ user }) {
         doc.setFont('times', 'bold');
         doc.text('Wali Kelas:', 20, yPos);
         doc.setFont('times', 'normal');
-        doc.text(wali?.nama || 'Putu Andika Wirasatriya, S.Pd.', 20 + 20, yPos);
+        doc.text(wali?.nama || 'Wali Kelas Belum Ditentukan', 20 + 20, yPos);
 
         // Right column
         yPos = 72;
@@ -453,12 +467,12 @@ function LaporanCetak({ user }) {
         doc.setFont('times', 'bold');
         doc.setFontSize(8);
         doc.text('Ketut Susila Widiarsana, S.Pd., M.Pd.', leftSigX, sigY + 20);
-        doc.text(wali?.nama || 'ERROR', rightSigX, sigY + 20);
+        doc.text(wali?.nama || 'Wali Kelas Belum Ditentukan', rightSigX, sigY + 20);
         
         doc.setFont('times', 'normal');
         doc.setFontSize(7);
         doc.text('NIP.  19831101 200803 1 001', leftSigX, sigY + 25);
-        doc.text(`NIP. ${wali?.nip || '19980913 202321 1 004'}`, rightSigX, sigY + 25);
+        doc.text(wali?.nip ? `NIP. ${wali.nip}` : '', rightSigX, sigY + 25);
       });
 
       return doc.output('blob');

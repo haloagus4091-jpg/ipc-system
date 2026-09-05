@@ -53,7 +53,26 @@ router.get('/', auth, async (req, res) => {
             return res.status(404).json({ message: 'User not found' });
         }
 
-        res.json(user[0]);
+        const userData = user[0];
+        
+        // If user is a student, fetch wali kelas information
+        if (userData.role === 'siswa' && userData.kelas) {
+            const [waliData] = await db.query(`
+                SELECT u.nama as wali_kelas_nama, u.nip as wali_kelas_nip
+                FROM wali_kelas_assignment wka
+                JOIN users u ON wka.guru_id = u.id
+                WHERE wka.kelas = ? AND wka.tahun_ajaran = YEAR(CURDATE())
+                ORDER BY wka.id DESC
+                LIMIT 1
+            `, [userData.kelas]);
+            
+            if (waliData.length > 0) {
+                userData.wali_kelas_nama = waliData[0].wali_kelas_nama;
+                userData.wali_kelas_nip = waliData[0].wali_kelas_nip;
+            }
+        }
+
+        res.json(userData);
     } catch (error) {
         console.error(error);
         res.status(500).json({ message: 'Server error' });
