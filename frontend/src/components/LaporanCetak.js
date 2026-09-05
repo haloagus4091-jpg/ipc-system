@@ -110,7 +110,7 @@ function LaporanCetak({ user }) {
   const generateClassReportPdf = async (students) => {
     try {
       const doc = new jsPDF({
-        orientation: 'portrait',
+        orientation: 'landscape',
         unit: 'mm',
         format: 'a4'
       });
@@ -152,93 +152,95 @@ function LaporanCetak({ user }) {
       doc.setFont('times', 'bold');
       doc.text(`Kelas: ${selectedClass}`, 20, 75);
 
-      // Prepare table data with full breakdown
-      const tableData = students.map((student, index) => {
+      // Generate report with individual student sections
+      let currentY = 80;
+      
+      students.forEach((student, index) => {
         const points = student.points || {};
         const total = student.ipc_total || student.ipc_awal || 0;
         
-        return [
-          index + 1,
-          student.nis || '-',
-          student.nama || '-',
-          student.jurusan || '-',
-          student.tahun_pelajaran || '-',
-          points.point_awal || student.ipc_awal || 80,
-          points.prestasi_akademik || 0,
-          points.prestasi_nonakademik || 0,
-          points.tanggung_jawab || 0,
-          points.disiplin || 0,
-          points.kepedulian || 0,
-          points.kemandirian || 0,
-          points.spiritual || 0,
-          points.kejujuran || 0,
-          points.kepercayaan_diri || 0,
-          points.organisasi || 0,
-          points.kepanitiaan || 0,
-          points.event || 0,
-          points.pelanggaran_ringan || 0,
-          points.pelanggaran_sedang || 0,
-          points.pelanggaran_berat || 0,
-          total < 0 ? `${total} (MINUS)` : total
+        // Add new page if needed
+        if (currentY > 180) {
+          doc.addPage();
+          currentY = 20;
+        }
+        
+        // Student header
+        doc.setFontSize(10);
+        doc.setFont('times', 'bold');
+        doc.text(`${index + 1}. ${student.nama} (${student.nis})`, 15, currentY);
+        currentY += 8;
+        
+        // Student info
+        doc.setFontSize(8);
+        doc.setFont('times', 'normal');
+        doc.text(`Jurusan: ${student.jurusan || '-'} | Tahun: ${student.tahun_pelajaran || '-'}`, 15, currentY);
+        currentY += 10;
+        
+        // IPC breakdown table for this student
+        const studentTableData = [
+          ['Point Awal', points.point_awal || student.ipc_awal || 80],
+          ['Prestasi Akademik', points.prestasi_akademik || 0],
+          ['Prestasi Non-Akademik', points.prestasi_nonakademik || 0],
+          ['Tanggung Jawab', points.tanggung_jawab || 0],
+          ['Disiplin', points.disiplin || 0],
+          ['Kepedulian', points.kepedulian || 0],
+          ['Kemandirian', points.kemandirian || 0],
+          ['Spiritual', points.spiritual || 0],
+          ['Kejujuran', points.kejujuran || 0],
+          ['Kepercayaan Diri', points.kepercayaan_diri || 0],
+          ['Organisasi', points.organisasi || 0],
+          ['Kepanitiaan', points.kepanitiaan || 0],
+          ['Event', points.event || 0],
+          ['Pelanggaran Ringan', points.pelanggaran_ringan || 0],
+          ['Pelanggaran Sedang', points.pelanggaran_sedang || 0],
+          ['Pelanggaran Berat', points.pelanggaran_berat || 0],
+          ['TOTAL IPC', total < 0 ? `${total} (MINUS)` : total]
         ];
-      });
-
-      // Add table with full breakdown columns
-      autoTable(doc, {
-        startY: 80,
-        head: [['No', 'NIS', 'Nama', 'Jurusan', 'Tahun', 'Awal', 'Pres.Ak', 'Pres.Non', 'Tang.Jawab', 'Disiplin', 'Kepedulian', 'Mandiri', 'Spiritual', 'Jujur', 'Perc.Diri', 'Org', 'Kepan', 'Event', 'Pel.Ringan', 'Pel.Sedang', 'Pel.Berat', 'Total']],
-        body: tableData,
-        theme: 'grid',
-        styles: {
-          font: 'times',
-          fontSize: 6,
-          cellPadding: 1,
-          lineColor: [0, 0, 0],
-          lineWidth: 0.1,
-          textColor: [0, 0, 0]
-        },
-        headStyles: {
-          fillColor: [240, 240, 240],
-          fontStyle: 'bold',
-          halign: 'center',
-          fontSize: 6,
-          textColor: [0, 0, 0]
-        },
-        columnStyles: {
-          0: { cellWidth: 8, halign: 'center' },
-          1: { cellWidth: 15, halign: 'center' },
-          2: { cellWidth: 25 },
-          3: { cellWidth: 12, halign: 'center' },
-          4: { cellWidth: 12, halign: 'center' },
-          5: { cellWidth: 8, halign: 'center' },
-          6: { cellWidth: 8, halign: 'center' },
-          7: { cellWidth: 8, halign: 'center' },
-          8: { cellWidth: 8, halign: 'center' },
-          9: { cellWidth: 8, halign: 'center' },
-          10: { cellWidth: 8, halign: 'center' },
-          11: { cellWidth: 8, halign: 'center' },
-          12: { cellWidth: 8, halign: 'center' },
-          13: { cellWidth: 8, halign: 'center' },
-          14: { cellWidth: 8, halign: 'center' },
-          15: { cellWidth: 8, halign: 'center' },
-          16: { cellWidth: 8, halign: 'center' },
-          17: { cellWidth: 8, halign: 'center' },
-          18: { cellWidth: 8, halign: 'center' },
-          19: { cellWidth: 8, halign: 'center' },
-          20: { cellWidth: 8, halign: 'center' },
-          21: { cellWidth: 12, halign: 'center', fontStyle: 'bold' }
-        },
-        margin: { left: 10, right: 10, top: 10, bottom: 20 },
-        didParseCell: function(data) {
-          // Style negative values in red with MINUS indicator
-          if (data.section === 'body' && data.column.index === 21) {
-            const cellValue = data.cell.raw;
-            if (typeof cellValue === 'string' && cellValue.includes('MINUS')) {
-              data.cell.styles.textColor = [255, 0, 0];
+        
+        autoTable(doc, {
+          startY: currentY,
+          head: [['Komponen', 'Point']],
+          body: studentTableData,
+          theme: 'grid',
+          styles: {
+            font: 'times',
+            fontSize: 8,
+            cellPadding: 2,
+            lineColor: [0, 0, 0],
+            lineWidth: 0.1,
+            textColor: [0, 0, 0]
+          },
+          headStyles: {
+            fillColor: [240, 240, 240],
+            fontStyle: 'bold',
+            halign: 'center',
+            fontSize: 8,
+            textColor: [0, 0, 0]
+          },
+          columnStyles: {
+            0: { cellWidth: 80 },
+            1: { cellWidth: 30, halign: 'center' }
+          },
+          margin: { left: 15, right: 15, top: 0, bottom: 10 },
+          didParseCell: function(data) {
+            // Style total row
+            if (data.section === 'body' && data.row.index === 16) {
+              data.cell.styles.fillColor = [240, 240, 240];
               data.cell.styles.fontStyle = 'bold';
             }
+            // Style negative values in red
+            if (data.section === 'body' && data.column.index === 1) {
+              const cellValue = data.cell.raw;
+              if (typeof cellValue === 'string' && cellValue.includes('MINUS')) {
+                data.cell.styles.textColor = [255, 0, 0];
+                data.cell.styles.fontStyle = 'bold';
+              }
+            }
           }
-        }
+        });
+        
+        currentY = doc.lastAutoTable.finalY + 15;
       });
 
       // Signatures

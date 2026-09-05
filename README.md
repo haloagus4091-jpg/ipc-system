@@ -10,10 +10,59 @@ Sistem Indeks Prestasi dan Karakter untuk sekolah dengan fitur lengkap untuk men
 <p style="text-align: center; font-weight: bold; margin-bottom: 10px;">Dashboard Utama</p>
 <img src="screenshots/dashboard.png" alt="Dashboard" style="width: 100%; height: auto; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1);">
 
+### Input Prestasi
+<p style="text-align: center; font-weight: bold; margin-bottom: 10px;">Dashboard Utama</p>
+<img src="screenshots/inputprestasi.png" alt="Dashboard" style="width: 100%; height: auto; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1);">
+
+### Input Organisasi
+<p style="text-align: center; font-weight: bold; margin-bottom: 10px;">Dashboard Utama</p>
+<img src="screenshots/input organisasi.png" alt="Dashboard" style="width: 100%; height: auto; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1);">
+
+### Input Kepanitiaan
+<p style="text-align: center; font-weight: bold; margin-bottom: 10px;">Dashboard Utama</p>
+<img src="screenshots/input kepanitiaan.png" alt="Dashboard" style="width: 100%; height: auto; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1);">
+
+### Input Event
+<p style="text-align: center; font-weight: bold; margin-bottom: 10px;">Dashboard Utama</p>
+<img src="screenshots/input event.png" alt="Dashboard" style="width: 100%; height: auto; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1);">
+
+### Input Pelanggaran
+<p style="text-align: center; font-weight: bold; margin-bottom: 10px;">Dashboard Utama</p>
+<img src="screenshots/input pelanggaran.png" alt="Dashboard" style="width: 100%; height: auto; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1);">
+
+### Input Perilaku
+<p style="text-align: center; font-weight: bold; margin-bottom: 10px;">Dashboard Utama</p>
+<img src="screenshots/input perilaku.png" alt="Dashboard" style="width: 100%; height: auto; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1);">
+
 
 ### Kelola Akun
 <p style="text-align: center; font-weight: bold; margin-bottom: 10px;">Kelola Akun</p>
 <img src="screenshots/kelolaakun.png" alt="Kelola Akun" style="width: 100%; height: auto; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1);">
+
+### Edit Ipc
+<p style="text-align: center; font-weight: bold; margin-bottom: 10px;">Dashboard Utama</p>
+<img src="screenshots/edit pc awal.png" alt="Dashboard" style="width: 100%; height: auto; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1);">
+
+### Izin Akun
+<p style="text-align: center; font-weight: bold; margin-bottom: 10px;">Dashboard Utama</p>
+<img src="screenshots/izin akun.png" alt="Dashboard" style="width: 100%; height: auto; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1);">
+
+### File Manager
+<p style="text-align: center; font-weight: bold; margin-bottom: 10px;">Dashboard Utama</p>
+<img src="screenshots/file manager.png" alt="Dashboard" style="width: 100%; height: auto; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1);">
+
+### Logs
+<p style="text-align: center; font-weight: bold; margin-bottom: 10px;">Dashboard Utama</p>
+<img src="screenshots/logs.png" alt="Dashboard" style="width: 100%; height: auto; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1);">
+
+### Manajemen Wali Kelas
+<p style="text-align: center; font-weight: bold; margin-bottom: 10px;">Dashboard Utama</p>
+<img src="screenshots/manajemenwali.png" alt="Dashboard" style="width: 100%; height: auto; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1);">
+
+### Peringkat
+<p style="text-align: center; font-weight: bold; margin-bottom: 10px;">Dashboard Utama</p>
+<img src="screenshots/peringkat.png" alt="Dashboard" style="width: 100%; height: auto; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1);">
+
 
 ### Laporan & Cetak
 <p style="text-align: center; font-weight: bold; margin-bottom: 10px;">Laporan & Cetak</p>
