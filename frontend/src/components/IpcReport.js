@@ -61,22 +61,22 @@ function IpcReport({ studentId, onClose }) {
 
   // Use the breakdown total from backend for consistency
   const calculatedTotal = ipcData ? (
-    (ipcData.point_awal || 80) +
-    (ipcData.prestasi_akademik || 0) +
-    (ipcData.prestasi_nonakademik || 0) +
-    (ipcData.tanggung_jawab || 0) +
-    (ipcData.disiplin || 0) +
-    (ipcData.kepedulian || 0) +
-    (ipcData.kemandirian || 0) +
-    (ipcData.spiritual || 0) +
-    (ipcData.kejujuran || 0) +
-    (ipcData.kepercayaan_diri || 0) +
-    (ipcData.organisasi || 0) +
-    (ipcData.kepanitiaan || 0) +
-    (ipcData.event || 0) -
-    (ipcData.pelanggaran_ringan || 0) -
-    (ipcData.pelanggaran_sedang || 0) -
-    (ipcData.pelanggaran_berat || 0)
+    (Number(ipcData.point_awal) || 80) +
+    (Number(ipcData.prestasi_akademik) || 0) +
+    (Number(ipcData.prestasi_nonakademik) || 0) +
+    (Number(ipcData.tanggung_jawab) || 0) +
+    (Number(ipcData.disiplin) || 0) +
+    (Number(ipcData.kepedulian) || 0) +
+    (Number(ipcData.kemandirian) || 0) +
+    (Number(ipcData.spiritual) || 0) +
+    (Number(ipcData.kejujuran) || 0) +
+    (Number(ipcData.kepercayaan_diri) || 0) +
+    (Number(ipcData.organisasi) || 0) +
+    (Number(ipcData.kepanitiaan) || 0) +
+    (Number(ipcData.event) || 0) -
+    (Number(ipcData.pelanggaran_ringan) || 0) -
+    (Number(ipcData.pelanggaran_sedang) || 0) -
+    (Number(ipcData.pelanggaran_berat) || 0)
   ) : 0;
 
   // Format total with negative indicator
@@ -175,7 +175,7 @@ function IpcReport({ studentId, onClose }) {
               </tr>
               <tr className="subtotal-row">
                 <td><strong>Jumlah Prestasi</strong></td>
-                <td className="point-value subtotal"><strong>{(ipcData?.prestasi_akademik || 0) + (ipcData?.prestasi_nonakademik || 0)}</strong></td>
+                <td className="point-value subtotal"><strong>{(Number(ipcData?.prestasi_akademik) || 0) + (Number(ipcData?.prestasi_nonakademik) || 0)}</strong></td>
               </tr>
 
               <tr className="section-header">
@@ -211,7 +211,7 @@ function IpcReport({ studentId, onClose }) {
               </tr>
               <tr className="subtotal-row">
                 <td><strong>Jumlah Perkembangan Karakter</strong></td>
-                <td className="point-value subtotal"><strong>{(ipcData?.tanggung_jawab || 0) + (ipcData?.disiplin || 0) + (ipcData?.kepedulian || 0) + (ipcData?.kemandirian || 0) + (ipcData?.spiritual || 0) + (ipcData?.kejujuran || 0) + (ipcData?.kepercayaan_diri || 0)}</strong></td>
+                <td className="point-value subtotal"><strong>{(Number(ipcData?.tanggung_jawab) || 0) + (Number(ipcData?.disiplin) || 0) + (Number(ipcData?.kepedulian) || 0) + (Number(ipcData?.kemandirian) || 0) + (Number(ipcData?.spiritual) || 0) + (Number(ipcData?.kejujuran) || 0) + (Number(ipcData?.kepercayaan_diri) || 0)}</strong></td>
               </tr>
 
               <tr className="section-header">
@@ -240,7 +240,7 @@ function IpcReport({ studentId, onClose }) {
 
               <tr className="subtotal-row">
                 <td><strong>Jumlah Keaktifan</strong></td>
-                <td className="point-value subtotal"><strong>{(ipcData?.organisasi || 0) + (ipcData?.kepanitiaan || 0) + (ipcData?.event || 0)}</strong></td>
+                <td className="point-value subtotal"><strong>{(Number(ipcData?.organisasi) || 0) + (Number(ipcData?.kepanitiaan) || 0) + (Number(ipcData?.event) || 0)}</strong></td>
               </tr>
 
               <tr className="section-header">
@@ -260,7 +260,7 @@ function IpcReport({ studentId, onClose }) {
               </tr>
               <tr className="subtotal-row">
                 <td><strong>Jumlah Pelanggaran</strong></td>
-                <td className="point-value subtotal negative"><strong>{(ipcData?.pelanggaran_ringan || 0) + (ipcData?.pelanggaran_sedang || 0) + (ipcData?.pelanggaran_berat || 0)}</strong></td>
+                <td className="point-value subtotal negative"><strong>{(Number(ipcData?.pelanggaran_ringan) || 0) + (Number(ipcData?.pelanggaran_sedang) || 0) + (Number(ipcData?.pelanggaran_berat) || 0)}</strong></td>
               </tr>
 
               <tr className="total-row">

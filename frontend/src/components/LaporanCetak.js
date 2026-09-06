@@ -48,22 +48,22 @@ const THIN_BORDER = {
 // Helper: Calculate totals - MUST MATCH BACKEND CALCULATION
 function hitungTotal(s) {
   // Point awal (default 80 if not specified)
-  const pointAwal = s.point_awal || 80;
-  
-  const jumlahPrestasi = (s.prestasi?.akademik || 0) + (s.prestasi?.nonAkademik || 0);
+  const pointAwal = Number(s.point_awal) || 80;
+
+  const jumlahPrestasi = (Number(s.prestasi_akademik) || 0) + (Number(s.prestasi_nonakademik) || 0);
   const jumlahKarakter =
-    (s.karakter?.tanggungJawab || 0) +
-    (s.karakter?.disiplin || 0) +
-    (s.karakter?.kepedulian || 0) +
-    (s.karakter?.kemandirian || 0) + // Added kemandirian
-    (s.karakter?.spiritual || 0) +
-    (s.karakter?.kejujuran || 0) +
-    (s.karakter?.percayaDiri || 0);
+    (Number(s.tanggung_jawab) || 0) +
+    (Number(s.disiplin) || 0) +
+    (Number(s.kepedulian) || 0) +
+    (Number(s.kemandirian) || 0) + // Added kemandirian
+    (Number(s.spiritual) || 0) +
+    (Number(s.kejujuran) || 0) +
+    (Number(s.kepercayaan_diri) || 0);
   const jumlahKeaktifan =
-    (s.keaktifan?.organisasi || 0) + (s.keaktifan?.kepanitiaan || 0) + (s.keaktifan?.event || 0);
+    (Number(s.organisasi) || 0) + (Number(s.kepanitiaan) || 0) + (Number(s.event) || 0);
   const jumlahPelanggaran =
-    (s.pelanggaran?.ringan || 0) + (s.pelanggaran?.sedang || 0) + (s.pelanggaran?.berat || 0);
-  
+    (Number(s.pelanggaran_ringan) || 0) + (Number(s.pelanggaran_sedang) || 0) + (Number(s.pelanggaran_berat) || 0);
+
   // Total IPC = Point Awal + Prestasi + Karakter + Keaktifan - Pelanggaran
   const totalIPC = pointAwal + jumlahPrestasi + jumlahKarakter + jumlahKeaktifan - jumlahPelanggaran;
 
@@ -88,17 +88,17 @@ const COLUMN_DEFS = [
   { key: "ghra", header1: "GHRA", merge: "v", width: 7 },
   { key: "pointAwal", header1: "Point Awal", merge: "v", width: 10 }, // Added point awal column
 
-  { key: "akademik", header1: "Prestasi", header2: "Akademik", group: "prestasi", width: 10 },
-  { key: "nonAkademik", header2: "Non-Akademik", group: "prestasi", width: 15 },
+  { key: "prestasi_akademik", header1: "Prestasi", header2: "Akademik", group: "prestasi", width: 10 },
+  { key: "prestasi_nonakademik", header2: "Non-Akademik", group: "prestasi", width: 15 },
   { key: "jumlahPrestasi", header2: "Jumlah", group: "prestasi", width: 9, jumlahFill: "jumlahPrestasi" },
 
-  { key: "tanggungJawab", header1: "Perkembangan Karakter", header2: "Tanggung Jawab", group: "karakter", width: 13 },
+  { key: "tanggung_jawab", header1: "Perkembangan Karakter", header2: "Tanggung Jawab", group: "karakter", width: 13 },
   { key: "disiplin", header2: "Disiplin", group: "karakter", width: 9 },
   { key: "kepedulian", header2: "Kepedulian", group: "karakter", width: 12 },
   { key: "kemandirian", header2: "Kemandirian", group: "karakter", width: 12 }, // Added kemandirian
   { key: "spiritual", header2: "Spiritual", group: "karakter", width: 9 },
   { key: "kejujuran", header2: "Kejujuran", group: "karakter", width: 9 },
-  { key: "percayaDiri", header2: "Kepercayaan Diri", group: "karakter", width: 15 },
+  { key: "kepercayaan_diri", header2: "Kepercayaan Diri", group: "karakter", width: 15 },
   { key: "jumlahKarakter", header2: "Jumlah", group: "karakter", width: 9, jumlahFill: "jumlahKarakter" },
 
   { key: "organisasi", header1: "Keaktifan", header2: "Organisasi", group: "keaktifan", width: 10 },
@@ -106,9 +106,9 @@ const COLUMN_DEFS = [
   { key: "event", header2: "Event", group: "keaktifan", width: 8 },
   { key: "jumlahKeaktifan", header2: "Jumlah", group: "keaktifan", width: 9, jumlahFill: "jumlahKeaktifan" },
 
-  { key: "ringan", header1: "Pelanggaran", header2: "Ringan", group: "pelanggaran", width: 9 },
-  { key: "sedang", header2: "Sedang", group: "pelanggaran", width: 9 },
-  { key: "berat", header2: "Berat", group: "pelanggaran", width: 8 },
+  { key: "pelanggaran_ringan", header1: "Pelanggaran", header2: "Ringan", group: "pelanggaran", width: 9 },
+  { key: "pelanggaran_sedang", header2: "Sedang", group: "pelanggaran", width: 9 },
+  { key: "pelanggaran_berat", header2: "Berat", group: "pelanggaran", width: 8 },
   { key: "jumlahPelanggaran", header2: "Jumlah", group: "pelanggaran", width: 9, jumlahFill: "jumlahPelanggaran" },
 
   { key: "totalIPC", header1: "Total IPC", merge: "v", width: 10, jumlahFill: "total" },
@@ -123,24 +123,24 @@ function buildRowValues(s) {
     kelas: s.kelas,
     ghra: s.ghra || "-",
     pointAwal: t.pointAwal, // Added point awal
-    akademik: s.prestasi?.akademik ?? 0,
-    nonAkademik: s.prestasi?.nonAkademik ?? 0,
+    prestasi_akademik: Number(s.prestasi_akademik) ?? 0,
+    prestasi_nonakademik: Number(s.prestasi_nonakademik) ?? 0,
     jumlahPrestasi: t.jumlahPrestasi,
-    tanggungJawab: s.karakter?.tanggungJawab ?? 0,
-    disiplin: s.karakter?.disiplin ?? 0,
-    kepedulian: s.karakter?.kepedulian ?? 0,
-    kemandirian: s.karakter?.kemandirian ?? 0, // Added kemandirian
-    spiritual: s.karakter?.spiritual ?? 0,
-    kejujuran: s.karakter?.kejujuran ?? 0,
-    percayaDiri: s.karakter?.percayaDiri ?? 0,
+    tanggung_jawab: Number(s.tanggung_jawab) ?? 0,
+    disiplin: Number(s.disiplin) ?? 0,
+    kepedulian: Number(s.kepedulian) ?? 0,
+    kemandirian: Number(s.kemandirian) ?? 0, // Added kemandirian
+    spiritual: Number(s.spiritual) ?? 0,
+    kejujuran: Number(s.kejujuran) ?? 0,
+    kepercayaan_diri: Number(s.kepercayaan_diri) ?? 0,
     jumlahKarakter: t.jumlahKarakter,
-    organisasi: s.keaktifan?.organisasi ?? 0,
-    kepanitiaan: s.keaktifan?.kepanitiaan ?? 0,
-    event: s.keaktifan?.event ?? 0,
+    organisasi: Number(s.organisasi) ?? 0,
+    kepanitiaan: Number(s.kepanitiaan) ?? 0,
+    event: Number(s.event) ?? 0,
     jumlahKeaktifan: t.jumlahKeaktifan,
-    ringan: s.pelanggaran?.ringan ?? 0,
-    sedang: s.pelanggaran?.sedang ?? 0,
-    berat: s.pelanggaran?.berat ?? 0,
+    pelanggaran_ringan: Number(s.pelanggaran_ringan) ?? 0,
+    pelanggaran_sedang: Number(s.pelanggaran_sedang) ?? 0,
+    pelanggaran_berat: Number(s.pelanggaran_berat) ?? 0,
     jumlahPelanggaran: t.jumlahPelanggaran,
     totalIPC: t.totalIPC,
   };
@@ -193,6 +193,7 @@ function LaporanCetak({ user }) {
   useEffect(() => {
     checkWaliKelasStatus();
     fetchStudents();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const checkWaliKelasStatus = async () => {
@@ -223,6 +224,7 @@ function LaporanCetak({ user }) {
     if (selectedClass && reportType === 'class') {
       fetchClassStudents();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [reportType, selectedClass]);
 
   const fetchStudents = async () => {
@@ -330,48 +332,71 @@ function LaporanCetak({ user }) {
       // Prepare table data with full breakdown and subtotals
       const tableData = students.map((student, index) => {
         const points = student.points || {};
-        const pointAwal = points.point_awal || student.ipc_awal || 80;
-        const total = student.ipc_total || pointAwal || 0;
-        
+        const pointAwalNum = Number(points.point_awal || student.ipc_awal) || 80;
+
         // Calculate subtotals - MUST MATCH BACKEND CALCULATION
-        const prestasiTotal = (points.prestasi_akademik || 0) + (points.prestasi_nonakademik || 0);
-        const karakterTotal = (points.tanggung_jawab || 0) + (points.disiplin || 0) + (points.kepedulian || 0) + 
-                             (points.kemandirian || 0) + // Added kemandirian
-                             (points.spiritual || 0) + (points.kejujuran || 0) + (points.kepercayaan_diri || 0);
-        const keaktifanTotal = (points.organisasi || 0) + (points.kepanitiaan || 0) + (points.event || 0);
-        const pelanggaranTotal = (points.pelanggaran_ringan || 0) + (points.pelanggaran_sedang || 0) + (points.pelanggaran_berat || 0);
-        
+        // Use Number() to ensure type consistency (handle string/null from API)
+        const prestasiTotal = (Number(points.prestasi_akademik) || 0) + (Number(points.prestasi_nonakademik) || 0);
+        const karakterTotal = (Number(points.tanggung_jawab) || 0) + (Number(points.disiplin) || 0) + (Number(points.kepedulian) || 0) +
+                             (Number(points.kemandirian) || 0) + // Added kemandirian
+                             (Number(points.spiritual) || 0) + (Number(points.kejujuran) || 0) + (Number(points.kepercayaan_diri) || 0);
+        const keaktifanTotal = (Number(points.organisasi) || 0) + (Number(points.kepanitiaan) || 0) + (Number(points.event) || 0);
+        const pelanggaranTotal = (Number(points.pelanggaran_ringan) || 0) + (Number(points.pelanggaran_sedang) || 0) + (Number(points.pelanggaran_berat) || 0);
+
         // Calculate total to ensure consistency
-        const calculatedTotal = pointAwal + prestasiTotal + karakterTotal + keaktifanTotal - pelanggaranTotal;
-        
-        return [
-          index + 1,
-          student.nama || '-',
-          student.nis || '-',
-          student.kelas || '-',
-          student.grha || '-',
-          pointAwal, // Added point awal
-          points.prestasi_akademik || 0,
-          points.prestasi_nonakademik || 0,
-          prestasiTotal,
-          points.tanggung_jawab || 0,
-          points.disiplin || 0,
-          points.kepedulian || 0,
-          points.kemandirian || 0, // Added kemandirian
-          points.spiritual || 0,
-          points.kejujuran || 0,
-          points.kepercayaan_diri || 0,
-          karakterTotal,
-          points.organisasi || 0,
-          points.kepanitiaan || 0,
-          points.event || 0,
-          keaktifanTotal,
-          points.pelanggaran_ringan || 0,
-          points.pelanggaran_sedang || 0,
-          points.pelanggaran_berat || 0,
-          pelanggaranTotal,
-          calculatedTotal < 0 ? `${calculatedTotal} (MINUS)` : calculatedTotal, // Use calculated total
+        const calculatedTotal = pointAwalNum + prestasiTotal + karakterTotal + keaktifanTotal - pelanggaranTotal;
+
+        // Debug log for troubleshooting
+        console.log('DEBUG PDF points untuk', student.nama, ':', points, 'total:', calculatedTotal);
+
+        // Use object first to ensure correct order, then convert to array
+        // Order MUST match COLUMN_DEFS exactly for proper column mapping
+        const row = {
+          no: index + 1,
+          nama: student.nama || '-',
+          nis: student.nis || '-',
+          kelas: student.kelas || '-',
+          ghra: student.grha || '-',
+          pointAwal: pointAwalNum,
+          prestasi_akademik: Number(points.prestasi_akademik) || 0,
+          prestasi_nonakademik: Number(points.prestasi_nonakademik) || 0,
+          jumlahPrestasi: prestasiTotal,
+          tanggung_jawab: Number(points.tanggung_jawab) || 0,
+          disiplin: Number(points.disiplin) || 0,
+          kepedulian: Number(points.kepedulian) || 0,
+          kemandirian: Number(points.kemandirian) || 0,
+          spiritual: Number(points.spiritual) || 0,
+          kejujuran: Number(points.kejujuran) || 0,
+          kepercayaan_diri: Number(points.kepercayaan_diri) || 0,
+          jumlahKarakter: karakterTotal,
+          organisasi: Number(points.organisasi) || 0,
+          kepanitiaan: Number(points.kepanitiaan) || 0,
+          event: Number(points.event) || 0,
+          jumlahKeaktifan: keaktifanTotal,
+          pelanggaran_ringan: Number(points.pelanggaran_ringan) || 0,
+          pelanggaran_sedang: Number(points.pelanggaran_sedang) || 0,
+          pelanggaran_berat: Number(points.pelanggaran_berat) || 0,
+          jumlahPelanggaran: pelanggaranTotal,
+          totalIPC: calculatedTotal < 0 ? `${calculatedTotal} (MINUS)` : calculatedTotal,
+        };
+
+        // Debug: verify object has exactly 26 properties
+        if (Object.keys(row).length !== 26) {
+          console.error('ERROR: Row object has wrong number of properties:', Object.keys(row).length, 'expected 26');
+          console.error('Row keys:', Object.keys(row));
+        }
+
+        // Convert to array using explicit key order to match COLUMN_DEFS
+        const columnOrder = [
+          'no', 'nama', 'nis', 'kelas', 'ghra', 'pointAwal',
+          'prestasi_akademik', 'prestasi_nonakademik', 'jumlahPrestasi',
+          'tanggung_jawab', 'disiplin', 'kepedulian', 'kemandirian', 'spiritual', 'kejujuran', 'kepercayaan_diri', 'jumlahKarakter',
+          'organisasi', 'kepanitiaan', 'event', 'jumlahKeaktifan',
+          'pelanggaran_ringan', 'pelanggaran_sedang', 'pelanggaran_berat', 'jumlahPelanggaran',
+          'totalIPC'
         ];
+
+        return columnOrder.map(key => row[key]);
       });
 
       // Create merged header structure
@@ -381,9 +406,9 @@ function LaporanCetak({ user }) {
         { content: 'NIS/NISN', rowSpan: 2, styles: { valign: 'middle', halign: 'center' } },
         { content: 'KELAS', rowSpan: 2, styles: { valign: 'middle', halign: 'center' } },
         { content: 'GHRA', rowSpan: 2, styles: { valign: 'middle', halign: 'center' } },
-        { content: 'Point Awal', rowSpan: 2, styles: { valign: 'middle', halign: 'center', fillColor: COLORS.headerTotal } }, // Added point awal
+        { content: 'Point\nAwal', rowSpan: 2, styles: { valign: 'middle', halign: 'center', fillColor: COLORS.headerTotal } }, // Added point awal with line break
         { content: 'Prestasi', colSpan: 3, styles: { halign: 'center', fillColor: COLORS.headerPrestasi } },
-        { content: 'Perkembangan Karakter', colSpan: 7, styles: { halign: 'center', fillColor: COLORS.headerKarakter } },
+        { content: 'Perkembangan\nKarakter', colSpan: 8, styles: { halign: 'center', fillColor: COLORS.headerKarakter } },
         { content: 'Keaktifan', colSpan: 4, styles: { halign: 'center', fillColor: COLORS.headerKeaktifan } },
         { content: 'Pelanggaran', colSpan: 4, styles: { halign: 'center', fillColor: COLORS.headerPelanggaran } },
         { content: 'Total\nIPC', rowSpan: 2, styles: { valign: 'middle', halign: 'center', fillColor: COLORS.headerTotal } },
@@ -391,28 +416,28 @@ function LaporanCetak({ user }) {
 
       const headerRow2 = [
         // Prestasi
-        { content: 'Akademik', styles: { fillColor: COLORS.headerPrestasi, halign: 'center' } },
-        { content: 'Non-\nAkademik', styles: { fillColor: COLORS.headerPrestasi, halign: 'center' } },
-        { content: 'Jumlah', styles: { fillColor: COLORS.headerPrestasi, halign: 'center' } },
+        { content: 'Akademik', styles: { fillColor: COLORS.headerPrestasi, halign: 'center', valign: 'middle' } },
+        { content: 'Non-\nAkademik', styles: { fillColor: COLORS.headerPrestasi, halign: 'center', valign: 'middle' } },
+        { content: 'Jumlah', styles: { fillColor: COLORS.headerPrestasi, halign: 'center', valign: 'middle' } },
         // Perkembangan Karakter (disingkat supaya 1 baris, tidak pecah kata)
-        { content: 'T. Jawab', styles: { fillColor: COLORS.headerKarakter, halign: 'center' } },
-        { content: 'Disiplin', styles: { fillColor: COLORS.headerKarakter, halign: 'center' } },
-        { content: 'Peduli', styles: { fillColor: COLORS.headerKarakter, halign: 'center' } },
-        { content: 'Mandiri', styles: { fillColor: COLORS.headerKarakter, halign: 'center' } }, // Added kemandirian
-        { content: 'Spiritual', styles: { fillColor: COLORS.headerKarakter, halign: 'center' } },
-        { content: 'Jujur', styles: { fillColor: COLORS.headerKarakter, halign: 'center' } },
-        { content: 'P. Diri', styles: { fillColor: COLORS.headerKarakter, halign: 'center' } },
-        { content: 'Jumlah', styles: { fillColor: COLORS.headerKarakter, halign: 'center' } },
+        { content: 'Tg.\nJawab', styles: { fillColor: COLORS.headerKarakter, halign: 'center', valign: 'middle' } },
+        { content: 'Disiplin', styles: { fillColor: COLORS.headerKarakter, halign: 'center', valign: 'middle' } },
+        { content: 'Peduli', styles: { fillColor: COLORS.headerKarakter, halign: 'center', valign: 'middle' } },
+        { content: 'Mandiri', styles: { fillColor: COLORS.headerKarakter, halign: 'center', valign: 'middle' } }, // Added kemandirian
+        { content: 'Spiritual', styles: { fillColor: COLORS.headerKarakter, halign: 'center', valign: 'middle' } },
+        { content: 'Jujur', styles: { fillColor: COLORS.headerKarakter, halign: 'center', valign: 'middle' } },
+        { content: 'P.\nDiri', styles: { fillColor: COLORS.headerKarakter, halign: 'center', valign: 'middle' } },
+        { content: 'Jumlah', styles: { fillColor: COLORS.headerKarakter, halign: 'center', valign: 'middle' } },
         // Keaktifan
-        { content: 'Organisasi', styles: { fillColor: COLORS.headerKeaktifan, halign: 'center' } },
-        { content: 'Panitia', styles: { fillColor: COLORS.headerKeaktifan, halign: 'center' } },
-        { content: 'Event', styles: { fillColor: COLORS.headerKeaktifan, halign: 'center' } },
-        { content: 'Jumlah', styles: { fillColor: COLORS.headerKeaktifan, halign: 'center' } },
+        { content: 'Org.', styles: { fillColor: COLORS.headerKeaktifan, halign: 'center', valign: 'middle' } },
+        { content: 'Panitia', styles: { fillColor: COLORS.headerKeaktifan, halign: 'center', valign: 'middle' } },
+        { content: 'Event', styles: { fillColor: COLORS.headerKeaktifan, halign: 'center', valign: 'middle' } },
+        { content: 'Jumlah', styles: { fillColor: COLORS.headerKeaktifan, halign: 'center', valign: 'middle' } },
         // Pelanggaran
-        { content: 'Ringan', styles: { fillColor: COLORS.headerPelanggaran, halign: 'center' } },
-        { content: 'Sedang', styles: { fillColor: COLORS.headerPelanggaran, halign: 'center' } },
-        { content: 'Berat', styles: { fillColor: COLORS.headerPelanggaran, halign: 'center' } },
-        { content: 'Jumlah', styles: { fillColor: COLORS.headerPelanggaran, halign: 'center' } },
+        { content: 'Ringan', styles: { fillColor: COLORS.headerPelanggaran, halign: 'center', valign: 'middle' } },
+        { content: 'Sedang', styles: { fillColor: COLORS.headerPelanggaran, halign: 'center', valign: 'middle' } },
+        { content: 'Berat', styles: { fillColor: COLORS.headerPelanggaran, halign: 'center', valign: 'middle' } },
+        { content: 'Jumlah', styles: { fillColor: COLORS.headerPelanggaran, halign: 'center', valign: 'middle' } },
       ];
 
       // Add table with merged headers
@@ -424,53 +449,55 @@ function LaporanCetak({ user }) {
         tableWidth: 'auto',
         styles: {
           font: 'helvetica',
-          fontSize: 6.3,
-          cellPadding: 1,
+          fontSize: 6.5,   // naik dari 6 supaya body sedikit lebih jelas
+          cellPadding: 1.2,
           halign: 'center',
           valign: 'middle',
           lineColor: COLORS.borderGray,
           lineWidth: 0.1,
           overflow: 'linebreak',
-          minCellHeight: 8,
+          minCellHeight: 9,
         },
         headStyles: {
           fontStyle: 'bold',
           fontSize: 6,
           fillColor: [230, 230, 230],
           textColor: [0, 0, 0],
-          minCellHeight: 11,
+          minCellHeight: 14, // naik dari 11, kasih ruang cukup untuk teks 2 baris supaya center sempurna
+          valign: 'middle',  // pastikan berlaku default ke semua header
         },
         columnStyles: {
-          [COL.NO]: { cellWidth: 7 },
-          [COL.NAMA]: { cellWidth: 24, halign: 'left', fontSize: 6.3 },
-          [COL.NIS]: { cellWidth: 14 },
-          [COL.KELAS]: { cellWidth: 12 },
-          [COL.GHRA]: { cellWidth: 8 },
+          [COL.NO]: { cellWidth: 6 },
+          [COL.NAMA]: { cellWidth: 22, halign: 'left', fontSize: 6.3 },
+          [COL.NIS]: { cellWidth: 12 },
+          [COL.KELAS]: { cellWidth: 10 },
+          [COL.GHRA]: { cellWidth: 7 },
+          [COL.POINT_AWAL]: { cellWidth: 10 }, // Added point awal column style
 
-          [COL.PRESTASI_AKADEMIK]: { cellWidth: 12 },
-          [COL.PRESTASI_NONAKADEMIK]: { cellWidth: 12 },
-          [COL.PRESTASI_JUMLAH]: { cellWidth: 10 },
+          [COL.PRESTASI_AKADEMIK]: { cellWidth: 10 },
+          [COL.PRESTASI_NONAKADEMIK]: { cellWidth: 10 },
+          [COL.PRESTASI_JUMLAH]: { cellWidth: 9 },
 
-          [COL.KARAKTER_TJ]: { cellWidth: 8 },
-          [COL.KARAKTER_DISIPLIN]: { cellWidth: 8 },
-          [COL.KARAKTER_PEDULI]: { cellWidth: 8 },
-          [COL.KARAKTER_KEMANDIRIAN]: { cellWidth: 8 },
-          [COL.KARAKTER_SPIRITUAL]: { cellWidth: 8 },
-          [COL.KARAKTER_JUJUR]: { cellWidth: 7 },
-          [COL.KARAKTER_PD]: { cellWidth: 7 },
-          [COL.KARAKTER_JUMLAH]: { cellWidth: 10 },
+          [COL.KARAKTER_TJ]: { cellWidth: 7 },
+          [COL.KARAKTER_DISIPLIN]: { cellWidth: 7 },
+          [COL.KARAKTER_PEDULI]: { cellWidth: 7 },
+          [COL.KARAKTER_KEMANDIRIAN]: { cellWidth: 7 },
+          [COL.KARAKTER_SPIRITUAL]: { cellWidth: 7 },
+          [COL.KARAKTER_JUJUR]: { cellWidth: 5 },
+          [COL.KARAKTER_PD]: { cellWidth: 5 },
+          [COL.KARAKTER_JUMLAH]: { cellWidth: 9 },
 
-          [COL.KEAKTIFAN_ORGANISASI]: { cellWidth: 10 },
-          [COL.KEAKTIFAN_KEPANITIAAN]: { cellWidth: 8 },
-          [COL.KEAKTIFAN_EVENT]: { cellWidth: 7 },
-          [COL.KEAKTIFAN_JUMLAH]: { cellWidth: 10 },
+          [COL.KEAKTIFAN_ORGANISASI]: { cellWidth: 9 },
+          [COL.KEAKTIFAN_KEPANITIAAN]: { cellWidth: 7 },
+          [COL.KEAKTIFAN_EVENT]: { cellWidth: 6 },
+          [COL.KEAKTIFAN_JUMLAH]: { cellWidth: 9 },
 
-          [COL.PELANGGARAN_RINGAN]: { cellWidth: 8 },
-          [COL.PELANGGARAN_SEDANG]: { cellWidth: 8 },
-          [COL.PELANGGARAN_BERAT]: { cellWidth: 7 },
-          [COL.PELANGGARAN_JUMLAH]: { cellWidth: 10 },
+          [COL.PELANGGARAN_RINGAN]: { cellWidth: 7 },
+          [COL.PELANGGARAN_SEDANG]: { cellWidth: 7 },
+          [COL.PELANGGARAN_BERAT]: { cellWidth: 9 },
+          [COL.PELANGGARAN_JUMLAH]: { cellWidth: 9 },
 
-          [COL.TOTAL_IPC]: { cellWidth: 14 },
+          [COL.TOTAL_IPC]: { cellWidth: 12 }, // Reduced but still visible
         },
         didParseCell: (data) => {
           if (data.section !== 'body') return;
@@ -567,35 +594,29 @@ function LaporanCetak({ user }) {
         // Prepare student data in the format expected by the Excel generator
         const formattedStudents = classStudents.map((student, index) => {
           const points = student.points || {};
+          console.log('DEBUG Excel generation untuk', student.nama, ':', points);
           return {
             no: index + 1,
             nama: student.nama || '-',
             nis: student.nis || '-',
             kelas: student.kelas || '-',
             ghra: student.grha || '-',
-            prestasi: {
-              akademik: points.prestasi_akademik || 0,
-              nonAkademik: points.prestasi_nonakademik || 0,
-            },
-            karakter: {
-              tanggungJawab: points.tanggung_jawab || 0,
-              disiplin: points.disiplin || 0,
-              kepedulian: points.kepedulian || 0,
-              kemandirian: points.kemandirian || 0,
-              spiritual: points.spiritual || 0,
-              kejujuran: points.kejujuran || 0,
-              percayaDiri: points.kepercayaan_diri || 0,
-            },
-            keaktifan: {
-              organisasi: points.organisasi || 0,
-              kepanitiaan: points.kepanitiaan || 0,
-              event: points.event || 0,
-            },
-            pelanggaran: {
-              ringan: points.pelanggaran_ringan || 0,
-              sedang: points.pelanggaran_sedang || 0,
-              berat: points.pelanggaran_berat || 0,
-            },
+            // Use snake_case to match backend API directly
+            prestasi_akademik: Number(points.prestasi_akademik) || 0,
+            prestasi_nonakademik: Number(points.prestasi_nonakademik) || 0,
+            tanggung_jawab: Number(points.tanggung_jawab) || 0,
+            disiplin: Number(points.disiplin) || 0,
+            kepedulian: Number(points.kepedulian) || 0,
+            kemandirian: Number(points.kemandirian) || 0,
+            spiritual: Number(points.spiritual) || 0,
+            kejujuran: Number(points.kejujuran) || 0,
+            kepercayaan_diri: Number(points.kepercayaan_diri) || 0,
+            organisasi: Number(points.organisasi) || 0,
+            kepanitiaan: Number(points.kepanitiaan) || 0,
+            event: Number(points.event) || 0,
+            pelanggaran_ringan: Number(points.pelanggaran_ringan) || 0,
+            pelanggaran_sedang: Number(points.pelanggaran_sedang) || 0,
+            pelanggaran_berat: Number(points.pelanggaran_berat) || 0,
           };
         });
 
@@ -797,22 +818,22 @@ function LaporanCetak({ user }) {
 
         // Calculate total from breakdown to ensure synchronization
         const calculateTotalFromBreakdown = (breakdown) => {
-          let total = breakdown.point_awal || 80;
-          total += breakdown.prestasi_akademik || 0;
-          total += breakdown.prestasi_nonakademik || 0;
-          total += breakdown.tanggung_jawab || 0;
-          total += breakdown.disiplin || 0;
-          total += breakdown.kepedulian || 0;
-          total += breakdown.kemandirian || 0;
-          total += breakdown.spiritual || 0;
-          total += breakdown.kejujuran || 0;
-          total += breakdown.kepercayaan_diri || 0;
-          total += breakdown.organisasi || 0;
-          total += breakdown.kepanitiaan || 0;
-          total += breakdown.event || 0;
-          total -= breakdown.pelanggaran_ringan || 0;
-          total -= breakdown.pelanggaran_sedang || 0;
-          total -= breakdown.pelanggaran_berat || 0;
+          let total = Number(breakdown.point_awal) || 80;
+          total += Number(breakdown.prestasi_akademik) || 0;
+          total += Number(breakdown.prestasi_nonakademik) || 0;
+          total += Number(breakdown.tanggung_jawab) || 0;
+          total += Number(breakdown.disiplin) || 0;
+          total += Number(breakdown.kepedulian) || 0;
+          total += Number(breakdown.kemandirian) || 0;
+          total += Number(breakdown.spiritual) || 0;
+          total += Number(breakdown.kejujuran) || 0;
+          total += Number(breakdown.kepercayaan_diri) || 0;
+          total += Number(breakdown.organisasi) || 0;
+          total += Number(breakdown.kepanitiaan) || 0;
+          total += Number(breakdown.event) || 0;
+          total -= Number(breakdown.pelanggaran_ringan) || 0;
+          total -= Number(breakdown.pelanggaran_sedang) || 0;
+          total -= Number(breakdown.pelanggaran_berat) || 0;
           return total;
         };
 
@@ -913,7 +934,7 @@ function LaporanCetak({ user }) {
           ['II Prestasi', ''],
           ['1. Akademik', breakdown.prestasi_akademik],
           ['2. Non-Akademik', breakdown.prestasi_nonakademik],
-          ['Jumlah Prestasi', (breakdown.prestasi_akademik || 0) + (breakdown.prestasi_nonakademik || 0)],
+          ['Jumlah Prestasi', (Number(breakdown.prestasi_akademik) || 0) + (Number(breakdown.prestasi_nonakademik) || 0)],
           ['III Perkembangan Karakter', ''],
           ['1. Tanggung Jawab', breakdown.tanggung_jawab],
           ['2. Disiplin', breakdown.disiplin],
@@ -922,19 +943,19 @@ function LaporanCetak({ user }) {
           ['5. Spiritual', breakdown.spiritual],
           ['6. Kejujuran', breakdown.kejujuran],
           ['7. Kepercayaan Diri', breakdown.kepercayaan_diri],
-          ['Jumlah Perkembangan Karakter', (breakdown.tanggung_jawab || 0) + (breakdown.disiplin || 0) + (breakdown.kepedulian || 0) + (breakdown.kemandirian || 0) + (breakdown.spiritual || 0) + (breakdown.kejujuran || 0) + (breakdown.kepercayaan_diri || 0)],
+          ['Jumlah Perkembangan Karakter', (Number(breakdown.tanggung_jawab) || 0) + (Number(breakdown.disiplin) || 0) + (Number(breakdown.kepedulian) || 0) + (Number(breakdown.kemandirian) || 0) + (Number(breakdown.spiritual) || 0) + (Number(breakdown.kejujuran) || 0) + (Number(breakdown.kepercayaan_diri) || 0)],
           ['IV Organisasi', ''],
           ['', breakdown.organisasi],
           ['V Kepanitiaan', ''],
           ['', breakdown.kepanitiaan],
           ['VI Event', ''],
           ['', breakdown.event],
-          ['Jumlah Keaktifan', (breakdown.organisasi || 0) + (breakdown.kepanitiaan || 0) + (breakdown.event || 0)],
+          ['Jumlah Keaktifan', (Number(breakdown.organisasi) || 0) + (Number(breakdown.kepanitiaan) || 0) + (Number(breakdown.event) || 0)],
           ['VII Pelanggaran', ''],
           ['1. Ringan', breakdown.pelanggaran_ringan],
           ['2. Sedang', breakdown.pelanggaran_sedang],
           ['3. Berat', breakdown.pelanggaran_berat],
-          ['Jumlah Pelanggaran', (breakdown.pelanggaran_ringan || 0) + (breakdown.pelanggaran_sedang || 0) + (breakdown.pelanggaran_berat || 0)],
+          ['Jumlah Pelanggaran', (Number(breakdown.pelanggaran_ringan) || 0) + (Number(breakdown.pelanggaran_sedang) || 0) + (Number(breakdown.pelanggaran_berat) || 0)],
           ['TOTAL POINT IPC', formatTotal(total)]
         ];
 
