@@ -118,6 +118,8 @@ router.get('/leaderboard/akademik', auth, async (req, res) => {
             LIMIT 20
         `);
 
+        console.log('Akademik students:', students.length);
+
         // Get detailed competition info for each student
         const studentsWithDetails = await Promise.all(
             students.map(async (student, index) => {
@@ -132,6 +134,8 @@ router.get('/leaderboard/akademik', auth, async (req, res) => {
                         AND status = 'approved'
                     ORDER BY created_at DESC
                 `, [student.id]);
+
+                console.log(`Student ${student.nama} (${student.id}) has ${competitions.length} competitions`);
 
                 // Format competitions list
                 const keterangan = competitions.map(c => 
@@ -152,6 +156,7 @@ router.get('/leaderboard/akademik', auth, async (req, res) => {
             })
         );
 
+        console.log('Final akademik data:', studentsWithDetails);
         res.json(studentsWithDetails);
     } catch (error) {
         console.error('Error fetching akademik leaderboard:', error);

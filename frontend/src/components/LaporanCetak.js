@@ -2,7 +2,167 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import ExcelJS from 'exceljs';
 import '../ipcPrint.css';
+
+// ------------------------------------------------------------------
+// KONFIGURASI WARNA
+// ------------------------------------------------------------------
+const COLORS = {
+  headerPrestasi: [255, 242, 204], // kuning muda
+  headerKarakter: [198, 224, 180], // hijau muda
+  headerKeaktifan: [248, 203, 173], // oranye muda
+  headerPelanggaran: [244, 199, 195], // pink muda
+  headerTotal: [189, 215, 238], // biru muda
+
+  cellJumlahPrestasi: [255, 242, 0], // kuning tegas
+  cellJumlahKarakter: [169, 208, 142], // hijau tegas
+  cellJumlahKeaktifan: [244, 176, 132], // oranye tegas
+  cellJumlahPelanggaran: [255, 199, 206], // pink tegas
+
+  textNegative: [192, 0, 0], // merah untuk nilai negatif
+  borderGray: [180, 180, 180],
+};
+
+// Warna untuk ExcelJS (format ARGB)
+const EXCEL_COLORS = {
+  prestasi: "FFFFF2CC",
+  karakter: "FFC6E0B4",
+  keaktifan: "FFF8CBAD",
+  pelanggaran: "FFF4C7C3",
+  total: "FFBDD7EE",
+  jumlahPrestasi: "FFFFFF00",
+  jumlahKarakter: "FFA9D08E",
+  jumlahKeaktifan: "FFF4B084",
+  jumlahPelanggaran: "FFFFC7CE",
+  headerAbu: "FFE6E6E6",
+};
+
+const THIN_BORDER = {
+  top: { style: "thin", color: { argb: "FFB4B4B4" } },
+  left: { style: "thin", color: { argb: "FFB4B4B4" } },
+  bottom: { style: "thin", color: { argb: "FFB4B4B4" } },
+  right: { style: "thin", color: { argb: "FFB4B4B4" } },
+};
+
+// Helper: Calculate totals
+function hitungTotal(s) {
+  const jumlahPrestasi = (s.prestasi?.akademik || 0) + (s.prestasi?.nonAkademik || 0);
+  const jumlahKarakter =
+    (s.karakter?.tanggungJawab || 0) +
+    (s.karakter?.disiplin || 0) +
+    (s.karakter?.kepedulian || 0) +
+    (s.karakter?.spiritual || 0) +
+    (s.karakter?.kejujuran || 0) +
+    (s.karakter?.percayaDiri || 0);
+  const jumlahKeaktifan =
+    (s.keaktifan?.organisasi || 0) + (s.keaktifan?.kepanitiaan || 0) + (s.keaktifan?.event || 0);
+  const jumlahPelanggaran =
+    (s.pelanggaran?.ringan || 0) + (s.pelanggaran?.sedang || 0) + (s.pelanggaran?.berat || 0);
+  const totalIPC = jumlahPrestasi + jumlahKarakter + jumlahKeaktifan + jumlahPelanggaran;
+
+  return { jumlahPrestasi, jumlahKarakter, jumlahKeaktifan, jumlahPelanggaran, totalIPC };
+}
+
+// Helper: Style cell
+function styleCell(cell, { fill, bold, align = "center", color } = {}) {
+  cell.border = THIN_BORDER;
+  cell.alignment = { vertical: "middle", horizontal: align, wrapText: true };
+  if (fill) cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: fill } };
+  if (bold) cell.font = { ...(cell.font || {}), bold: true, color: color ? { argb: color } : undefined };
+  else if (color) cell.font = { ...(cell.font || {}), color: { argb: color } };
+}
+
+// Column definitions
+const COLUMN_DEFS = [
+  { key: "no", header1: "NO", merge: "v", width: 5 },
+  { key: "nama", header1: "NAMA SISWA", merge: "v", width: 24, align: "left" },
+  { key: "nis", header1: "NIS/NISN", merge: "v", width: 11 },
+  { key: "kelas", header1: "KELAS", merge: "v", width: 10 },
+  { key: "ghra", header1: "GHRA", merge: "v", width: 7 },
+
+  { key: "akademik", header1: "Prestasi", header2: "Akademik", group: "prestasi", width: 10 },
+  { key: "nonAkademik", header2: "Non-Akademik", group: "prestasi", width: 15 },
+  { key: "jumlahPrestasi", header2: "Jumlah", group: "prestasi", width: 9, jumlahFill: "jumlahPrestasi" },
+
+  { key: "tanggungJawab", header1: "Perkembangan Karakter", header2: "Tanggung Jawab", group: "karakter", width: 13 },
+  { key: "disiplin", header2: "Disiplin", group: "karakter", width: 9 },
+  { key: "kepedulian", header2: "Kepedulian", group: "karakter", width: 12 },
+  { key: "spiritual", header2: "Spiritual", group: "karakter", width: 9 },
+  { key: "kejujuran", header2: "Kejujuran", group: "karakter", width: 9 },
+  { key: "percayaDiri", header2: "Kepercayaan Diri", group: "karakter", width: 15 },
+  { key: "jumlahKarakter", header2: "Jumlah", group: "karakter", width: 9, jumlahFill: "jumlahKarakter" },
+
+  { key: "organisasi", header1: "Keaktifan", header2: "Organisasi", group: "keaktifan", width: 10 },
+  { key: "kepanitiaan", header2: "Kepanitiaan", group: "keaktifan", width: 11 },
+  { key: "event", header2: "Event", group: "keaktifan", width: 8 },
+  { key: "jumlahKeaktifan", header2: "Jumlah", group: "keaktifan", width: 9, jumlahFill: "jumlahKeaktifan" },
+
+  { key: "ringan", header1: "Pelanggaran", header2: "Ringan", group: "pelanggaran", width: 9 },
+  { key: "sedang", header2: "Sedang", group: "pelanggaran", width: 9 },
+  { key: "berat", header2: "Berat", group: "pelanggaran", width: 8 },
+  { key: "jumlahPelanggaran", header2: "Jumlah", group: "pelanggaran", width: 9, jumlahFill: "jumlahPelanggaran" },
+
+  { key: "totalIPC", header1: "Total IPC", merge: "v", width: 10, jumlahFill: "total" },
+];
+
+function buildRowValues(s) {
+  const t = hitungTotal(s);
+  return {
+    no: s.no,
+    nama: s.nama,
+    nis: s.nis,
+    kelas: s.kelas,
+    ghra: s.ghra || "-",
+    akademik: s.prestasi?.akademik ?? 0,
+    nonAkademik: s.prestasi?.nonAkademik ?? 0,
+    jumlahPrestasi: t.jumlahPrestasi,
+    tanggungJawab: s.karakter?.tanggungJawab ?? 0,
+    disiplin: s.karakter?.disiplin ?? 0,
+    kepedulian: s.karakter?.kepedulian ?? 0,
+    spiritual: s.karakter?.spiritual ?? 0,
+    kejujuran: s.karakter?.kejujuran ?? 0,
+    percayaDiri: s.karakter?.percayaDiri ?? 0,
+    jumlahKarakter: t.jumlahKarakter,
+    organisasi: s.keaktifan?.organisasi ?? 0,
+    kepanitiaan: s.keaktifan?.kepanitiaan ?? 0,
+    event: s.keaktifan?.event ?? 0,
+    jumlahKeaktifan: t.jumlahKeaktifan,
+    ringan: s.pelanggaran?.ringan ?? 0,
+    sedang: s.pelanggaran?.sedang ?? 0,
+    berat: s.pelanggaran?.berat ?? 0,
+    jumlahPelanggaran: t.jumlahPelanggaran,
+    totalIPC: t.totalIPC,
+  };
+}
+
+// Index kolom body (0-based)
+const COL = {
+  NO: 0,
+  NAMA: 1,
+  NIS: 2,
+  KELAS: 3,
+  GHRA: 4,
+  PRESTASI_AKADEMIK: 5,
+  PRESTASI_NONAKADEMIK: 6,
+  PRESTASI_JUMLAH: 7,
+  KARAKTER_TJ: 8,
+  KARAKTER_DISIPLIN: 9,
+  KARAKTER_PEDULI: 10,
+  KARAKTER_SPIRITUAL: 11,
+  KARAKTER_JUJUR: 12,
+  KARAKTER_PD: 13,
+  KARAKTER_JUMLAH: 14,
+  KEAKTIFAN_ORGANISASI: 15,
+  KEAKTIFAN_KEPANITIAAN: 16,
+  KEAKTIFAN_EVENT: 17,
+  KEAKTIFAN_JUMLAH: 18,
+  PELANGGARAN_RINGAN: 19,
+  PELANGGARAN_SEDANG: 20,
+  PELANGGARAN_BERAT: 21,
+  PELANGGARAN_JUMLAH: 22,
+  TOTAL_IPC: 23,
+};
 
 function LaporanCetak({ user }) {
   const [students, setStudents] = useState([]);
@@ -16,6 +176,7 @@ function LaporanCetak({ user }) {
   const [classStudents, setClassStudents] = useState([]);
   const [isWaliKelas, setIsWaliKelas] = useState(false);
   const [waliKelasInfo, setWaliKelasInfo] = useState(null);
+  const [excelLoading, setExcelLoading] = useState(false);
   
   useEffect(() => {
     checkWaliKelasStatus();
@@ -110,7 +271,7 @@ function LaporanCetak({ user }) {
   const generateClassReportPdf = async (students) => {
     try {
       const doc = new jsPDF({
-        orientation: 'portrait',
+        orientation: 'landscape',
         unit: 'mm',
         format: 'a4'
       });
@@ -152,131 +313,400 @@ function LaporanCetak({ user }) {
       doc.setFont('times', 'bold');
       doc.text(`Kelas: ${selectedClass}`, 20, 75);
 
-      // Prepare table data with full breakdown
+      let y = 78;
+
+      // Prepare table data with full breakdown and subtotals
       const tableData = students.map((student, index) => {
         const points = student.points || {};
         const total = student.ipc_total || student.ipc_awal || 0;
         
+        // Calculate subtotals
+        const prestasiTotal = (points.prestasi_akademik || 0) + (points.prestasi_nonakademik || 0);
+        const karakterTotal = (points.tanggung_jawab || 0) + (points.disiplin || 0) + (points.kepedulian || 0) + 
+                             (points.spiritual || 0) + (points.kejujuran || 0) + (points.kepercayaan_diri || 0);
+        const keaktifanTotal = (points.organisasi || 0) + (points.kepanitiaan || 0) + (points.event || 0);
+        const pelanggaranTotal = (points.pelanggaran_ringan || 0) + (points.pelanggaran_sedang || 0) + (points.pelanggaran_berat || 0);
+        
         return [
           index + 1,
-          student.nis || '-',
           student.nama || '-',
-          student.jurusan || '-',
-          student.tahun_pelajaran || '-',
-          points.point_awal || student.ipc_awal || 80,
+          student.nis || '-',
+          student.kelas || '-',
+          student.grha || '-',
           points.prestasi_akademik || 0,
           points.prestasi_nonakademik || 0,
+          prestasiTotal,
           points.tanggung_jawab || 0,
           points.disiplin || 0,
           points.kepedulian || 0,
-          points.kemandirian || 0,
           points.spiritual || 0,
           points.kejujuran || 0,
           points.kepercayaan_diri || 0,
+          karakterTotal,
           points.organisasi || 0,
           points.kepanitiaan || 0,
           points.event || 0,
+          keaktifanTotal,
           points.pelanggaran_ringan || 0,
           points.pelanggaran_sedang || 0,
           points.pelanggaran_berat || 0,
-          total < 0 ? `${total} (MINUS)` : total
+          pelanggaranTotal,
+          total < 0 ? `${total} (MINUS)` : total,
         ];
       });
 
-      // Add table with full breakdown columns
+      // Create merged header structure
+      const headerRow1 = [
+        { content: 'NO', rowSpan: 2, styles: { valign: 'middle', halign: 'center' } },
+        { content: 'NAMA SISWA', rowSpan: 2, styles: { valign: 'middle', halign: 'left' } },
+        { content: 'NIS/NISN', rowSpan: 2, styles: { valign: 'middle', halign: 'center' } },
+        { content: 'KELAS', rowSpan: 2, styles: { valign: 'middle', halign: 'center' } },
+        { content: 'GHRA', rowSpan: 2, styles: { valign: 'middle', halign: 'center' } },
+        { content: 'Prestasi', colSpan: 3, styles: { halign: 'center', fillColor: COLORS.headerPrestasi } },
+        { content: 'Perkembangan Karakter', colSpan: 7, styles: { halign: 'center', fillColor: COLORS.headerKarakter } },
+        { content: 'Keaktifan', colSpan: 4, styles: { halign: 'center', fillColor: COLORS.headerKeaktifan } },
+        { content: 'Pelanggaran', colSpan: 4, styles: { halign: 'center', fillColor: COLORS.headerPelanggaran } },
+        { content: 'Total\nIPC', rowSpan: 2, styles: { valign: 'middle', halign: 'center', fillColor: COLORS.headerTotal } },
+      ];
+
+      const headerRow2 = [
+        // Prestasi
+        { content: 'Akademik', styles: { fillColor: COLORS.headerPrestasi, halign: 'center' } },
+        { content: 'Non-\nAkademik', styles: { fillColor: COLORS.headerPrestasi, halign: 'center' } },
+        { content: 'Jumlah', styles: { fillColor: COLORS.headerPrestasi, halign: 'center' } },
+        // Perkembangan Karakter (disingkat supaya 1 baris, tidak pecah kata)
+        { content: 'T. Jawab', styles: { fillColor: COLORS.headerKarakter, halign: 'center' } },
+        { content: 'Disiplin', styles: { fillColor: COLORS.headerKarakter, halign: 'center' } },
+        { content: 'Peduli', styles: { fillColor: COLORS.headerKarakter, halign: 'center' } },
+        { content: 'Spiritual', styles: { fillColor: COLORS.headerKarakter, halign: 'center' } },
+        { content: 'Jujur', styles: { fillColor: COLORS.headerKarakter, halign: 'center' } },
+        { content: 'P. Diri', styles: { fillColor: COLORS.headerKarakter, halign: 'center' } },
+        { content: 'Jumlah', styles: { fillColor: COLORS.headerKarakter, halign: 'center' } },
+        // Keaktifan
+        { content: 'Organisasi', styles: { fillColor: COLORS.headerKeaktifan, halign: 'center' } },
+        { content: 'Panitia', styles: { fillColor: COLORS.headerKeaktifan, halign: 'center' } },
+        { content: 'Event', styles: { fillColor: COLORS.headerKeaktifan, halign: 'center' } },
+        { content: 'Jumlah', styles: { fillColor: COLORS.headerKeaktifan, halign: 'center' } },
+        // Pelanggaran
+        { content: 'Ringan', styles: { fillColor: COLORS.headerPelanggaran, halign: 'center' } },
+        { content: 'Sedang', styles: { fillColor: COLORS.headerPelanggaran, halign: 'center' } },
+        { content: 'Berat', styles: { fillColor: COLORS.headerPelanggaran, halign: 'center' } },
+        { content: 'Jumlah', styles: { fillColor: COLORS.headerPelanggaran, halign: 'center' } },
+      ];
+
+      // Add table with merged headers
       autoTable(doc, {
-        startY: 80,
-        head: [['No', 'NIS', 'Nama', 'Jurusan', 'Tahun', 'Awal', 'Pres.Ak', 'Pres.Non', 'Tang.Jawab', 'Disiplin', 'Kepedulian', 'Mandiri', 'Spiritual', 'Jujur', 'Perc.Diri', 'Org', 'Kepan', 'Event', 'Pel.Ringan', 'Pel.Sedang', 'Pel.Berat', 'Total']],
+        startY: y,
+        head: [headerRow1, headerRow2],
         body: tableData,
         theme: 'grid',
+        tableWidth: 'auto',
         styles: {
-          font: 'times',
-          fontSize: 6,
+          font: 'helvetica',
+          fontSize: 6.3,
           cellPadding: 1,
-          lineColor: [0, 0, 0],
+          halign: 'center',
+          valign: 'middle',
+          lineColor: COLORS.borderGray,
           lineWidth: 0.1,
-          textColor: [0, 0, 0]
+          overflow: 'linebreak',
+          minCellHeight: 8,
         },
         headStyles: {
-          fillColor: [240, 240, 240],
           fontStyle: 'bold',
-          halign: 'center',
           fontSize: 6,
-          textColor: [0, 0, 0]
+          fillColor: [230, 230, 230],
+          textColor: [0, 0, 0],
+          minCellHeight: 11,
         },
         columnStyles: {
-          0: { cellWidth: 8, halign: 'center' },
-          1: { cellWidth: 15, halign: 'center' },
-          2: { cellWidth: 25 },
-          3: { cellWidth: 12, halign: 'center' },
-          4: { cellWidth: 12, halign: 'center' },
-          5: { cellWidth: 8, halign: 'center' },
-          6: { cellWidth: 8, halign: 'center' },
-          7: { cellWidth: 8, halign: 'center' },
-          8: { cellWidth: 8, halign: 'center' },
-          9: { cellWidth: 8, halign: 'center' },
-          10: { cellWidth: 8, halign: 'center' },
-          11: { cellWidth: 8, halign: 'center' },
-          12: { cellWidth: 8, halign: 'center' },
-          13: { cellWidth: 8, halign: 'center' },
-          14: { cellWidth: 8, halign: 'center' },
-          15: { cellWidth: 8, halign: 'center' },
-          16: { cellWidth: 8, halign: 'center' },
-          17: { cellWidth: 8, halign: 'center' },
-          18: { cellWidth: 8, halign: 'center' },
-          19: { cellWidth: 8, halign: 'center' },
-          20: { cellWidth: 8, halign: 'center' },
-          21: { cellWidth: 12, halign: 'center', fontStyle: 'bold' }
+          [COL.NO]: { cellWidth: 7 },
+          [COL.NAMA]: { cellWidth: 28, halign: 'left', fontSize: 6.3 },
+          [COL.NIS]: { cellWidth: 14 },
+          [COL.KELAS]: { cellWidth: 12 },
+          [COL.GHRA]: { cellWidth: 8 },
+
+          [COL.PRESTASI_AKADEMIK]: { cellWidth: 14 },
+          [COL.PRESTASI_NONAKADEMIK]: { cellWidth: 14 },
+          [COL.PRESTASI_JUMLAH]: { cellWidth: 11 },
+
+          [COL.KARAKTER_TJ]: { cellWidth: 9.5 },
+          [COL.KARAKTER_DISIPLIN]: { cellWidth: 10 },
+          [COL.KARAKTER_PEDULI]: { cellWidth: 9 },
+          [COL.KARAKTER_SPIRITUAL]: { cellWidth: 12 },
+          [COL.KARAKTER_JUJUR]: { cellWidth: 8.5 },
+          [COL.KARAKTER_PD]: { cellWidth: 8.5 },
+          [COL.KARAKTER_JUMLAH]: { cellWidth: 11 },
+
+          [COL.KEAKTIFAN_ORGANISASI]: { cellWidth: 14 },
+          [COL.KEAKTIFAN_KEPANITIAAN]: { cellWidth: 9.5 },
+          [COL.KEAKTIFAN_EVENT]: { cellWidth: 8 },
+          [COL.KEAKTIFAN_JUMLAH]: { cellWidth: 11 },
+
+          [COL.PELANGGARAN_RINGAN]: { cellWidth: 10 },
+          [COL.PELANGGARAN_SEDANG]: { cellWidth: 10.5 },
+          [COL.PELANGGARAN_BERAT]: { cellWidth: 8 },
+          [COL.PELANGGARAN_JUMLAH]: { cellWidth: 11 },
+
+          [COL.TOTAL_IPC]: { cellWidth: 11 },
         },
-        margin: { left: 10, right: 10, top: 10, bottom: 20 },
-        didParseCell: function(data) {
-          // Style negative values in red with MINUS indicator
-          if (data.section === 'body' && data.column.index === 21) {
-            const cellValue = data.cell.raw;
-            if (typeof cellValue === 'string' && cellValue.includes('MINUS')) {
-              data.cell.styles.textColor = [255, 0, 0];
-              data.cell.styles.fontStyle = 'bold';
-            }
+        didParseCell: (data) => {
+          if (data.section !== 'body') return;
+          const col = data.column.index;
+          const raw = data.cell.raw;
+
+          if (col === COL.PRESTASI_JUMLAH) {
+            data.cell.styles.fillColor = COLORS.cellJumlahPrestasi;
+            data.cell.styles.fontStyle = 'bold';
           }
-        }
+          if (col === COL.KARAKTER_JUMLAH) {
+            data.cell.styles.fillColor = COLORS.cellJumlahKarakter;
+            data.cell.styles.fontStyle = 'bold';
+          }
+          if (col === COL.KEAKTIFAN_JUMLAH) {
+            data.cell.styles.fillColor = COLORS.cellJumlahKeaktifan;
+            data.cell.styles.fontStyle = 'bold';
+          }
+          if (col === COL.PELANGGARAN_JUMLAH) {
+            data.cell.styles.fillColor = COLORS.cellJumlahPelanggaran;
+            data.cell.styles.fontStyle = 'bold';
+          }
+          if (col === COL.TOTAL_IPC) {
+            data.cell.styles.fillColor = COLORS.headerTotal;
+            data.cell.styles.fontStyle = 'bold';
+          }
+
+          // Nilai negatif ditampilkan merah
+          if (typeof raw === 'number' && raw < 0) {
+            data.cell.styles.textColor = COLORS.textNegative;
+          }
+          // Handle string negative values
+          if (typeof raw === 'string' && raw.includes('MINUS')) {
+            data.cell.styles.textColor = COLORS.textNegative;
+          }
+        },
+        margin: { left: 10, right: 10 },
       });
 
+      // Add footnote for abbreviations
+      const noteY = doc.lastAutoTable.finalY + 4;
+      doc.setFont('times', 'italic');
+      doc.setFontSize(7);
+      doc.text(
+        'Ket: T. Jawab = Tanggung Jawab, Peduli = Kepedulian, P. Diri = Kepercayaan Diri, Panitia = Kepanitiaan',
+        15,
+        noteY
+      );
+
       // Signatures
-      const finalY = doc.lastAutoTable.finalY || 80;
-      const sigY = finalY + 15;
-      const leftSigX = 20;
-      const rightSigX = doc.internal.pageSize.getWidth() - 75;
+      const finalY = doc.lastAutoTable.finalY + 20;
+      const leftX = 20;
+      const rightX = doc.internal.pageSize.getWidth() - 90;
 
       const formatDate = () => {
         const options = { day: 'numeric', month: 'long', year: 'numeric' };
         return new Date().toLocaleDateString('id-ID', options);
       };
 
-      doc.setFontSize(9);
       doc.setFont('times', 'normal');
-      doc.text('Mengetahui,', leftSigX, sigY);
-      doc.text(`Kubutambahan, ${formatDate()}`, rightSigX, sigY);
+      doc.setFontSize(10);
+      doc.text('Mengetahui,', leftX, finalY);
+      doc.text(`Kubutambahan, ${formatDate()}`, rightX, finalY);
 
       doc.setFont('times', 'bold');
-      doc.setFontSize(9);
-      doc.text('Kepala SMK Negeri Bali Mandara', leftSigX, sigY + 5);
-      doc.text('Wali Kelas', rightSigX, sigY + 5);
+      doc.text('Kepala SMK Negeri Bali Mandara', leftX, finalY + 5);
+      doc.text('Wali Kelas', rightX, finalY + 5);
 
+      // Ruang tanda tangan
+      const ttdY = finalY + 22;
       doc.setFont('times', 'bold');
-      doc.setFontSize(9);
-      doc.text('Ketut Susila Widiarsana, S.Pd., M.Pd.', leftSigX, sigY + 20);
-      doc.text(waliKelasData.nama, rightSigX, sigY + 20);
+      doc.text('Ketut Susila Widiarsana, S.Pd., M.Pd.', leftX, ttdY);
+      doc.text(waliKelasData.nama, rightX, ttdY);
 
       doc.setFont('times', 'normal');
-      doc.setFontSize(8);
-      doc.text('NIP.  19831101 200803 1 001', leftSigX, sigY + 25);
-      doc.text(`NIP. ${waliKelasData.nip}`, rightSigX, sigY + 25);
+      doc.setFontSize(9);
+      doc.text('NIP. 19831101 200803 1 001', leftX, ttdY + 5);
+      doc.text(`NIP. ${waliKelasData.nip}`, rightX, ttdY + 5);
 
       return doc.output('blob');
     } catch (e) {
       console.error('Error generating class report PDF:', e);
       return null;
     }
+  };
+
+  const generateExcelBlob = async () => {
+    if (reportType === 'individual') {
+      // For individual report, we'll handle separately if needed
+      return null;
+    } else if (reportType === 'class') {
+      // For class report, generate Excel with leger format using ExcelJS
+      try {
+        // Prepare student data in the format expected by the Excel generator
+        const formattedStudents = classStudents.map((student, index) => {
+          const points = student.points || {};
+          return {
+            no: index + 1,
+            nama: student.nama || '-',
+            nis: student.nis || '-',
+            kelas: student.kelas || '-',
+            ghra: student.grha || '-',
+            prestasi: {
+              akademik: points.prestasi_akademik || 0,
+              nonAkademik: points.prestasi_nonakademik || 0,
+            },
+            karakter: {
+              tanggungJawab: points.tanggung_jawab || 0,
+              disiplin: points.disiplin || 0,
+              kepedulian: points.kepedulian || 0,
+              spiritual: points.spiritual || 0,
+              kejujuran: points.kejujuran || 0,
+              percayaDiri: points.kepercayaan_diri || 0,
+            },
+            keaktifan: {
+              organisasi: points.organisasi || 0,
+              kepanitiaan: points.kepanitiaan || 0,
+              event: points.event || 0,
+            },
+            pelanggaran: {
+              ringan: points.pelanggaran_ringan || 0,
+              sedang: points.pelanggaran_sedang || 0,
+              berat: points.pelanggaran_berat || 0,
+            },
+          };
+        });
+
+        const workbook = new ExcelJS.Workbook();
+        const sheet = workbook.addWorksheet("Laporan IPC", {
+          pageSetup: { orientation: "landscape", fitToPage: true, fitToWidth: 1 },
+        });
+        sheet.properties.defaultRowHeight = 20;
+
+        const totalCols = COLUMN_DEFS.length;
+        const tahunPelajaran = `${new Date().getFullYear()}/${new Date().getFullYear() + 1}`;
+
+        // ---- Judul di atas tabel ----
+        sheet.mergeCells(1, 1, 1, totalCols);
+        sheet.getCell(1, 1).value = "LAPORAN IPC PER KELAS";
+        sheet.getCell(1, 1).font = { bold: true, size: 13 };
+        sheet.getCell(1, 1).alignment = { horizontal: "center" };
+
+        sheet.mergeCells(2, 1, 2, totalCols);
+        sheet.getCell(2, 1).value = "SMK NEGERI BALI MANDARA";
+        sheet.getCell(2, 1).font = { bold: true };
+        sheet.getCell(2, 1).alignment = { horizontal: "center" };
+
+        sheet.mergeCells(3, 1, 3, totalCols);
+        sheet.getCell(3, 1).value = `TAHUN PELAJARAN ${tahunPelajaran}`;
+        sheet.getCell(3, 1).font = { bold: true };
+        sheet.getCell(3, 1).alignment = { horizontal: "center" };
+
+        sheet.mergeCells(5, 1, 5, totalCols);
+        sheet.getCell(5, 1).value = `Kelas: ${selectedClass}`;
+        sheet.getCell(5, 1).font = { bold: true };
+
+        // Baris 6 dikosongkan sebagai jarak
+        const HEAD_ROW_1 = 7; // baris grup
+        const HEAD_ROW_2 = 8; // baris sub-header
+        const DATA_START_ROW = 9;
+
+        // ---- Set lebar kolom ----
+        COLUMN_DEFS.forEach((def, i) => {
+          sheet.getColumn(i + 1).width = def.width;
+        });
+
+        // ---- Set tinggi baris header supaya teks tidak kepotong ----
+        sheet.getRow(HEAD_ROW_1).height = 22;
+        sheet.getRow(HEAD_ROW_2).height = 38;
+
+        // ---- Tulis header baris 1 & 2, sekaligus merge sesuai grup/rowspan ----
+        let colCursor = 1;
+        while (colCursor <= totalCols) {
+          const def = COLUMN_DEFS[colCursor - 1];
+
+          if (def.merge === "v") {
+            // Kolom rowspan 2
+            sheet.mergeCells(HEAD_ROW_1, colCursor, HEAD_ROW_2, colCursor);
+            const cell = sheet.getCell(HEAD_ROW_1, colCursor);
+            cell.value = def.header1;
+            styleCell(cell, { fill: def.jumlahFill ? EXCEL_COLORS[def.jumlahFill] : EXCEL_COLORS.headerAbu, bold: true });
+
+            // style cell kedua juga (walau sudah merge) supaya border-nya konsisten
+            styleCell(sheet.getCell(HEAD_ROW_2, colCursor), { fill: def.jumlahFill ? EXCEL_COLORS[def.jumlahFill] : EXCEL_COLORS.headerAbu, bold: true });
+
+            colCursor += 1;
+            continue;
+          }
+
+          if (def.group) {
+            // Hitung berapa banyak kolom berturutan dengan group yang sama
+            let span = 1;
+            while (
+              colCursor + span <= totalCols &&
+              COLUMN_DEFS[colCursor + span - 1] &&
+              COLUMN_DEFS[colCursor + span - 1].group === def.group
+            ) {
+              span += 1;
+            }
+
+            if (span > 1) {
+              sheet.mergeCells(HEAD_ROW_1, colCursor, HEAD_ROW_1, colCursor + span - 1);
+            }
+
+            // PENTING: style SEMUA cell dalam rentang merge, bukan cuma cell pertama,
+            // supaya border tidak bolong di tengah setelah merge
+            for (let k = 0; k < span; k++) {
+              const groupCell = sheet.getCell(HEAD_ROW_1, colCursor + k);
+              if (k === 0) groupCell.value = def.header1;
+              styleCell(groupCell, { fill: EXCEL_COLORS[def.group], bold: true });
+            }
+
+            for (let k = 0; k < span; k++) {
+              const subDef = COLUMN_DEFS[colCursor - 1 + k];
+              const subCell = sheet.getCell(HEAD_ROW_2, colCursor + k);
+              subCell.value = subDef.header2;
+              styleCell(subCell, { fill: EXCEL_COLORS[subDef.group], bold: true });
+            }
+
+            colCursor += span;
+            continue;
+          }
+
+          colCursor += 1;
+        }
+
+        // ---- Tulis baris data siswa ----
+        formattedStudents.forEach((s, idx) => {
+          const rowNum = DATA_START_ROW + idx;
+          const values = buildRowValues(s);
+
+          COLUMN_DEFS.forEach((def, colIdx) => {
+            const cell = sheet.getCell(rowNum, colIdx + 1);
+            cell.value = values[def.key];
+
+            const isNegative = typeof values[def.key] === "number" && values[def.key] < 0;
+
+            styleCell(cell, {
+              fill: def.jumlahFill ? EXCEL_COLORS[def.jumlahFill] : undefined,
+              bold: !!def.jumlahFill,
+              align: def.align || "center",
+              color: isNegative ? "FFC00000" : undefined,
+            });
+          });
+        });
+
+        // ---- Freeze panes supaya header tetap kelihatan saat scroll ----
+        sheet.views = [{ state: "frozen", ySplit: HEAD_ROW_2, xSplit: 5 }];
+
+        // ---- Trigger download ----
+        const buffer = await workbook.xlsx.writeBuffer();
+        return buffer;
+      } catch (error) {
+        console.error('Error generating Excel:', error);
+        return null;
+      }
+    }
+    return null;
   };
 
   const generatePdfBlob = async () => {
@@ -564,6 +994,30 @@ function LaporanCetak({ user }) {
     }
   };
 
+  const handleDownloadExcel = async () => {
+    const filename = `Laporan_IPC_Kelas_${selectedClass || 'SEMUA'}.xlsx`;
+
+    try {
+      setExcelLoading(true);
+      const blob = await generateExcelBlob();
+      if (blob) {
+        const url = URL.createObjectURL(new Blob([blob], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }));
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = filename;
+        link.click();
+        URL.revokeObjectURL(url);
+      } else {
+        alert('Gagal membuat Excel');
+      }
+    } catch (e) {
+      console.error(e);
+      alert('Gagal membuat Excel');
+    } finally {
+      setExcelLoading(false);
+    }
+  };
+
   const handleDownloadPdf = async () => {
     let filename;
 
@@ -711,7 +1165,7 @@ function LaporanCetak({ user }) {
         ) : (
           <>
             <p style={{ marginBottom: '14px', color: 'var(--text-secondary)', fontSize: '14px' }}>
-              Format cetak menampilkan daftar semua siswa dalam kelas dengan breakdown lengkap: Point Awal, Prestasi (Akademik/Non-Akademik), Perkembangan Karakter (7 aspek), Organisasi, Kepanitiaan, Event, Pelanggaran (Ringan/Sedang/Berat), dan Total IPC (diurutkan berdasarkan NIS).
+              Format cetak menampilkan Leger IPC Individual Point Card dengan format tabel lengkap termasuk NIS/NISN, Nama, Kelas, GHRA, breakdown IPC (Prestasi, Perkembangan Karakter, Keaktifan, Pelanggaran), dan Total IPC dalam format landscape yang rapi dan profesional.
             </p>
 
             <div className="ipc-print-toolbar">
@@ -725,6 +1179,9 @@ function LaporanCetak({ user }) {
               </button>
               <button type="button" onClick={handleDownloadPdf} disabled={(!selectedClass) || ipcLoading}>
                 {ipcLoading ? 'Membuat PDF...' : 'Download PDF'}
+              </button>
+              <button type="button" onClick={handleDownloadExcel} disabled={(!selectedClass) || excelLoading} className="btn btn-success">
+                {excelLoading ? 'Membuat Excel...' : 'Download Excel'}
               </button>
             </div>
           </>

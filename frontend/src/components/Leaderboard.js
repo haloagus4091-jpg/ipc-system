@@ -1,9 +1,20 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import API_BASE_URL from '../config';
+import { Trophy, User, RefreshCw, GraduationCap, ListOrdered, FileText, Medal } from "lucide-react";
+
+const PAGE_BG = "#F7F8FB";
+const CARD = "#FFFFFF";
+const LINE = "#E7E8EE";
+const INK = "#1E2130";
+const SLATE = "#6B7080";
+
+const BLUE = { bg: "#EAF1FE", text: "#2563EB", border: "#C6DAFC", solid: "#3B7CF6" };
+const GREEN = { bg: "#EAFBF3", text: "#0F7A55", border: "#B7EED7" };
+const AMBER = { bg: "#FFF8EA", text: "#B4700A", border: "#F7DFAE" };
 
 function Leaderboard() {
-  const [activeTab, setActiveTab] = useState('akademik'); // 'akademik' or 'nonakademik'
+  const [activeTab, setActiveTab] = useState('akademik');
   const [akademikData, setAkademikData] = useState([]);
   const [nonAkademikData, setNonAkademikData] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -18,7 +29,6 @@ function Leaderboard() {
       setLoading(true);
       const token = localStorage.getItem('token');
       
-      // Fetch both rankings in parallel
       const [akademikRes, nonAkademikRes] = await Promise.all([
         axios.get('/search/leaderboard/akademik', {
           headers: { Authorization: `Bearer ${token}` }
@@ -38,283 +48,391 @@ function Leaderboard() {
     }
   };
 
-  const getRankBadge = (rank) => {
-    if (rank === 1) return { bg: 'linear-gradient(135deg, #FFD700 0%, #FFA500 100%)', text: '#000', icon: '🥇', shadow: '0 8px 25px rgba(255, 215, 0, 0.4)' };
-    if (rank === 2) return { bg: 'linear-gradient(135deg, #C0C0C0 0%, #A0A0A0 100%)', text: '#000', icon: '🥈', shadow: '0 8px 25px rgba(192, 192, 192, 0.4)' };
-    if (rank === 3) return { bg: 'linear-gradient(135deg, #CD7F32 0%, #B87333 100%)', text: '#fff', icon: '🥉', shadow: '0 8px 25px rgba(205, 127, 50, 0.4)' };
-    return { bg: 'var(--bg-tertiary)', text: 'var(--text-primary)', icon: rank, shadow: 'none' };
-  };
+  function rankBadge(rank) {
+    if (rank === 1) return { bg: "#FCEDBB", fg: "#8A6512", ring: "#E4B932" };
+    if (rank === 2) return { bg: "#E7E9EE", fg: "#565B68", ring: "#B7BCC7" };
+    if (rank === 3) return { bg: "#F4DEC4", fg: "#9A5B21", ring: "#D99A55" };
+    return { bg: "#EEF0F4", fg: SLATE, ring: LINE };
+  }
+
+  function initials(name) {
+    return name.split(" ").map((w) => w[0]).slice(0, 2).join("").toUpperCase();
+  }
 
   const currentData = activeTab === 'akademik' ? akademikData : nonAkademikData;
+  const title = activeTab === 'akademik' ? "Peringkat akademik" : "Peringkat non-akademik";
 
   if (loading) {
     return (
-      <div data-aos="fade-up">
-        <h2>🏆 Peringkat</h2>
-        <div className="card" style={{ textAlign: 'center', padding: '60px' }}>
-          <div className="spinner" style={{ marginBottom: '20px' }}></div>
-          <p>Memuat data...</p>
-        </div>
+      <div style={{
+        fontFamily: "'Source Sans 3', ui-sans-serif, system-ui, -apple-system, sans-serif",
+        background: PAGE_BG,
+        minHeight: "100vh",
+        padding: "28px 32px 60px",
+        color: INK,
+      }}>
+        <div className="loading"><div className="spinner"></div></div>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div data-aos="fade-up">
-        <h2>🏆 Peringkat</h2>
-        <div className="card" style={{ textAlign: 'center', padding: '40px' }}>
-          <p style={{ color: 'var(--danger-color)', marginBottom: '20px', fontSize: '1.1rem' }}>{error}</p>
-          <button className="btn btn-primary" onClick={fetchLeaderboardData}>
-            🔄 Coba Lagi
-          </button>
-        </div>
+      <div style={{
+        fontFamily: "'Source Sans 3', ui-sans-serif, system-ui, -apple-system, sans-serif",
+        background: PAGE_BG,
+        minHeight: "100vh",
+        padding: "28px 32px 60px",
+        color: INK,
+      }}>
+        <div className="alert alert-danger">{error}</div>
+        <button className="btn btn-primary" onClick={fetchLeaderboardData}>
+          Coba Lagi
+        </button>
       </div>
     );
   }
 
   return (
-    <div data-aos="fade-up">
-      <div style={{ marginBottom: '24px' }}>
-        <h2 style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <span style={{ fontSize: '2rem' }}>🏆</span>
-          Peringkat Top 20
-        </h2>
-        <p style={{ color: 'var(--text-secondary)', marginTop: '8px' }}>
-          Lihat peringkat siswa berdasarkan prestasi akademik dan non-akademik
-        </p>
-      </div>
-      
-      {/* Tab Navigation */}
-      <div style={{ display: 'flex', gap: '12px', marginBottom: '24px' }} data-aos="fade-down" data-aos-delay="100">
-        <button
-          onClick={() => setActiveTab('akademik')}
+    <div
+      style={{
+        fontFamily: "'Source Sans 3', ui-sans-serif, system-ui, -apple-system, sans-serif",
+        background: PAGE_BG,
+        minHeight: "100vh",
+        padding: "28px 32px 60px",
+        color: INK,
+      }}
+    >
+      {/* Header */}
+      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6 }}>
+        <div
           style={{
-            flex: 1,
-            padding: '16px',
-            border: '2px solid',
-            borderColor: activeTab === 'akademik' ? 'var(--primary-color)' : 'var(--border-color)',
-            borderRadius: 'var(--border-radius-md)',
-            background: activeTab === 'akademik' ? 'var(--primary-color)' : 'var(--bg-primary)',
-            color: activeTab === 'akademik' ? 'white' : 'var(--text-primary)',
-            fontWeight: '600',
-            cursor: 'pointer',
-            transition: 'all var(--transition-fast)',
+            width: 34, height: 34, borderRadius: 9,
+            background: AMBER.bg, display: "flex", alignItems: "center", justifyContent: "center",
           }}
         >
-          <div style={{ fontSize: '1.5rem', marginBottom: '4px' }}>📚</div>
-          <div style={{ fontSize: '1rem', fontWeight: '700' }}>Akademik</div>
-          <div style={{ fontSize: '0.8rem', opacity: 0.7, marginTop: '2px' }}>{akademikData.length} siswa</div>
-        </button>
-        <button
-          onClick={() => setActiveTab('nonakademik')}
-          style={{
-            flex: 1,
-            padding: '16px',
-            border: '2px solid',
-            borderColor: activeTab === 'nonakademik' ? 'var(--success-color)' : 'var(--border-color)',
-            borderRadius: 'var(--border-radius-md)',
-            background: activeTab === 'nonakademik' ? 'var(--success-color)' : 'var(--bg-primary)',
-            color: activeTab === 'nonakademik' ? 'white' : 'var(--text-primary)',
-            fontWeight: '600',
-            cursor: 'pointer',
-            transition: 'all var(--transition-fast)',
-          }}
-        >
-          <div style={{ fontSize: '1.5rem', marginBottom: '4px' }}>🎨</div>
-          <div style={{ fontSize: '1rem', fontWeight: '700' }}>Non-Akademik</div>
-          <div style={{ fontSize: '0.8rem', opacity: 0.7, marginTop: '2px' }}>{nonAkademikData.length} siswa</div>
-        </button>
+          <Trophy size={17} strokeWidth={2} color={AMBER.text} />
+        </div>
+        <h1 style={{ fontSize: 22, fontWeight: 700, margin: 0, letterSpacing: "-0.01em" }}>
+          Peringkat top 20
+        </h1>
       </div>
+      <p style={{ fontSize: 13.5, color: SLATE, margin: "0 0 22px" }}>
+        Peringkat siswa berdasarkan prestasi akademik dan non-akademik
+      </p>
 
-      {/* Refresh Button */}
-      <div style={{ marginBottom: '24px', textAlign: 'right' }} data-aos="fade-down" data-aos-delay="200">
-        <button 
-          className="btn btn-info" 
+      {/* Tabs + refresh */}
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          gap: 12,
+          marginBottom: 22,
+          flexWrap: "wrap",
+        }}
+      >
+        <div
+          style={{
+            display: "flex",
+            background: CARD,
+            border: `1px solid ${LINE}`,
+            borderRadius: 9,
+            padding: 4,
+            gap: 4,
+          }}
+        >
+          {[
+            { key: "akademik", label: "Akademik", count: akademikData.length },
+            { key: "nonakademik", label: "Non-akademik", count: nonAkademikData.length },
+          ].map((t) => {
+            const active = activeTab === t.key;
+            return (
+              <button
+                key={t.key}
+                onClick={() => setActiveTab(t.key)}
+                style={{
+                  border: "none",
+                  cursor: "pointer",
+                  padding: "9px 20px",
+                  borderRadius: 6,
+                  background: active ? BLUE.solid : "transparent",
+                  color: active ? "#fff" : SLATE,
+                  fontSize: 13.5,
+                  fontWeight: 600,
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  minWidth: 130,
+                }}
+              >
+                <span>{t.label}</span>
+                <span
+                  style={{
+                    fontSize: 11.5,
+                    fontWeight: 400,
+                    color: active ? "rgba(255,255,255,0.75)" : SLATE,
+                    marginTop: 1,
+                  }}
+                >
+                  {t.count} siswa
+                </span>
+              </button>
+            );
+          })}
+        </div>
+
+        <button
           onClick={fetchLeaderboardData}
-          style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 7,
+            padding: "10px 16px",
+            borderRadius: 7,
+            border: "none",
+            background: BLUE.solid,
+            color: "#fff",
+            fontSize: 13.5,
+            fontWeight: 500,
+            cursor: "pointer",
+          }}
         >
-          🔄 Refresh Data
+          <RefreshCw size={15} strokeWidth={2} />
+          Refresh data
         </button>
       </div>
 
-      {/* Leaderboard Table */}
-      <div className="card" data-aos="fade-up" data-aos-delay="300">
-        <div style={{ marginBottom: '20px' }}>
-          <h3 style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            {activeTab === 'akademik' ? '📚' : '🎨'}
-            Peringkat {activeTab === 'akademik' ? 'Akademik' : 'Non-Akademik'}
-          </h3>
-          <p style={{ color: 'var(--text-secondary)', marginTop: '8px', lineHeight: '1.6' }}>
-            {activeTab === 'akademik' 
-              ? 'Peringkat berdasarkan jumlah prestasi akademik yang telah disetujui.'
-              : 'Peringkat berdasarkan jumlah prestasi non-akademik yang telah disetujui.'}
+      {/* Table card */}
+      <div
+        style={{
+          background: CARD,
+          border: `1px solid ${LINE}`,
+          borderRadius: 12,
+          overflow: "hidden",
+        }}
+      >
+        <div style={{ padding: "20px 22px 16px" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+            <ListOrdered size={16} strokeWidth={2} color={BLUE.text} />
+            <h2 style={{ fontSize: 15.5, fontWeight: 600, margin: 0 }}>{title}</h2>
+          </div>
+          <p style={{ fontSize: 12.5, color: SLATE, margin: 0 }}>
+            Peringkat berdasarkan jumlah prestasi yang telah disetujui.
           </p>
         </div>
 
-        {currentData.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: '60px 20px', color: 'var(--text-secondary)' }}>
-            <div style={{ fontSize: '4rem', marginBottom: '16px' }}>📭</div>
-            <p style={{ fontSize: '1.1rem' }}>Belum ada data prestasi {activeTab === 'akademik' ? 'akademik' : 'non-akademik'}.</p>
-          </div>
-        ) : (
-          <div style={{ overflowX: 'auto', borderRadius: 'var(--border-radius-sm)' }}>
-            <table className="table" style={{ minWidth: '800px' }}>
-              <thead>
+        <div style={{ overflowX: "auto" }}>
+          <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 640 }}>
+            <thead>
+              <tr style={{ background: "#F4F6FA" }}>
+                <th style={th}>Posisi</th>
+                <th style={th}>Nama</th>
+                <th style={th}>Kelas</th>
+                <th style={{ ...th, textAlign: "center" }}>Total</th>
+                <th style={th}>Detail prestasi</th>
+              </tr>
+            </thead>
+            <tbody>
+              {currentData.length === 0 ? (
                 <tr>
-                  <th style={{ textAlign: 'center', width: '60px', padding: '16px' }}>Posisi</th>
-                  <th style={{ width: '180px', padding: '16px' }}>Nama</th>
-                  <th style={{ textAlign: 'center', width: '100px', padding: '16px' }}>Kelas</th>
-                  <th style={{ textAlign: 'center', width: '100px', padding: '16px' }}>Total</th>
-                  <th style={{ width: '450px', padding: '16px' }}>Detail Prestasi</th>
+                  <td colSpan="5" style={{ textAlign: "center", padding: "60px 20px", color: SLATE }}>
+                    Belum ada data prestasi {activeTab === 'akademik' ? 'akademik' : 'non-akademik'}.
+                  </td>
                 </tr>
-              </thead>
-              <tbody>
-                {currentData.map((student, index) => {
-                  const badge = getRankBadge(student.rank);
+              ) : (
+                currentData.map((s) => {
+                  const badge = rankBadge(s.rank);
                   return (
-                    <tr 
-                      key={student.id} 
-                      style={{ 
-                        background: badge.bg,
-                        color: badge.text,
-                        transition: 'all var(--transition-fast)',
-                      }}
-                      onMouseOver={(e) => {
-                        e.target.style.transform = 'scale(1.01)';
-                        e.target.style.boxShadow = badge.shadow;
-                      }}
-                      onMouseOut={(e) => {
-                        e.target.style.transform = 'scale(1)';
-                        e.target.style.boxShadow = 'none';
-                      }}
-                    >
-                      <td style={{ textAlign: 'center', padding: '16px', fontSize: '1.5rem' }}>
-                        {badge.icon}
+                    <tr key={s.id} style={{ borderTop: `1px solid ${LINE}` }}>
+                      <td style={{ ...td, width: 70 }}>
+                        <div
+                          style={{
+                            width: 28,
+                            height: 28,
+                            borderRadius: "50%",
+                            background: badge.bg,
+                            color: badge.fg,
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            fontSize: 12.5,
+                            fontWeight: 700,
+                            border: `1px solid ${badge.ring}`,
+                          }}
+                        >
+                          {s.rank}
+                        </div>
                       </td>
-                      <td style={{ padding: '16px' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                          <div style={{
-                            width: '40px',
-                            height: '40px',
-                            borderRadius: '50%',
-                            background: 'var(--bg-tertiary)',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            overflow: 'hidden',
-                            border: '2px solid var(--primary-color)',
-                            flexShrink: 0
-                          }}>
-                            {student.foto ? (
-                              <img 
-                                src={`${API_BASE_URL.replace('/api', '')}${student.foto}`} 
-                                alt={student.nama} 
-                                style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
-                              />
-                            ) : (
-                              <span style={{ fontSize: '1.2rem' }}>👤</span>
-                            )}
+                      <td style={td}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                          <div
+                            style={{
+                              width: 32,
+                              height: 32,
+                              borderRadius: "50%",
+                              background: BLUE.bg,
+                              color: BLUE.text,
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              fontSize: 12,
+                              fontWeight: 700,
+                              flexShrink: 0,
+                            }}
+                          >
+                            {initials(s.nama)}
                           </div>
                           <div>
-                            <strong style={{ fontSize: '1rem', display: 'block', marginBottom: '2px' }}>{student.nama}</strong>
-                            <span style={{ fontSize: '0.75rem', opacity: 0.7 }}>NIS: {student.nis}</span>
+                            <div style={{ fontSize: 13.5, fontWeight: 600 }}>{s.nama}</div>
+                            <div style={{ fontSize: 11.5, color: SLATE }}>NIS {s.nis}</div>
                           </div>
                         </div>
                       </td>
-                      <td style={{ textAlign: 'center', padding: '16px' }}>
-                        <strong style={{ display: 'block', fontSize: '1rem' }}>{student.kelas}</strong>
+                      <td style={td}>
+                        <span
+                          style={{
+                            display: "inline-block",
+                            fontSize: 12.5,
+                            fontWeight: 600,
+                            color: GREEN.text,
+                            background: GREEN.bg,
+                            border: `1px solid ${GREEN.border}`,
+                            borderRadius: 999,
+                            padding: "3px 11px",
+                          }}
+                        >
+                          {s.kelas}
+                        </span>
                       </td>
-                      <td style={{ textAlign: 'center', padding: '16px', fontWeight: '700', fontSize: '1.5rem' }}>
-                        {student.total_prestasi}
+                      <td style={{ ...td, textAlign: "center" }}>
+                        <span
+                          style={{
+                            display: "inline-flex",
+                            minWidth: 26,
+                            padding: "3px 9px",
+                            borderRadius: 999,
+                            background: BLUE.bg,
+                            color: BLUE.text,
+                            border: `1px solid ${BLUE.border}`,
+                            fontSize: 12.5,
+                            fontWeight: 700,
+                            justifyContent: "center",
+                          }}
+                        >
+                          {s.total_prestasi}
+                        </span>
                       </td>
-                      <td style={{ padding: '16px', fontSize: '0.85rem', lineHeight: '1.8' }}>
-                        {student.detail_prestasi && student.detail_prestasi.length > 0 ? (
-                          <div style={{ maxHeight: '180px', overflowY: 'auto', paddingRight: '8px' }}>
-                            {student.detail_prestasi.map((comp, idx) => (
-                              <div 
-                                key={idx} 
-                                style={{ 
-                                  marginBottom: '8px', 
-                                  padding: '8px', 
-                                  background: 'rgba(255,255,255,0.3)', 
-                                  borderRadius: 'var(--border-radius-sm)',
-                                  transition: 'all var(--transition-fast)'
-                                }}
-                                onMouseOver={(e) => {
-                                  e.target.style.background = 'rgba(255,255,255,0.5)';
-                                  e.target.style.transform = 'translateX(4px)';
-                                }}
-                                onMouseOut={(e) => {
-                                  e.target.style.background = 'rgba(255,255,255,0.3)';
-                                  e.target.style.transform = 'translateX(0)';
+                      <td style={{ ...td, minWidth: 220 }}>
+                        <div
+                          style={{
+                            maxHeight: 132,
+                            overflowY: s.detail_prestasi && s.detail_prestasi.length > 2 ? "auto" : "visible",
+                            paddingRight: s.detail_prestasi && s.detail_prestasi.length > 2 ? 4 : 0,
+                          }}
+                        >
+                          {s.detail_prestasi && s.detail_prestasi.length > 0 ? (
+                            s.detail_prestasi.map((d, i) => (
+                              <div
+                                key={i}
+                                style={{
+                                  background: AMBER.bg,
+                                  border: `1px solid ${AMBER.border}`,
+                                  borderRadius: 8,
+                                  padding: "8px 12px",
+                                  marginBottom: i < s.detail_prestasi.length - 1 ? 6 : 0,
                                 }}
                               >
-                                <strong style={{ display: 'block', marginBottom: '2px', fontSize: '0.85rem' }}>
-                                  🏆 {comp.nama_lomba}
-                                </strong>
-                                <span style={{ fontSize: '0.75rem', opacity: 0.8 }}>
-                                  {comp.juara}
-                                </span>
+                                <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13, fontWeight: 600, color: AMBER.text }}>
+                                  <Medal size={13} strokeWidth={2} color={AMBER.text} />
+                                  {d.nama_lomba}
+                                </div>
+                                <div style={{ fontSize: 11.5, color: "#A9791F", marginTop: 1 }}>{d.juara}</div>
                               </div>
-                            ))}
-                          </div>
-                        ) : (
-                          <span style={{ opacity: 0.6, fontStyle: 'italic' }}>Tidak ada detail</span>
-                        )}
+                            ))
+                          ) : (
+                            <span style={{ opacity: 0.6, fontStyle: "italic" }}>Tidak ada detail</span>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   );
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
 
         {/* Legend */}
-        <div style={{ 
-          marginTop: '24px', 
-          padding: '20px', 
-          background: 'var(--bg-tertiary)', 
-          borderRadius: 'var(--border-radius-md)',
-          border: '1px solid var(--border-color)'
-        }} data-aos="fade-up" data-aos-delay="400">
-          <h4 style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
-            📋 Keterangan
-          </h4>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '12px', marginTop: '12px' }}>
-            <div style={{ padding: '10px', background: 'var(--bg-primary)', borderRadius: 'var(--border-radius-sm)' }}>
-              <strong style={{ color: 'var(--primary-color)' }}>👤 Nama</strong>
-              <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: '2px' }}>Nama siswa</div>
-            </div>
-            <div style={{ padding: '10px', background: 'var(--bg-primary)', borderRadius: 'var(--border-radius-sm)' }}>
-              <strong style={{ color: 'var(--primary-color)' }}>🏫 Kelas</strong>
-              <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: '2px' }}>Kelas</div>
-            </div>
-            <div style={{ padding: '10px', background: 'var(--bg-primary)', borderRadius: 'var(--border-radius-sm)' }}>
-              <strong style={{ color: 'var(--primary-color)' }}>📊 Total</strong>
-              <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: '2px' }}>Jumlah prestasi</div>
-            </div>
-            <div style={{ padding: '10px', background: 'var(--bg-primary)', borderRadius: 'var(--border-radius-sm)' }}>
-              <strong style={{ color: 'var(--primary-color)' }}>📝 Detail</strong>
-              <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: '2px' }}>Info lomba & juara</div>
-            </div>
+        <div style={{ padding: "18px 22px 22px" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 7, marginBottom: 12 }}>
+            <FileText size={14} strokeWidth={2} color={SLATE} />
+            <span style={{ fontSize: 12.5, fontWeight: 600, color: SLATE }}>Keterangan</span>
           </div>
-          <div style={{ 
-            marginTop: '16px', 
-            padding: '12px', 
-            background: 'var(--bg-primary)', 
-            borderRadius: 'var(--border-radius-sm)',
-            borderLeft: '3px solid var(--warning-color)'
-          }}>
-            <p style={{ margin: 0, color: 'var(--text-secondary)', fontSize: '0.8rem', lineHeight: '1.5' }}>
-              <strong>💡 Info:</strong> 🥇🥈🥉 = Peringkat 1-3 (Emas, Perak, Perunggu) | Data diupdate otomatis.
-            </p>
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))",
+              gap: 10,
+              marginBottom: 14,
+            }}
+          >
+            {[
+              { icon: User, label: "Nama", desc: "Nama siswa" },
+              { icon: GraduationCap, label: "Kelas", desc: "Kelas siswa" },
+              { icon: ListOrdered, label: "Total", desc: "Jumlah prestasi" },
+              { icon: FileText, label: "Detail", desc: "Info lomba & juara" },
+            ].map(({ icon: Icon, label, desc }) => (
+              <div
+                key={label}
+                style={{
+                  background: CARD,
+                  border: `1px solid ${LINE}`,
+                  borderRadius: 8,
+                  padding: "10px 12px",
+                }}
+              >
+                <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12.5, fontWeight: 700, marginBottom: 2, color: BLUE.text }}>
+                  <Icon size={13} strokeWidth={2} color={BLUE.text} />
+                  {label}
+                </div>
+                <div style={{ fontSize: 11.5, color: SLATE }}>{desc}</div>
+              </div>
+            ))}
+          </div>
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 8,
+              padding: "10px 14px",
+              borderLeft: `3px solid ${AMBER.text}`,
+              background: AMBER.bg,
+              borderRadius: 6,
+              fontSize: 12.5,
+              color: AMBER.text,
+            }}
+          >
+            Lingkaran bernomor menandai peringkat 1 sampai 3. Data diperbarui otomatis.
           </div>
         </div>
       </div>
     </div>
   );
 }
+
+const th = {
+  textAlign: "left",
+  padding: "10px 16px",
+  fontSize: 11.5,
+  fontWeight: 600,
+  color: SLATE,
+  textTransform: "none",
+};
+
+const td = {
+  padding: "14px 16px",
+  verticalAlign: "top",
+};
 
 export default Leaderboard;

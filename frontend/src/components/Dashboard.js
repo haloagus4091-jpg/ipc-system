@@ -18,7 +18,7 @@ function Dashboard() {
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState(null);
-  const [showLabels, setShowLabels] = useState(true); // Opsi untuk menampilkan/menyembunyikan label
+  const [showLabels, setShowLabels] = useState(true);
   
   // Chart colors
   const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8', '#82CA9D'];

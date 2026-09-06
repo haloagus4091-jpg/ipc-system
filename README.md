@@ -261,17 +261,31 @@ full project ipcs/
 │   │   ├── pelanggaran.js
 │   │   ├── perilaku.js
 │   │   ├── approvals.js
+│   │   ├── approvals-v2.js
 │   │   ├── permissions.js
+│   │   ├── input-access.js
 │   │   ├── logs.js
 │   │   ├── dashboard.js
 │   │   ├── waliKelas.js
 │   │   ├── search.js
-│   │   └── profile.js
+│   │   ├── profile.js
+│   │   ├── reports.js
+│   │   ├── academicYear.js
+│   │   └── file-viewer.js
 │   ├── uploads/
 │   │   ├── prestasi/
 │   │   ├── organisasi/
 │   │   ├── event/
-│   │   └── pelanggaran/
+│   │   ├── kepanitiaan/
+│   │   ├── pelanggaran/
+│   │   └── approvals/
+│   ├── utils/
+│   │   ├── ipc.js
+│   │   ├── approvalSchema.js
+│   │   ├── fileUtils.js
+│   │   └── ipcCardBreakdown.js
+│   ├── constants/
+│   │   └── points.js
 │   ├── .env
 │   ├── package.json
 │   └── server.js
@@ -286,6 +300,7 @@ full project ipcs/
 │   │   │   ├── InputPrestasi.js
 │   │   │   ├── InputOrganisasi.js
 │   │   │   ├── InputEvent.js
+│   │   │   ├── InputKepanitiaan.js
 │   │   │   ├── InputPelanggaran.js
 │   │   │   ├── InputPerilaku.js
 │   │   │   ├── KelolaAkun.js
@@ -294,13 +309,42 @@ full project ipcs/
 │   │   │   ├── Profile.js
 │   │   │   ├── Logs.js
 │   │   │   ├── WaliKelas.js
-│   │   │   └── Approvals.js
+│   │   │   ├── Approvals.js
+│   │   │   ├── ApprovalsV2.js
+│   │   │   ├── Notifications.js
+│   │   │   ├── NotificationBadge.js
+│   │   │   ├── EditModal.js
+│   │   │   ├── EditIPCAwal.js
+│   │   │   ├── Leaderboard.js
+│   │   │   ├── StudentDetail.js
+│   │   │   ├── StudentRecordsHistory.js
+│   │   │   ├── TeacherWaliKelas.js
+│   │   │   ├── LaporanCetak.js
+│   │   │   ├── IpcReport.js
+│   │   │   ├── IpcPrintSheet.js
+│   │   │   ├── ipcPrintBranding.js
+│   │   │   └── DriveViewer.js
+│   │   ├── hooks/
+│   │   │   └── useEditModal.js
+│   │   ├── utils/
+│   │   │   └── kelasJurusan.js
 │   │   ├── App.js
 │   │   ├── index.js
-│   │   └── index.css
+│   │   ├── index.css
+│   │   └── config.js
 │   └── package.json
-├── skema.sql
-└── README.md
+├── database/
+│   └── skema.sql
+├── docs/
+├── screenshots/
+├── .github/
+├── .gitignore
+├── apache-config.conf
+├── README.md
+├── DOCUMENTATION.md
+├── QUICK_GUIDE.md
+├── REQUIREMENTS.md
+└── SECURITY.md
 ```
 
 ## Panduan Penggunaan
@@ -351,6 +395,21 @@ full project ipcs/
 - Semua input data memerlukan approval kecuali dari superadmin
 - Foto bukti disimpan di folder `backend/uploads/approvals` di server (local storage)
 - Google Drive integration telah dihapus dan diganti dengan penyimpanan lokal server
+
+## Optimasi & Kinerja
+
+### Optimasi yang Diterapkan
+- **Dashboard Auto-refresh**: Data dashboard otomatis di-refresh setiap 30 detik untuk memastikan data terbaru
+- **Notification Polling**: Notifikasi dicek setiap 30 detik untuk update real-time
+- **Database Query Optimization**: Query dashboard dioptimasi dengan indexing pada tabel utama
+- **Class Calculation**: Kelas siswa dihitung otomatis berdasarkan tahun pelajaran dan jurusan
+- **IPC Breakdown**: Perhitungan IPC menggunakan fungsi terpusat untuk konsistensi data
+
+### Catatan Kinerja
+- Aplikasi menggunakan React 18 dengan optimasi rendering
+- Backend menggunakan Express.js dengan middleware rate limiting untuk keamanan
+- File upload menggunakan multer dengan storage lokal yang efisien
+- Query database menggunakan prepared statements untuk mencegah SQL injection
 
 ## Pengembangan Lanjutan
 
