@@ -45,13 +45,17 @@ const THIN_BORDER = {
   right: { style: "thin", color: { argb: "FFB4B4B4" } },
 };
 
-// Helper: Calculate totals
+// Helper: Calculate totals - MUST MATCH BACKEND CALCULATION
 function hitungTotal(s) {
+  // Point awal (default 80 if not specified)
+  const pointAwal = s.point_awal || 80;
+  
   const jumlahPrestasi = (s.prestasi?.akademik || 0) + (s.prestasi?.nonAkademik || 0);
   const jumlahKarakter =
     (s.karakter?.tanggungJawab || 0) +
     (s.karakter?.disiplin || 0) +
     (s.karakter?.kepedulian || 0) +
+    (s.karakter?.kemandirian || 0) + // Added kemandirian
     (s.karakter?.spiritual || 0) +
     (s.karakter?.kejujuran || 0) +
     (s.karakter?.percayaDiri || 0);
@@ -59,9 +63,11 @@ function hitungTotal(s) {
     (s.keaktifan?.organisasi || 0) + (s.keaktifan?.kepanitiaan || 0) + (s.keaktifan?.event || 0);
   const jumlahPelanggaran =
     (s.pelanggaran?.ringan || 0) + (s.pelanggaran?.sedang || 0) + (s.pelanggaran?.berat || 0);
-  const totalIPC = jumlahPrestasi + jumlahKarakter + jumlahKeaktifan + jumlahPelanggaran;
+  
+  // Total IPC = Point Awal + Prestasi + Karakter + Keaktifan - Pelanggaran
+  const totalIPC = pointAwal + jumlahPrestasi + jumlahKarakter + jumlahKeaktifan - jumlahPelanggaran;
 
-  return { jumlahPrestasi, jumlahKarakter, jumlahKeaktifan, jumlahPelanggaran, totalIPC };
+  return { jumlahPrestasi, jumlahKarakter, jumlahKeaktifan, jumlahPelanggaran, totalIPC, pointAwal };
 }
 
 // Helper: Style cell
@@ -80,6 +86,7 @@ const COLUMN_DEFS = [
   { key: "nis", header1: "NIS/NISN", merge: "v", width: 11 },
   { key: "kelas", header1: "KELAS", merge: "v", width: 10 },
   { key: "ghra", header1: "GHRA", merge: "v", width: 7 },
+  { key: "pointAwal", header1: "Point Awal", merge: "v", width: 10 }, // Added point awal column
 
   { key: "akademik", header1: "Prestasi", header2: "Akademik", group: "prestasi", width: 10 },
   { key: "nonAkademik", header2: "Non-Akademik", group: "prestasi", width: 15 },
@@ -88,6 +95,7 @@ const COLUMN_DEFS = [
   { key: "tanggungJawab", header1: "Perkembangan Karakter", header2: "Tanggung Jawab", group: "karakter", width: 13 },
   { key: "disiplin", header2: "Disiplin", group: "karakter", width: 9 },
   { key: "kepedulian", header2: "Kepedulian", group: "karakter", width: 12 },
+  { key: "kemandirian", header2: "Kemandirian", group: "karakter", width: 12 }, // Added kemandirian
   { key: "spiritual", header2: "Spiritual", group: "karakter", width: 9 },
   { key: "kejujuran", header2: "Kejujuran", group: "karakter", width: 9 },
   { key: "percayaDiri", header2: "Kepercayaan Diri", group: "karakter", width: 15 },
@@ -114,12 +122,14 @@ function buildRowValues(s) {
     nis: s.nis,
     kelas: s.kelas,
     ghra: s.ghra || "-",
+    pointAwal: t.pointAwal, // Added point awal
     akademik: s.prestasi?.akademik ?? 0,
     nonAkademik: s.prestasi?.nonAkademik ?? 0,
     jumlahPrestasi: t.jumlahPrestasi,
     tanggungJawab: s.karakter?.tanggungJawab ?? 0,
     disiplin: s.karakter?.disiplin ?? 0,
     kepedulian: s.karakter?.kepedulian ?? 0,
+    kemandirian: s.karakter?.kemandirian ?? 0, // Added kemandirian
     spiritual: s.karakter?.spiritual ?? 0,
     kejujuran: s.karakter?.kejujuran ?? 0,
     percayaDiri: s.karakter?.percayaDiri ?? 0,
@@ -143,25 +153,27 @@ const COL = {
   NIS: 2,
   KELAS: 3,
   GHRA: 4,
-  PRESTASI_AKADEMIK: 5,
-  PRESTASI_NONAKADEMIK: 6,
-  PRESTASI_JUMLAH: 7,
-  KARAKTER_TJ: 8,
-  KARAKTER_DISIPLIN: 9,
-  KARAKTER_PEDULI: 10,
-  KARAKTER_SPIRITUAL: 11,
-  KARAKTER_JUJUR: 12,
-  KARAKTER_PD: 13,
-  KARAKTER_JUMLAH: 14,
-  KEAKTIFAN_ORGANISASI: 15,
-  KEAKTIFAN_KEPANITIAAN: 16,
-  KEAKTIFAN_EVENT: 17,
-  KEAKTIFAN_JUMLAH: 18,
-  PELANGGARAN_RINGAN: 19,
-  PELANGGARAN_SEDANG: 20,
-  PELANGGARAN_BERAT: 21,
-  PELANGGARAN_JUMLAH: 22,
-  TOTAL_IPC: 23,
+  POINT_AWAL: 5, // Added point awal
+  PRESTASI_AKADEMIK: 6,
+  PRESTASI_NONAKADEMIK: 7,
+  PRESTASI_JUMLAH: 8,
+  KARAKTER_TJ: 9,
+  KARAKTER_DISIPLIN: 10,
+  KARAKTER_PEDULI: 11,
+  KARAKTER_KEMANDIRIAN: 12, // Added kemandirian
+  KARAKTER_SPIRITUAL: 13,
+  KARAKTER_JUJUR: 14,
+  KARAKTER_PD: 15,
+  KARAKTER_JUMLAH: 16,
+  KEAKTIFAN_ORGANISASI: 17,
+  KEAKTIFAN_KEPANITIAAN: 18,
+  KEAKTIFAN_EVENT: 19,
+  KEAKTIFAN_JUMLAH: 20,
+  PELANGGARAN_RINGAN: 21,
+  PELANGGARAN_SEDANG: 22,
+  PELANGGARAN_BERAT: 23,
+  PELANGGARAN_JUMLAH: 24,
+  TOTAL_IPC: 25,
 };
 
 function LaporanCetak({ user }) {
@@ -318,14 +330,19 @@ function LaporanCetak({ user }) {
       // Prepare table data with full breakdown and subtotals
       const tableData = students.map((student, index) => {
         const points = student.points || {};
-        const total = student.ipc_total || student.ipc_awal || 0;
+        const pointAwal = points.point_awal || student.ipc_awal || 80;
+        const total = student.ipc_total || pointAwal || 0;
         
-        // Calculate subtotals
+        // Calculate subtotals - MUST MATCH BACKEND CALCULATION
         const prestasiTotal = (points.prestasi_akademik || 0) + (points.prestasi_nonakademik || 0);
         const karakterTotal = (points.tanggung_jawab || 0) + (points.disiplin || 0) + (points.kepedulian || 0) + 
+                             (points.kemandirian || 0) + // Added kemandirian
                              (points.spiritual || 0) + (points.kejujuran || 0) + (points.kepercayaan_diri || 0);
         const keaktifanTotal = (points.organisasi || 0) + (points.kepanitiaan || 0) + (points.event || 0);
         const pelanggaranTotal = (points.pelanggaran_ringan || 0) + (points.pelanggaran_sedang || 0) + (points.pelanggaran_berat || 0);
+        
+        // Calculate total to ensure consistency
+        const calculatedTotal = pointAwal + prestasiTotal + karakterTotal + keaktifanTotal - pelanggaranTotal;
         
         return [
           index + 1,
@@ -333,12 +350,14 @@ function LaporanCetak({ user }) {
           student.nis || '-',
           student.kelas || '-',
           student.grha || '-',
+          pointAwal, // Added point awal
           points.prestasi_akademik || 0,
           points.prestasi_nonakademik || 0,
           prestasiTotal,
           points.tanggung_jawab || 0,
           points.disiplin || 0,
           points.kepedulian || 0,
+          points.kemandirian || 0, // Added kemandirian
           points.spiritual || 0,
           points.kejujuran || 0,
           points.kepercayaan_diri || 0,
@@ -351,7 +370,7 @@ function LaporanCetak({ user }) {
           points.pelanggaran_sedang || 0,
           points.pelanggaran_berat || 0,
           pelanggaranTotal,
-          total < 0 ? `${total} (MINUS)` : total,
+          calculatedTotal < 0 ? `${calculatedTotal} (MINUS)` : calculatedTotal, // Use calculated total
         ];
       });
 
@@ -362,6 +381,7 @@ function LaporanCetak({ user }) {
         { content: 'NIS/NISN', rowSpan: 2, styles: { valign: 'middle', halign: 'center' } },
         { content: 'KELAS', rowSpan: 2, styles: { valign: 'middle', halign: 'center' } },
         { content: 'GHRA', rowSpan: 2, styles: { valign: 'middle', halign: 'center' } },
+        { content: 'Point Awal', rowSpan: 2, styles: { valign: 'middle', halign: 'center', fillColor: COLORS.headerTotal } }, // Added point awal
         { content: 'Prestasi', colSpan: 3, styles: { halign: 'center', fillColor: COLORS.headerPrestasi } },
         { content: 'Perkembangan Karakter', colSpan: 7, styles: { halign: 'center', fillColor: COLORS.headerKarakter } },
         { content: 'Keaktifan', colSpan: 4, styles: { halign: 'center', fillColor: COLORS.headerKeaktifan } },
@@ -378,6 +398,7 @@ function LaporanCetak({ user }) {
         { content: 'T. Jawab', styles: { fillColor: COLORS.headerKarakter, halign: 'center' } },
         { content: 'Disiplin', styles: { fillColor: COLORS.headerKarakter, halign: 'center' } },
         { content: 'Peduli', styles: { fillColor: COLORS.headerKarakter, halign: 'center' } },
+        { content: 'Mandiri', styles: { fillColor: COLORS.headerKarakter, halign: 'center' } }, // Added kemandirian
         { content: 'Spiritual', styles: { fillColor: COLORS.headerKarakter, halign: 'center' } },
         { content: 'Jujur', styles: { fillColor: COLORS.headerKarakter, halign: 'center' } },
         { content: 'P. Diri', styles: { fillColor: COLORS.headerKarakter, halign: 'center' } },

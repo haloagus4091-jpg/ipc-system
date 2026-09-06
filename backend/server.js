@@ -110,6 +110,7 @@ app.use('/api/profile', require('./routes/profile'));
 app.use('/api/reports', require('./routes/reports'));
 app.use('/api/file-viewer', require('./routes/file-viewer'));
 app.use('/api/academic-year', require('./routes/academicYear'));
+app.use('/api/sync', require('./routes/sync'));
 
 // Global error handler - Security: Don't expose internal details
 app.use(errorHandler);

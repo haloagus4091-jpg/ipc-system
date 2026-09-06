@@ -40,7 +40,26 @@ function IpcPrintSheet({ student, wali, points, ipcTotal, printDate = new Date()
     pelanggaran_berat: 0
   };
 
-  const total = ipcTotal ?? student?.ipc_total ?? breakdown.point_awal;
+  // Calculate total using the same formula as backend for consistency
+  const calculatedTotal = 
+    (breakdown.point_awal || 80) +
+    (breakdown.prestasi_akademik || 0) +
+    (breakdown.prestasi_nonakademik || 0) +
+    (breakdown.tanggung_jawab || 0) +
+    (breakdown.disiplin || 0) +
+    (breakdown.kepedulian || 0) +
+    (breakdown.kemandirian || 0) +
+    (breakdown.spiritual || 0) +
+    (breakdown.kejujuran || 0) +
+    (breakdown.kepercayaan_diri || 0) +
+    (breakdown.organisasi || 0) +
+    (breakdown.kepanitiaan || 0) +
+    (breakdown.event || 0) -
+    (breakdown.pelanggaran_ringan || 0) -
+    (breakdown.pelanggaran_sedang || 0) -
+    (breakdown.pelanggaran_berat || 0);
+
+  const total = ipcTotal ?? calculatedTotal ?? student?.ipc_total ?? breakdown.point_awal;
 
   return (
     <div className="ipc-print-sheet">

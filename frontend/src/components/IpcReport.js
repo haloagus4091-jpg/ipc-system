@@ -59,31 +59,25 @@ function IpcReport({ studentId, onClose }) {
     }
   };
 
-  const calculateTotal = () => {
-    if (!ipcData) return 0;
-    
-    let total = ipcData.point_awal || 80;
-    total += ipcData.prestasi_akademik || 0;
-    total += ipcData.prestasi_nonakademik || 0;
-    total += ipcData.tanggung_jawab || 0;
-    total += ipcData.disiplin || 0;
-    total += ipcData.kepedulian || 0;
-    total += ipcData.kemandirian || 0;
-    total += ipcData.spiritual || 0;
-    total += ipcData.kejujuran || 0;
-    total += ipcData.kepercayaan_diri || 0;
-    total += ipcData.organisasi || 0;
-    total += ipcData.kepanitiaan || 0;
-    total += ipcData.event || 0;
-    total -= ipcData.pelanggaran_ringan || 0;
-    total -= ipcData.pelanggaran_sedang || 0;
-    total -= ipcData.pelanggaran_berat || 0;
-    
-    return total;
-  };
-
-  // Use the calculated total from breakdown for consistency
-  const calculatedTotal = calculateTotal();
+  // Use the breakdown total from backend for consistency
+  const calculatedTotal = ipcData ? (
+    (ipcData.point_awal || 80) +
+    (ipcData.prestasi_akademik || 0) +
+    (ipcData.prestasi_nonakademik || 0) +
+    (ipcData.tanggung_jawab || 0) +
+    (ipcData.disiplin || 0) +
+    (ipcData.kepedulian || 0) +
+    (ipcData.kemandirian || 0) +
+    (ipcData.spiritual || 0) +
+    (ipcData.kejujuran || 0) +
+    (ipcData.kepercayaan_diri || 0) +
+    (ipcData.organisasi || 0) +
+    (ipcData.kepanitiaan || 0) +
+    (ipcData.event || 0) -
+    (ipcData.pelanggaran_ringan || 0) -
+    (ipcData.pelanggaran_sedang || 0) -
+    (ipcData.pelanggaran_berat || 0)
+  ) : 0;
 
   // Format total with negative indicator
   const formatTotal = (value) => {
