@@ -454,6 +454,7 @@ function LaporanCetak({ user }) {
           [COL.KARAKTER_TJ]: { cellWidth: 9.5 },
           [COL.KARAKTER_DISIPLIN]: { cellWidth: 10 },
           [COL.KARAKTER_PEDULI]: { cellWidth: 9 },
+          [COL.KARAKTER_KEMANDIRIAN]: { cellWidth: 12 },
           [COL.KARAKTER_SPIRITUAL]: { cellWidth: 12 },
           [COL.KARAKTER_JUJUR]: { cellWidth: 8.5 },
           [COL.KARAKTER_PD]: { cellWidth: 8.5 },
@@ -580,6 +581,7 @@ function LaporanCetak({ user }) {
               tanggungJawab: points.tanggung_jawab || 0,
               disiplin: points.disiplin || 0,
               kepedulian: points.kepedulian || 0,
+              kemandirian: points.kemandirian || 0,
               spiritual: points.spiritual || 0,
               kejujuran: points.kejujuran || 0,
               percayaDiri: points.kepercayaan_diri || 0,
@@ -911,6 +913,7 @@ function LaporanCetak({ user }) {
           ['II Prestasi', ''],
           ['1. Akademik', breakdown.prestasi_akademik],
           ['2. Non-Akademik', breakdown.prestasi_nonakademik],
+          ['Jumlah Prestasi', (breakdown.prestasi_akademik || 0) + (breakdown.prestasi_nonakademik || 0)],
           ['III Perkembangan Karakter', ''],
           ['1. Tanggung Jawab', breakdown.tanggung_jawab],
           ['2. Disiplin', breakdown.disiplin],
@@ -919,16 +922,19 @@ function LaporanCetak({ user }) {
           ['5. Spiritual', breakdown.spiritual],
           ['6. Kejujuran', breakdown.kejujuran],
           ['7. Kepercayaan Diri', breakdown.kepercayaan_diri],
+          ['Jumlah Perkembangan Karakter', (breakdown.tanggung_jawab || 0) + (breakdown.disiplin || 0) + (breakdown.kepedulian || 0) + (breakdown.kemandirian || 0) + (breakdown.spiritual || 0) + (breakdown.kejujuran || 0) + (breakdown.kepercayaan_diri || 0)],
           ['IV Organisasi', ''],
           ['', breakdown.organisasi],
           ['V Kepanitiaan', ''],
           ['', breakdown.kepanitiaan],
           ['VI Event', ''],
           ['', breakdown.event],
+          ['Jumlah Keaktifan', (breakdown.organisasi || 0) + (breakdown.kepanitiaan || 0) + (breakdown.event || 0)],
           ['VII Pelanggaran', ''],
           ['1. Ringan', breakdown.pelanggaran_ringan],
           ['2. Sedang', breakdown.pelanggaran_sedang],
           ['3. Berat', breakdown.pelanggaran_berat],
+          ['Jumlah Pelanggaran', (breakdown.pelanggaran_ringan || 0) + (breakdown.pelanggaran_sedang || 0) + (breakdown.pelanggaran_berat || 0)],
           ['TOTAL POINT IPC', formatTotal(total)]
         ];
 
@@ -962,6 +968,12 @@ function LaporanCetak({ user }) {
             const sectionHeaders = ['I Point Awal', 'II Prestasi', 'III Perkembangan Karakter', 'IV Organisasi', 'V Kepanitiaan', 'VI Event', 'VII Pelanggaran', 'TOTAL POINT IPC'];
             if (sectionHeaders.includes(data.row.raw[0])) {
               data.cell.styles.fillColor = [224, 224, 224];
+              data.cell.styles.fontStyle = 'bold';
+            }
+            // Style subtotal rows
+            const subtotalRows = ['Jumlah Prestasi', 'Jumlah Perkembangan Karakter', 'Jumlah Keaktifan', 'Jumlah Pelanggaran'];
+            if (subtotalRows.includes(data.row.raw[0])) {
+              data.cell.styles.fillColor = [230, 240, 255];
               data.cell.styles.fontStyle = 'bold';
             }
             // Style total row specifically

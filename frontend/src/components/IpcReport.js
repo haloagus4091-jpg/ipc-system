@@ -173,6 +173,10 @@ function IpcReport({ studentId, onClose }) {
                 <td>2. Non-Akademik</td>
                 <td className="point-value">{ipcData?.prestasi_nonakademik || 0}</td>
               </tr>
+              <tr className="subtotal-row">
+                <td><strong>Jumlah Prestasi</strong></td>
+                <td className="point-value subtotal"><strong>{(ipcData?.prestasi_akademik || 0) + (ipcData?.prestasi_nonakademik || 0)}</strong></td>
+              </tr>
 
               <tr className="section-header">
                 <td colSpan="2">III Perkembangan Karakter</td>
@@ -205,6 +209,10 @@ function IpcReport({ studentId, onClose }) {
                 <td>7. Kepercayaan Diri</td>
                 <td className="point-value">{ipcData?.kepercayaan_diri || 0}</td>
               </tr>
+              <tr className="subtotal-row">
+                <td><strong>Jumlah Perkembangan Karakter</strong></td>
+                <td className="point-value subtotal"><strong>{(ipcData?.tanggung_jawab || 0) + (ipcData?.disiplin || 0) + (ipcData?.kepedulian || 0) + (ipcData?.kemandirian || 0) + (ipcData?.spiritual || 0) + (ipcData?.kejujuran || 0) + (ipcData?.kepercayaan_diri || 0)}</strong></td>
+              </tr>
 
               <tr className="section-header">
                 <td colSpan="2">IV Organisasi</td>
@@ -230,6 +238,11 @@ function IpcReport({ studentId, onClose }) {
                 <td className="point-value">{ipcData?.event || 0}</td>
               </tr>
 
+              <tr className="subtotal-row">
+                <td><strong>Jumlah Keaktifan</strong></td>
+                <td className="point-value subtotal"><strong>{(ipcData?.organisasi || 0) + (ipcData?.kepanitiaan || 0) + (ipcData?.event || 0)}</strong></td>
+              </tr>
+
               <tr className="section-header">
                 <td colSpan="2">VII Pelanggaran</td>
               </tr>
@@ -244,6 +257,10 @@ function IpcReport({ studentId, onClose }) {
               <tr>
                 <td>3. Berat</td>
                 <td className="point-value negative">{ipcData?.pelanggaran_berat || 0}</td>
+              </tr>
+              <tr className="subtotal-row">
+                <td><strong>Jumlah Pelanggaran</strong></td>
+                <td className="point-value subtotal negative"><strong>{(ipcData?.pelanggaran_ringan || 0) + (ipcData?.pelanggaran_sedang || 0) + (ipcData?.pelanggaran_berat || 0)}</strong></td>
               </tr>
 
               <tr className="total-row">

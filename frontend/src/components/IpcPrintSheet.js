@@ -131,6 +131,10 @@ function IpcPrintSheet({ student, wali, points, ipcTotal, printDate = new Date()
               <td>2. Non-Akademik</td>
               <td className="point-value">{breakdown.prestasi_nonakademik}</td>
             </tr>
+            <tr className="subtotal-row">
+              <td><strong>Jumlah Prestasi</strong></td>
+              <td className="point-value subtotal"><strong>{(breakdown.prestasi_akademik || 0) + (breakdown.prestasi_nonakademik || 0)}</strong></td>
+            </tr>
 
             <tr className="section-header">
               <td colSpan="2">III Perkembangan Karakter</td>
@@ -163,6 +167,10 @@ function IpcPrintSheet({ student, wali, points, ipcTotal, printDate = new Date()
               <td>7. Kepercayaan Diri</td>
               <td className="point-value">{breakdown.kepercayaan_diri}</td>
             </tr>
+            <tr className="subtotal-row">
+              <td><strong>Jumlah Perkembangan Karakter</strong></td>
+              <td className="point-value subtotal"><strong>{(breakdown.tanggung_jawab || 0) + (breakdown.disiplin || 0) + (breakdown.kepedulian || 0) + (breakdown.kemandirian || 0) + (breakdown.spiritual || 0) + (breakdown.kejujuran || 0) + (breakdown.kepercayaan_diri || 0)}</strong></td>
+            </tr>
 
             <tr className="section-header">
               <td colSpan="2">IV Organisasi</td>
@@ -188,6 +196,11 @@ function IpcPrintSheet({ student, wali, points, ipcTotal, printDate = new Date()
               <td className="point-value">{breakdown.event}</td>
             </tr>
 
+            <tr className="subtotal-row">
+              <td><strong>Jumlah Keaktifan</strong></td>
+              <td className="point-value subtotal"><strong>{(breakdown.organisasi || 0) + (breakdown.kepanitiaan || 0) + (breakdown.event || 0)}</strong></td>
+            </tr>
+
             <tr className="section-header">
               <td colSpan="2">VII Pelanggaran</td>
             </tr>
@@ -202,6 +215,10 @@ function IpcPrintSheet({ student, wali, points, ipcTotal, printDate = new Date()
             <tr>
               <td>3. Berat</td>
               <td className="point-value negative">{breakdown.pelanggaran_berat}</td>
+            </tr>
+            <tr className="subtotal-row">
+              <td><strong>Jumlah Pelanggaran</strong></td>
+              <td className="point-value subtotal negative"><strong>{(breakdown.pelanggaran_ringan || 0) + (breakdown.pelanggaran_sedang || 0) + (breakdown.pelanggaran_berat || 0)}</strong></td>
             </tr>
 
             <tr className="total-row">

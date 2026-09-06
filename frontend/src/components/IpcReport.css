@@ -153,6 +153,16 @@
   background: #d0d0d0 !important;
 }
 
+.subtotal-row {
+  background: #e6f0ff;
+  border-top: 1px solid #000;
+}
+
+.subtotal-row td {
+  font-weight: bold;
+  background: #e6f0ff !important;
+}
+
 .point-value {
   text-align: center;
   font-weight: bold;
