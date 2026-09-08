@@ -90,7 +90,7 @@ const COLUMN_DEFS = [
 
   { key: "prestasi_akademik", header1: "Prestasi", header2: "Akademik", group: "prestasi", width: 10 },
   { key: "prestasi_nonakademik", header2: "Non-Akademik", group: "prestasi", width: 15 },
-  { key: "jumlahPrestasi", header2: "Jumlah", group: "prestasi", width: 9, jumlahFill: "jumlahPrestasi" },
+  { key: "jumlahPrestasi", header2: "Jumlah", group: "prestasi", width: 10, jumlahFill: "jumlahPrestasi" },
 
   { key: "tanggung_jawab", header1: "Perkembangan Karakter", header2: "Tanggung Jawab", group: "karakter", width: 13 },
   { key: "disiplin", header2: "Disiplin", group: "karakter", width: 9 },
@@ -99,17 +99,17 @@ const COLUMN_DEFS = [
   { key: "spiritual", header2: "Spiritual", group: "karakter", width: 9 },
   { key: "kejujuran", header2: "Kejujuran", group: "karakter", width: 9 },
   { key: "kepercayaan_diri", header2: "Kepercayaan Diri", group: "karakter", width: 15 },
-  { key: "jumlahKarakter", header2: "Jumlah", group: "karakter", width: 9, jumlahFill: "jumlahKarakter" },
+  { key: "jumlahKarakter", header2: "Jumlah", group: "karakter", width: 10, jumlahFill: "jumlahKarakter" },
 
   { key: "organisasi", header1: "Keaktifan", header2: "Organisasi", group: "keaktifan", width: 10 },
   { key: "kepanitiaan", header2: "Kepanitiaan", group: "keaktifan", width: 11 },
   { key: "event", header2: "Event", group: "keaktifan", width: 8 },
-  { key: "jumlahKeaktifan", header2: "Jumlah", group: "keaktifan", width: 9, jumlahFill: "jumlahKeaktifan" },
+  { key: "jumlahKeaktifan", header2: "Jumlah", group: "keaktifan", width: 10, jumlahFill: "jumlahKeaktifan" },
 
-  { key: "pelanggaran_ringan", header1: "Pelanggaran", header2: "Ringan", group: "pelanggaran", width: 9 },
-  { key: "pelanggaran_sedang", header2: "Sedang", group: "pelanggaran", width: 9 },
-  { key: "pelanggaran_berat", header2: "Berat", group: "pelanggaran", width: 8 },
-  { key: "jumlahPelanggaran", header2: "Jumlah", group: "pelanggaran", width: 9, jumlahFill: "jumlahPelanggaran" },
+  { key: "pelanggaran_ringan", header1: "Pelanggaran", header2: "Ringan", group: "pelanggaran", width: 10 },
+  { key: "pelanggaran_sedang", header2: "Sedang", group: "pelanggaran", width: 10 },
+  { key: "pelanggaran_berat", header2: "Berat", group: "pelanggaran", width: 9 },
+  { key: "jumlahPelanggaran", header2: "Jumlah", group: "pelanggaran", width: 10, jumlahFill: "jumlahPelanggaran" },
 
   { key: "totalIPC", header1: "Total IPC", merge: "v", width: 10, jumlahFill: "total" },
 ];
@@ -291,7 +291,7 @@ function LaporanCetak({ user }) {
       });
 
       // Fetch wali kelas data for this class
-      let waliKelasData = { nama: 'Putu Andika Wirasatriya, S.Pd.', nip: '19980913 202321 1 004' };
+      let waliKelasData = { nama: 'Wali Kelas Belum Ditentukan', nip: '' };
       try {
         const token = localStorage.getItem('token');
         const response = await axios.get(`/wali-kelas/class/${selectedClass}`, {
@@ -299,9 +299,12 @@ function LaporanCetak({ user }) {
         });
         if (response.data && response.data.nama) {
           waliKelasData = response.data;
+          console.log('Wali kelas data fetched:', waliKelasData);
+        } else {
+          console.log('Wali kelas data response invalid:', response.data);
         }
       } catch (error) {
-        console.log('Could not fetch wali kelas data, using default');
+        console.error('Could not fetch wali kelas data:', error);
       }
 
       // Header Image
@@ -415,30 +418,63 @@ function LaporanCetak({ user }) {
       ];
 
       const headerRow2 = [
-        // Prestasi
         { content: 'Akademik', styles: { fillColor: COLORS.headerPrestasi, halign: 'center', valign: 'middle' } },
-        { content: 'Non-\nAkademik', styles: { fillColor: COLORS.headerPrestasi, halign: 'center', valign: 'middle' } },
+        { content: 'Non-Akademik', styles: { fillColor: COLORS.headerPrestasi, halign: 'center', valign: 'middle' } },
         { content: 'Jumlah', styles: { fillColor: COLORS.headerPrestasi, halign: 'center', valign: 'middle' } },
-        // Perkembangan Karakter (disingkat supaya 1 baris, tidak pecah kata)
-        { content: 'Tg.\nJawab', styles: { fillColor: COLORS.headerKarakter, halign: 'center', valign: 'middle' } },
+
+        { content: 'Tg. Jawab', styles: { fillColor: COLORS.headerKarakter, halign: 'center', valign: 'middle' } },
         { content: 'Disiplin', styles: { fillColor: COLORS.headerKarakter, halign: 'center', valign: 'middle' } },
         { content: 'Peduli', styles: { fillColor: COLORS.headerKarakter, halign: 'center', valign: 'middle' } },
-        { content: 'Mandiri', styles: { fillColor: COLORS.headerKarakter, halign: 'center', valign: 'middle' } }, // Added kemandirian
+        { content: 'Mandiri', styles: { fillColor: COLORS.headerKarakter, halign: 'center', valign: 'middle' } },
         { content: 'Spiritual', styles: { fillColor: COLORS.headerKarakter, halign: 'center', valign: 'middle' } },
         { content: 'Jujur', styles: { fillColor: COLORS.headerKarakter, halign: 'center', valign: 'middle' } },
-        { content: 'P.\nDiri', styles: { fillColor: COLORS.headerKarakter, halign: 'center', valign: 'middle' } },
+        { content: 'P. Diri', styles: { fillColor: COLORS.headerKarakter, halign: 'center', valign: 'middle' } },
         { content: 'Jumlah', styles: { fillColor: COLORS.headerKarakter, halign: 'center', valign: 'middle' } },
-        // Keaktifan
+
         { content: 'Org.', styles: { fillColor: COLORS.headerKeaktifan, halign: 'center', valign: 'middle' } },
         { content: 'Panitia', styles: { fillColor: COLORS.headerKeaktifan, halign: 'center', valign: 'middle' } },
         { content: 'Event', styles: { fillColor: COLORS.headerKeaktifan, halign: 'center', valign: 'middle' } },
         { content: 'Jumlah', styles: { fillColor: COLORS.headerKeaktifan, halign: 'center', valign: 'middle' } },
-        // Pelanggaran
+
         { content: 'Ringan', styles: { fillColor: COLORS.headerPelanggaran, halign: 'center', valign: 'middle' } },
         { content: 'Sedang', styles: { fillColor: COLORS.headerPelanggaran, halign: 'center', valign: 'middle' } },
         { content: 'Berat', styles: { fillColor: COLORS.headerPelanggaran, halign: 'center', valign: 'middle' } },
         { content: 'Jumlah', styles: { fillColor: COLORS.headerPelanggaran, halign: 'center', valign: 'middle' } },
       ];
+
+      // Calculate dynamic margin to center table horizontally
+      const columnStyles = {
+        [COL.NO]: { cellWidth: 6 },
+        [COL.NAMA]: { cellWidth: 22, halign: 'left', fontSize: 6 },
+        [COL.NIS]: { cellWidth: 10 },
+        [COL.KELAS]: { cellWidth: 9 },
+        [COL.GHRA]: { cellWidth: 6 },
+        [COL.POINT_AWAL]: { cellWidth: 9 },
+        [COL.PRESTASI_AKADEMIK]: { cellWidth: 9 },
+        [COL.PRESTASI_NONAKADEMIK]: { cellWidth: 13 },
+        [COL.PRESTASI_JUMLAH]: { cellWidth: 8 },
+        [COL.KARAKTER_TJ]: { cellWidth: 9 },
+        [COL.KARAKTER_DISIPLIN]: { cellWidth: 9 },
+        [COL.KARAKTER_PEDULI]: { cellWidth: 9 },
+        [COL.KARAKTER_KEMANDIRIAN]: { cellWidth: 9 },
+        [COL.KARAKTER_SPIRITUAL]: { cellWidth: 9 },
+        [COL.KARAKTER_JUJUR]: { cellWidth: 7 },
+        [COL.KARAKTER_PD]: { cellWidth: 8 },
+        [COL.KARAKTER_JUMLAH]: { cellWidth: 8 },
+        [COL.KEAKTIFAN_ORGANISASI]: { cellWidth: 8 },
+        [COL.KEAKTIFAN_KEPANITIAAN]: { cellWidth: 9 },
+        [COL.KEAKTIFAN_EVENT]: { cellWidth: 7 },
+        [COL.KEAKTIFAN_JUMLAH]: { cellWidth: 8 },
+        [COL.PELANGGARAN_RINGAN]: { cellWidth: 9 },
+        [COL.PELANGGARAN_SEDANG]: { cellWidth: 9 },
+        [COL.PELANGGARAN_BERAT]: { cellWidth: 7 },
+        [COL.PELANGGARAN_JUMLAH]: { cellWidth: 8 },
+        [COL.TOTAL_IPC]: { cellWidth: 10 },
+      };
+
+      const totalTableWidth = Object.values(columnStyles).reduce((sum, c) => sum + c.cellWidth, 0);
+      const pageWidth = doc.internal.pageSize.getWidth();
+      const marginX = Math.max(10, (pageWidth - totalTableWidth) / 2);
 
       // Add table with merged headers
       autoTable(doc, {
@@ -447,58 +483,31 @@ function LaporanCetak({ user }) {
         body: tableData,
         theme: 'grid',
         tableWidth: 'auto',
+        showHead: 'everyPage',
+        rowPageBreak: 'avoid',
         styles: {
           font: 'helvetica',
-          fontSize: 6.5,   // naik dari 6 supaya body sedikit lebih jelas
-          cellPadding: 1.2,
+          fontSize: 6,
+          cellPadding: 0.8,
           halign: 'center',
           valign: 'middle',
           lineColor: COLORS.borderGray,
           lineWidth: 0.1,
           overflow: 'linebreak',
-          minCellHeight: 9,
+          minCellHeight: 6.5,
         },
         headStyles: {
           fontStyle: 'bold',
-          fontSize: 6,
+          fontSize: 6.5,
           fillColor: [230, 230, 230],
           textColor: [0, 0, 0],
-          minCellHeight: 14, // naik dari 11, kasih ruang cukup untuk teks 2 baris supaya center sempurna
-          valign: 'middle',  // pastikan berlaku default ke semua header
+          minCellHeight: 18,
+          valign: 'middle',
+          cellPadding: 0.6,
+          overflow: 'linebreak',
         },
-        columnStyles: {
-          [COL.NO]: { cellWidth: 6 },
-          [COL.NAMA]: { cellWidth: 22, halign: 'left', fontSize: 6.3 },
-          [COL.NIS]: { cellWidth: 12 },
-          [COL.KELAS]: { cellWidth: 10 },
-          [COL.GHRA]: { cellWidth: 7 },
-          [COL.POINT_AWAL]: { cellWidth: 10 }, // Added point awal column style
-
-          [COL.PRESTASI_AKADEMIK]: { cellWidth: 10 },
-          [COL.PRESTASI_NONAKADEMIK]: { cellWidth: 10 },
-          [COL.PRESTASI_JUMLAH]: { cellWidth: 9 },
-
-          [COL.KARAKTER_TJ]: { cellWidth: 7 },
-          [COL.KARAKTER_DISIPLIN]: { cellWidth: 7 },
-          [COL.KARAKTER_PEDULI]: { cellWidth: 7 },
-          [COL.KARAKTER_KEMANDIRIAN]: { cellWidth: 7 },
-          [COL.KARAKTER_SPIRITUAL]: { cellWidth: 7 },
-          [COL.KARAKTER_JUJUR]: { cellWidth: 5 },
-          [COL.KARAKTER_PD]: { cellWidth: 5 },
-          [COL.KARAKTER_JUMLAH]: { cellWidth: 9 },
-
-          [COL.KEAKTIFAN_ORGANISASI]: { cellWidth: 9 },
-          [COL.KEAKTIFAN_KEPANITIAAN]: { cellWidth: 7 },
-          [COL.KEAKTIFAN_EVENT]: { cellWidth: 6 },
-          [COL.KEAKTIFAN_JUMLAH]: { cellWidth: 9 },
-
-          [COL.PELANGGARAN_RINGAN]: { cellWidth: 7 },
-          [COL.PELANGGARAN_SEDANG]: { cellWidth: 7 },
-          [COL.PELANGGARAN_BERAT]: { cellWidth: 9 },
-          [COL.PELANGGARAN_JUMLAH]: { cellWidth: 9 },
-
-          [COL.TOTAL_IPC]: { cellWidth: 12 }, // Reduced but still visible
-        },
+        columnStyles,
+        margin: { left: marginX, right: marginX, top: 10, bottom: 20 },
         didParseCell: (data) => {
           if (data.section !== 'body') return;
           const col = data.column.index;
@@ -534,7 +543,6 @@ function LaporanCetak({ user }) {
             data.cell.styles.textColor = COLORS.textNegative;
           }
         },
-        margin: { left: 10, right: 10 },
       });
 
       // Add footnote for abbreviations
@@ -543,7 +551,7 @@ function LaporanCetak({ user }) {
       doc.setFontSize(7);
       doc.text(
         'Ket: T. Jawab = Tanggung Jawab, Peduli = Kepedulian, P. Diri = Kepercayaan Diri, Panitia = Kepanitiaan',
-        15,
+        marginX,
         noteY
       );
 
@@ -570,12 +578,14 @@ function LaporanCetak({ user }) {
       const ttdY = finalY + 22;
       doc.setFont('times', 'bold');
       doc.text('Ketut Susila Widiarsana, S.Pd., M.Pd.', leftX, ttdY);
-      doc.text(waliKelasData.nama, rightX, ttdY);
+      doc.text(waliKelasData.nama || 'Wali Kelas Belum Ditentukan', rightX, ttdY);
 
       doc.setFont('times', 'normal');
       doc.setFontSize(9);
       doc.text('NIP. 19831101 200803 1 001', leftX, ttdY + 5);
-      doc.text(`NIP. ${waliKelasData.nip}`, rightX, ttdY + 5);
+      if (waliKelasData.nip) {
+        doc.text(`NIP. ${waliKelasData.nip}`, rightX, ttdY + 5);
+      }
 
       return doc.output('blob');
     } catch (e) {
@@ -740,7 +750,7 @@ function LaporanCetak({ user }) {
         });
 
         // ---- Freeze panes supaya header tetap kelihatan saat scroll ----
-        sheet.views = [{ state: "frozen", ySplit: HEAD_ROW_2, xSplit: 5 }];
+        sheet.views = [{ state: "frozen", ySplit: HEAD_ROW_2 }];
 
         // ---- Trigger download ----
         const buffer = await workbook.xlsx.writeBuffer();
@@ -1037,8 +1047,10 @@ function LaporanCetak({ user }) {
         
         doc.setFont('times', 'normal');
         doc.setFontSize(7);
-        doc.text('NIP.  19831101 200803 1 001', leftSigX, sigY + 25);
-        doc.text(wali?.nip ? `NIP. ${wali.nip}` : '', rightSigX, sigY + 25);
+        doc.text('NIP. 19831101 200803 1 001', leftSigX, sigY + 25);
+        if (wali?.nip) {
+          doc.text(`NIP. ${wali.nip}`, rightSigX, sigY + 25);
+        }
       });
 
       return doc.output('blob');
@@ -1076,57 +1088,147 @@ function LaporanCetak({ user }) {
     let filename;
 
     if (reportType === 'individual') {
-      if (selectedStudentId) {
-        // Fetch student data to get the name
-        try {
-          const studentData = await fetchIpcCard(selectedStudentId);
-          filename = `IPC_${studentData.student.nama || 'SISWA'}.pdf`;
-        } catch {
-          filename = `IPC_SISWA.pdf`;
-        }
-      } else {
-        filename = `IPC_SISWA.pdf`;
+      if (!selectedStudentId) {
+        alert('Pilih siswa terlebih dahulu');
+        return;
       }
-    } else {
-      filename = `Laporan_IPC_Kelas_${selectedClass || 'SEMUA'}.pdf`;
-    }
 
-    try {
-      setIpcLoading(true);
-      const blob = await generatePdfBlob();
-      if (blob) {
-        const url = URL.createObjectURL(blob);
+      try {
+        setIpcLoading(true);
+        const token = localStorage.getItem('token');
+        
+        // Call backend endpoint for PDF generation
+        const response = await axios.get(`/reports/ipc-card-pdf/${selectedStudentId}`, {
+          headers: { Authorization: `Bearer ${token}` },
+          responseType: 'blob'
+        });
+
+        // Create download link
+        const url = window.URL.createObjectURL(new Blob([response.data]));
         const link = document.createElement('a');
         link.href = url;
+        
+        // Get filename from Content-Disposition header or use default
+        const contentDisposition = response.headers['content-disposition'];
+        if (contentDisposition) {
+          const filenameMatch = contentDisposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
+          if (filenameMatch && filenameMatch[1]) {
+            filename = filenameMatch[1].replace(/['"]/g, '');
+          }
+        }
+        
+        if (!filename) {
+          filename = `IPC_SISWA.pdf`;
+        }
+        
         link.download = filename;
         link.click();
         URL.revokeObjectURL(url);
-      } else {
+      } catch (e) {
+        console.error(e);
         alert('Gagal membuat PDF');
+      } finally {
+        setIpcLoading(false);
       }
-    } catch (e) {
-      console.error(e);
-      alert('Gagal membuat PDF');
-    } finally {
-      setIpcLoading(false);
+    } else {
+      // Class report - use backend endpoint for PDF generation
+      if (!selectedClass) {
+        alert('Pilih kelas terlebih dahulu');
+        return;
+      }
+
+      try {
+        setIpcLoading(true);
+        const token = localStorage.getItem('token');
+        
+        // Call backend endpoint for class report PDF generation
+        const response = await axios.get(`/reports/leger-pdf/${encodeURIComponent(selectedClass)}`, {
+          headers: { Authorization: `Bearer ${token}` },
+          responseType: 'blob'
+        });
+
+        // Create download link
+        const url = window.URL.createObjectURL(new Blob([response.data]));
+        const link = document.createElement('a');
+        link.href = url;
+        
+        // Get filename from Content-Disposition header or use default
+        const contentDisposition = response.headers['content-disposition'];
+        if (contentDisposition) {
+          const filenameMatch = contentDisposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
+          if (filenameMatch && filenameMatch[1]) {
+            filename = filenameMatch[1].replace(/['"]/g, '');
+          }
+        }
+        
+        if (!filename) {
+          filename = `Leger_IPC_Kelas_${selectedClass}.pdf`;
+        }
+        
+        link.download = filename;
+        link.click();
+        URL.revokeObjectURL(url);
+      } catch (e) {
+        console.error(e);
+        alert('Gagal membuat PDF');
+      } finally {
+        setIpcLoading(false);
+      }
     }
   };
 
   const handleGeneratePreview = async () => {
-    try {
-      setIpcLoading(true);
-      const blob = await generatePdfBlob();
-      if (blob) {
-        const url = URL.createObjectURL(blob);
-        setPdfPreviewUrl(url);
-      } else {
-        alert('Gagal membuat preview PDF');
+    if (reportType === 'individual') {
+      if (!selectedStudentId) {
+        alert('Pilih siswa terlebih dahulu');
+        return;
       }
-    } catch (e) {
-      console.error(e);
-      alert('Gagal membuat preview PDF');
-    } finally {
-      setIpcLoading(false);
+
+      try {
+        setIpcLoading(true);
+        const token = localStorage.getItem('token');
+        
+        // Call backend endpoint for PDF preview (inline)
+        const response = await axios.get(`/reports/ipc-card-preview/${selectedStudentId}`, {
+          headers: { Authorization: `Bearer ${token}` },
+          responseType: 'blob'
+        });
+
+        // Create preview URL from blob
+        const url = window.URL.createObjectURL(new Blob([response.data], { type: 'application/pdf' }));
+        setPdfPreviewUrl(url);
+      } catch (e) {
+        console.error(e);
+        alert('Gagal membuat preview PDF');
+      } finally {
+        setIpcLoading(false);
+      }
+    } else {
+      // Class report - use backend endpoint for PDF preview
+      if (!selectedClass) {
+        alert('Pilih kelas terlebih dahulu');
+        return;
+      }
+
+      try {
+        setIpcLoading(true);
+        const token = localStorage.getItem('token');
+        
+        // Call backend endpoint for class report PDF preview (inline)
+        const response = await axios.get(`/reports/leger-preview/${encodeURIComponent(selectedClass)}`, {
+          headers: { Authorization: `Bearer ${token}` },
+          responseType: 'blob'
+        });
+
+        // Create preview URL from blob
+        const url = window.URL.createObjectURL(new Blob([response.data], { type: 'application/pdf' }));
+        setPdfPreviewUrl(url);
+      } catch (e) {
+        console.error(e);
+        alert('Gagal membuat preview PDF');
+      } finally {
+        setIpcLoading(false);
+      }
     }
   };
 

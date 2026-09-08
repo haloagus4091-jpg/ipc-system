@@ -1,0 +1,153 @@
+@page {
+  size: A4 landscape;
+  margin: 7mm 8mm;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  font-family: 'Calibri', Arial, sans-serif;
+  color: #000;
+  margin: 0;
+  padding: 0;
+}
+
+.sheet {
+  width: 100%;
+}
+
+/* ================= KOP SURAT ================= */
+/* Kop surat = 1 file gambar utuh (logo kiri, teks tengah, logo kanan sudah jadi satu).
+   Rasio asli file kop-surat.jpg sekitar 3:1 (lebar:tinggi) — width 100% + height auto
+   supaya proporsi tetap terjaga dan tidak gepeng/melar di kertas A4 landscape. */
+.kop-image {
+  display: block;
+  width: 100%;
+  height: auto;
+  margin-bottom: 6px;
+}
+
+.judul {
+  text-align: center;
+  font-weight: bold;
+  font-size: 12px;
+  line-height: 1.4;
+  margin: 6px 0 8px 0;
+  text-transform: uppercase;
+}
+
+.info-kelas {
+  font-weight: bold;
+  font-size: 10px;
+  margin-bottom: 4px;
+}
+
+/* ================= TABEL LEGER (24 kolom) ================= */
+/* table-layout: fixed + persentase supaya lebar kolom konsisten
+   berapapun jumlah siswa/halaman, dan tidak melar/kepotong. */
+table.leger {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+  font-size: 13px;              /* base font tabel, auto-scale lihat .compact/.dense di bawah */
+}
+
+table.leger th,
+table.leger td {
+  border: 0.5px solid #555;
+  padding: 2px 1.5px;
+  text-align: center;
+  vertical-align: middle;
+  word-break: keep-all;         /* "Ringan" "Sedang" "Berat" TIDAK pecah huruf */
+  overflow-wrap: break-word;    /* tapi tetap boleh wrap ke baris baru jika kepanjangan */
+  hyphens: none;
+  white-space: normal;
+  line-height: 1.15;
+}
+
+table.leger td.nama {
+  text-align: left;
+  white-space: normal;
+  word-break: break-word;
+}
+
+/* Header berulang tiap halaman cetak/PDF */
+table.leger thead {
+  display: table-header-group;
+}
+/* 1 baris siswa tidak boleh terpotong antar halaman */
+table.leger tbody tr {
+  page-break-inside: avoid;
+}
+/* Table tidak boleh terpotong antar halaman */
+table.leger {
+  page-break-inside: auto;
+}
+
+/* ---------- LEBAR KOLOM (total 100%) ---------- */
+.col-no    { width: 2.4%; }
+.col-nama  { width: 14%; }
+.col-nis   { width: 6.5%; }
+.col-kelas { width: 6%; }
+.col-ghra  { width: 5%; }
+.col-jml   { font-weight: bold; }
+.col-total { width: 5%; }
+
+/* ---------- WARNA GROUP HEADER ---------- */
+th.grp-prestasi    { background: #ffe699; }
+th.grp-karakter    { background: #c6e0b4; }
+th.grp-keaktifan   { background: #f8cbad; }
+th.grp-pelanggaran { background: #f4a6a6; }
+th.grp-total       { background: #9dc3e6; }
+
+/* ---------- WARNA GROUP DATA (lebih pucat dari header) ---------- */
+td.grp-prestasi    { background: #fff6de; }
+td.grp-karakter    { background: #e9f2e2; }
+td.grp-keaktifan   { background: #fdeee4; }
+td.grp-pelanggaran { background: #fbe4e4; }
+
+td.col-jml.grp-prestasi    { background: #ffd966; font-weight: bold; }
+td.col-jml.grp-karakter    { background: #a9d18e; font-weight: bold; color: #1b3a0d; }
+td.col-jml.grp-keaktifan   { background: #f4b183; font-weight: bold; color: #5c2b04; }
+td.col-jml.grp-pelanggaran { background: #ee9494; font-weight: bold; color: #5c0a0a; }
+
+td.col-total {
+  background: #bdd7ee;
+  font-weight: bold;
+  font-size: 8px;
+}
+
+table.leger tbody tr:nth-child(even) { background: #fafafa; }
+
+/* ---------- KETERANGAN ---------- */
+.keterangan {
+  font-size: 7.5px;
+  font-style: italic;
+  margin-top: 4px;
+}
+
+/* ================= TANDA TANGAN ================= */
+.ttd {
+  width: 100%;
+  margin-top: 22px;
+  display: table;
+  font-size: 9px;
+}
+.ttd .kiri, .ttd .kanan {
+  display: table-cell;
+  width: 50%;
+  vertical-align: top;
+  text-align: left;
+}
+.ttd .spasi { height: 40px; }
+.ttd .nama-ttd { font-weight: bold; text-decoration: underline; }
+
+/* =========================================================
+   AUTO-SCALE FONT SESUAI JUMLAH SISWA
+   Tambahkan class ini pada <table class="leger ..."> dari JS
+   berdasarkan jumlah baris, supaya tabel tetap muat rapi
+   walau siswa sangat banyak (mis. 40+ siswa/kelas).
+   ========================================================= */
+table.leger.dense-30    { font-size: 10px; }
+table.leger.dense-40    { font-size: 9px; }
+table.leger.dense-50    { font-size: 8px; }
