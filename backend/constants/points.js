@@ -1,5 +1,9 @@
 // Single source of truth for IPC point calculations
+// Now integrated with database configuration system
 
+const { getIPCConfig } = require('../utils/ipcConfig');
+
+// Default values as fallback
 const PRESTASI_POINTS = {
     'juara 1': { kecamatan: 8, kabupaten: 12, provinsi: 30, nasional: 40, internasional: 50 },
     'juara 2': { kecamatan: 7, kabupaten: 10, provinsi: 25, nasional: 35, internasional: 45 },
@@ -51,24 +55,57 @@ const PERILAKU_POINTS = {
     'sangat baik': 4
 };
 
-const calculatePrestasiPoints = (juara, kategori) => {
-    return PRESTASI_POINTS[juara]?.[kategori] || 0;
+// Enhanced calculate functions that use database configuration
+const calculatePrestasiPoints = async (juara, kategori) => {
+    try {
+        const config = await getIPCConfig();
+        const juaraPoint = config.prestasi?.juara?.[juara] || PRESTASI_POINTS[juara]?.[kategori] || 0;
+        const kategoriMultiplier = config.prestasi?.kategori?.[kategori] || 1;
+        return juaraPoint * kategoriMultiplier;
+    } catch (error) {
+        console.error('Error calculating prestasi points:', error);
+        return PRESTASI_POINTS[juara]?.[kategori] || 0;
+    }
 };
 
-const calculateEventPoints = (tingkat) => {
-    return EVENT_POINTS[tingkat?.toLowerCase()] || EVENT_POINTS[tingkat] || 0;
+const calculateEventPoints = async (tingkat) => {
+    try {
+        const config = await getIPCConfig();
+        return config.event?.tingkat?.[tingkat] || EVENT_POINTS[tingkat?.toLowerCase()] || EVENT_POINTS[tingkat] || 0;
+    } catch (error) {
+        console.error('Error calculating event points:', error);
+        return EVENT_POINTS[tingkat?.toLowerCase()] || EVENT_POINTS[tingkat] || 0;
+    }
 };
 
-const calculateOrganisasiPoints = (jabatan) => {
-    return ORGANISASI_POINTS[jabatan?.toLowerCase()] || ORGANISASI_POINTS[jabatan] || 0;
+const calculateOrganisasiPoints = async (jabatan) => {
+    try {
+        const config = await getIPCConfig();
+        return config.organisasi?.jabatan?.[jabatan] || ORGANISASI_POINTS[jabatan?.toLowerCase()] || ORGANISASI_POINTS[jabatan] || 0;
+    } catch (error) {
+        console.error('Error calculating organisasi points:', error);
+        return ORGANISASI_POINTS[jabatan?.toLowerCase()] || ORGANISASI_POINTS[jabatan] || 0;
+    }
 };
 
-const calculateKepanitiaanPoints = (jabatan) => {
-    return KEPANITIAAN_POINTS[jabatan?.toLowerCase()] || KEPANITIAAN_POINTS[jabatan] || 0;
+const calculateKepanitiaanPoints = async (jabatan) => {
+    try {
+        const config = await getIPCConfig();
+        return config.kepanitiaan?.jabatan?.[jabatan] || KEPANITIAAN_POINTS[jabatan?.toLowerCase()] || KEPANITIAAN_POINTS[jabatan] || 0;
+    } catch (error) {
+        console.error('Error calculating kepanitiaan points:', error);
+        return KEPANITIAAN_POINTS[jabatan?.toLowerCase()] || KEPANITIAAN_POINTS[jabatan] || 0;
+    }
 };
 
-const calculatePelanggaranPoints = (jenis) => {
-    return PELANGGARAN_POINTS[jenis?.toLowerCase()] || 0;
+const calculatePelanggaranPoints = async (jenis) => {
+    try {
+        const config = await getIPCConfig();
+        return config.pelanggaran?.jenis?.[jenis] || PELANGGARAN_POINTS[jenis?.toLowerCase()] || 0;
+    } catch (error) {
+        console.error('Error calculating pelanggaran points:', error);
+        return PELANGGARAN_POINTS[jenis?.toLowerCase()] || 0;
+    }
 };
 
 const PERILAKU_CHARACTER_FIELDS = [
@@ -91,11 +128,94 @@ const PERILAKU_CHARACTER_LABELS = {
     kepercayaan_diri: 'Kepercayaan Diri'
 };
 
-const calculatePerilakuPoints = (karakter) => {
+const calculatePerilakuPoints = async (karakter) => {
+    try {
+        const config = await getIPCConfig();
+        return config.perilaku?.karakter?.[karakter] || PERILAKU_POINTS[karakter?.toLowerCase()] || 0;
+    } catch (error) {
+        console.error('Error calculating perilaku points:', error);
+        return PERILAKU_POINTS[karakter?.toLowerCase()] || 0;
+    }
+};
+
+const calculatePerilakuPointsFromFields = async (fields) => {
+    try {
+        const config = await getIPCConfig();
+        const indicators = config.perilaku?.indikator || {};
+        
+        const values = PERILAKU_CHARACTER_FIELDS
+            .map((field) => fields[field])
+            .filter(Boolean);
+
+        if (values.length === 0) {
+            return 0;
+        }
+
+        const total = values.reduce(
+            (sum, value) => sum + (indicators[value] || PERILAKU_POINTS[value?.toLowerCase()] || 0),
+            0
+        );
+
+        return Math.round(total / values.length);
+    } catch (error) {
+        console.error('Error calculating perilaku points from fields:', error);
+        // Fallback to original calculation
+        const values = PERILAKU_CHARACTER_FIELDS
+            .map((field) => fields[field])
+            .filter(Boolean);
+
+        if (values.length === 0) {
+            return 0;
+        }
+
+        const total = values.reduce(
+            (sum, value) => sum + (PERILAKU_POINTS[value?.toLowerCase()] || 0),
+            0
+        );
+
+        return Math.round(total / values.length);
+    }
+};
+
+const formatPerilakuKarakter = (fields) => {
+    return PERILAKU_CHARACTER_FIELDS
+        .filter((field) => fields[field])
+        .map((field) => `${PERILAKU_CHARACTER_LABELS[field]}: ${fields[field]}`)
+        .join(', ');
+};
+
+// Normalize prestasi jenis across tables (legacy non_akademik → nonakademik)
+const normalizePrestasiJenis = (jenis) => {
+    if (jenis === 'non_akademik') return 'nonakademik';
+    return jenis;
+};
+
+// Synchronous versions for backward compatibility (using default values)
+const calculatePrestasiPointsSync = (juara, kategori) => {
+    return PRESTASI_POINTS[juara]?.[kategori] || 0;
+};
+
+const calculateEventPointsSync = (tingkat) => {
+    return EVENT_POINTS[tingkat?.toLowerCase()] || EVENT_POINTS[tingkat] || 0;
+};
+
+const calculateOrganisasiPointsSync = (jabatan) => {
+    return ORGANISASI_POINTS[jabatan?.toLowerCase()] || ORGANISASI_POINTS[jabatan] || 0;
+};
+
+const calculateKepanitiaanPointsSync = (jabatan) => {
+    return KEPANITIAAN_POINTS[jabatan?.toLowerCase()] || KEPANITIAAN_POINTS[jabatan] || 0;
+};
+
+const calculatePelanggaranPointsSync = (jenis) => {
+    return PELANGGARAN_POINTS[jenis?.toLowerCase()] || 0;
+};
+
+const calculatePerilakuPointsSync = (karakter) => {
     return PERILAKU_POINTS[karakter?.toLowerCase()] || 0;
 };
 
-const calculatePerilakuPointsFromFields = (fields) => {
+const calculatePerilakuPointsFromFieldsSync = (fields) => {
     const values = PERILAKU_CHARACTER_FIELDS
         .map((field) => fields[field])
         .filter(Boolean);
@@ -112,19 +232,6 @@ const calculatePerilakuPointsFromFields = (fields) => {
     return Math.round(total / values.length);
 };
 
-const formatPerilakuKarakter = (fields) => {
-    return PERILAKU_CHARACTER_FIELDS
-        .filter((field) => fields[field])
-        .map((field) => `${PERILAKU_CHARACTER_LABELS[field]}: ${fields[field]}`)
-        .join(', ');
-};
-
-// Normalize prestasi jenis across tables (legacy non_akademik → nonakademik)
-const normalizePrestasiJenis = (jenis) => {
-    if (jenis === 'non_akademik') return 'nonakademik';
-    return jenis;
-};
-
 module.exports = {
     PRESTASI_POINTS,
     EVENT_POINTS,
@@ -139,6 +246,14 @@ module.exports = {
     calculatePelanggaranPoints,
     calculatePerilakuPoints,
     calculatePerilakuPointsFromFields,
+    // Synchronous versions for backward compatibility
+    calculatePrestasiPointsSync,
+    calculateEventPointsSync,
+    calculateOrganisasiPointsSync,
+    calculateKepanitiaanPointsSync,
+    calculatePelanggaranPointsSync,
+    calculatePerilakuPointsSync,
+    calculatePerilakuPointsFromFieldsSync,
     formatPerilakuKarakter,
     PERILAKU_CHARACTER_FIELDS,
     normalizePrestasiJenis

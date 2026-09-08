@@ -114,7 +114,7 @@ function Leaderboard() {
           <Trophy size={17} strokeWidth={2} color={AMBER.text} />
         </div>
         <h1 style={{ fontSize: 22, fontWeight: 700, margin: 0, letterSpacing: "-0.01em" }}>
-          Peringkat top 20
+          Peringkat Top 20
         </h1>
       </div>
       <p style={{ fontSize: 13.5, color: SLATE, margin: "0 0 22px" }}>
@@ -218,17 +218,18 @@ function Leaderboard() {
             <h2 style={{ fontSize: 15.5, fontWeight: 600, margin: 0 }}>{title}</h2>
           </div>
           <p style={{ fontSize: 12.5, color: SLATE, margin: 0 }}>
-            Peringkat berdasarkan jumlah prestasi yang telah disetujui.
+            Daftar siswa dengan prestasi terbanyak yang telah disetujui
           </p>
         </div>
 
         <div style={{ overflowX: "auto" }}>
-          <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 640 }}>
+          <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 800 }}>
             <thead>
               <tr style={{ background: "#F4F6FA" }}>
                 <th style={th}>Posisi</th>
                 <th style={th}>Nama</th>
                 <th style={th}>Kelas</th>
+                <th style={th}>Grha</th>
                 <th style={{ ...th, textAlign: "center" }}>Total</th>
                 <th style={th}>Detail prestasi</th>
               </tr>
@@ -236,7 +237,7 @@ function Leaderboard() {
             <tbody>
               {currentData.length === 0 ? (
                 <tr>
-                  <td colSpan="5" style={{ textAlign: "center", padding: "60px 20px", color: SLATE }}>
+                  <td colSpan="6" style={{ textAlign: "center", padding: "60px 20px", color: SLATE }}>
                     Belum ada data prestasi {activeTab === 'akademik' ? 'akademik' : 'non-akademik'}.
                   </td>
                 </tr>
@@ -271,17 +272,25 @@ function Leaderboard() {
                               width: 32,
                               height: 32,
                               borderRadius: "50%",
-                              background: BLUE.bg,
-                              color: BLUE.text,
+                              background: '#f0f0f0',
                               display: "flex",
                               alignItems: "center",
                               justifyContent: "center",
                               fontSize: 12,
                               fontWeight: 700,
                               flexShrink: 0,
+                              overflow: 'hidden',
                             }}
                           >
-                            {initials(s.nama)}
+                            {s.foto ? (
+                              <img 
+                                src={`${API_BASE_URL.replace('/api', '')}${s.foto}`} 
+                                alt={s.nama} 
+                                style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
+                              />
+                            ) : (
+                              <span style={{ fontSize: 12, color: BLUE.text }}>{initials(s.nama)}</span>
+                            )}
                           </div>
                           <div>
                             <div style={{ fontSize: 13.5, fontWeight: 600 }}>{s.nama}</div>
@@ -303,6 +312,22 @@ function Leaderboard() {
                           }}
                         >
                           {s.kelas}
+                        </span>
+                      </td>
+                      <td style={td}>
+                        <span
+                          style={{
+                            display: "inline-block",
+                            fontSize: 12.5,
+                            fontWeight: 600,
+                            color: AMBER.text,
+                            background: AMBER.bg,
+                            border: `1px solid ${AMBER.border}`,
+                            borderRadius: 999,
+                            padding: "3px 11px",
+                          }}
+                        >
+                          {s.grha || '-'}
                         </span>
                       </td>
                       <td style={{ ...td, textAlign: "center" }}>
@@ -380,6 +405,7 @@ function Leaderboard() {
             {[
               { icon: User, label: "Nama", desc: "Nama siswa" },
               { icon: GraduationCap, label: "Kelas", desc: "Kelas siswa" },
+              { icon: Medal, label: "Grha", desc: "Asrama siswa" },
               { icon: ListOrdered, label: "Total", desc: "Jumlah prestasi" },
               { icon: FileText, label: "Detail", desc: "Info lomba & juara" },
             ].map(({ icon: Icon, label, desc }) => (
@@ -423,7 +449,7 @@ function Leaderboard() {
 
 const th = {
   textAlign: "left",
-  padding: "10px 16px",
+  padding: "12px 16px",
   fontSize: 11.5,
   fontWeight: 600,
   color: SLATE,
@@ -432,7 +458,7 @@ const th = {
 
 const td = {
   padding: "14px 16px",
-  verticalAlign: "top",
+  verticalAlign: "middle",
 };
 
 export default Leaderboard;

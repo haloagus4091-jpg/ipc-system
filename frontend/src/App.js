@@ -22,6 +22,7 @@ import ApprovalsV2 from './components/ApprovalsV2';
 import DriveViewer from './components/DriveViewer';
 import Notifications from './components/Notifications';
 import LaporanCetak from './components/LaporanCetak';
+import KonfigurasiIPC from './components/KonfigurasiIPC';
 import axios from 'axios';
 import API_BASE_URL from './config';
 
@@ -197,6 +198,11 @@ function App() {
               }
               return <MainLayout user={user}><Dashboard /></MainLayout>;
             }}
+          </ProtectedRoute>
+        } />
+        <Route path="/konfigurasi-ipc" element={
+          <ProtectedRoute allowedRoles={['superadmin']}>
+            {(user) => <MainLayout user={user}><KonfigurasiIPC /></MainLayout>}
           </ProtectedRoute>
         } />
       </Routes>

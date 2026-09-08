@@ -82,7 +82,7 @@ router.post('/', auth, upload.single('foto'), async (req, res) => {
             foto = newFileName;
         }
 
-        const point = calculatePrestasiPoints(juara, kategori);
+        const point = await calculatePrestasiPoints(juara, kategori);
 
         const [result] = await db.query(
             'INSERT INTO prestasi (user_id, nama, nis, jenis, nama_lomba, foto, kelas, pembina, grha, juara, kategori, point) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
@@ -207,7 +207,7 @@ router.put('/:id', auth, upload.single('foto'), async (req, res) => {
         }
 
         // Recalculate points if juara or kategori changed
-        const point = calculatePrestasiPoints(juara, kategori);
+        const point = await calculatePrestasiPoints(juara, kategori);
 
         await db.query(
             'UPDATE prestasi SET nama = ?, nis = ?, jenis = ?, nama_lomba = ?, foto = ?, kelas = ?, pembina = ?, grha = ?, juara = ?, kategori = ?, point = ? WHERE id = ?',
