@@ -750,7 +750,7 @@ function LaporanCetak({ user }) {
         });
 
         // ---- Freeze panes supaya header tetap kelihatan saat scroll ----
-        sheet.views = [{ state: "frozen", ySplit: HEAD_ROW_2, xSplit: 5 }];
+        sheet.views = [{ state: "frozen", ySplit: HEAD_ROW_2 }];
 
         // ---- Trigger download ----
         const buffer = await workbook.xlsx.writeBuffer();
@@ -1088,57 +1088,147 @@ function LaporanCetak({ user }) {
     let filename;
 
     if (reportType === 'individual') {
-      if (selectedStudentId) {
-        // Fetch student data to get the name
-        try {
-          const studentData = await fetchIpcCard(selectedStudentId);
-          filename = `IPC_${studentData.student.nama || 'SISWA'}.pdf`;
-        } catch {
-          filename = `IPC_SISWA.pdf`;
-        }
-      } else {
-        filename = `IPC_SISWA.pdf`;
+      if (!selectedStudentId) {
+        alert('Pilih siswa terlebih dahulu');
+        return;
       }
-    } else {
-      filename = `Laporan_IPC_Kelas_${selectedClass || 'SEMUA'}.pdf`;
-    }
 
-    try {
-      setIpcLoading(true);
-      const blob = await generatePdfBlob();
-      if (blob) {
-        const url = URL.createObjectURL(blob);
+      try {
+        setIpcLoading(true);
+        const token = localStorage.getItem('token');
+        
+        // Call backend endpoint for PDF generation
+        const response = await axios.get(`/reports/ipc-card-pdf/${selectedStudentId}`, {
+          headers: { Authorization: `Bearer ${token}` },
+          responseType: 'blob'
+        });
+
+        // Create download link
+        const url = window.URL.createObjectURL(new Blob([response.data]));
         const link = document.createElement('a');
         link.href = url;
+        
+        // Get filename from Content-Disposition header or use default
+        const contentDisposition = response.headers['content-disposition'];
+        if (contentDisposition) {
+          const filenameMatch = contentDisposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
+          if (filenameMatch && filenameMatch[1]) {
+            filename = filenameMatch[1].replace(/['"]/g, '');
+          }
+        }
+        
+        if (!filename) {
+          filename = `IPC_SISWA.pdf`;
+        }
+        
         link.download = filename;
         link.click();
         URL.revokeObjectURL(url);
-      } else {
+      } catch (e) {
+        console.error(e);
         alert('Gagal membuat PDF');
+      } finally {
+        setIpcLoading(false);
       }
-    } catch (e) {
-      console.error(e);
-      alert('Gagal membuat PDF');
-    } finally {
-      setIpcLoading(false);
+    } else {
+      // Class report - use backend endpoint for PDF generation
+      if (!selectedClass) {
+        alert('Pilih kelas terlebih dahulu');
+        return;
+      }
+
+      try {
+        setIpcLoading(true);
+        const token = localStorage.getItem('token');
+        
+        // Call backend endpoint for class report PDF generation
+        const response = await axios.get(`/reports/leger-pdf/${encodeURIComponent(selectedClass)}`, {
+          headers: { Authorization: `Bearer ${token}` },
+          responseType: 'blob'
+        });
+
+        // Create download link
+        const url = window.URL.createObjectURL(new Blob([response.data]));
+        const link = document.createElement('a');
+        link.href = url;
+        
+        // Get filename from Content-Disposition header or use default
+        const contentDisposition = response.headers['content-disposition'];
+        if (contentDisposition) {
+          const filenameMatch = contentDisposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
+          if (filenameMatch && filenameMatch[1]) {
+            filename = filenameMatch[1].replace(/['"]/g, '');
+          }
+        }
+        
+        if (!filename) {
+          filename = `Leger_IPC_Kelas_${selectedClass}.pdf`;
+        }
+        
+        link.download = filename;
+        link.click();
+        URL.revokeObjectURL(url);
+      } catch (e) {
+        console.error(e);
+        alert('Gagal membuat PDF');
+      } finally {
+        setIpcLoading(false);
+      }
     }
   };
 
   const handleGeneratePreview = async () => {
-    try {
-      setIpcLoading(true);
-      const blob = await generatePdfBlob();
-      if (blob) {
-        const url = URL.createObjectURL(blob);
-        setPdfPreviewUrl(url);
-      } else {
-        alert('Gagal membuat preview PDF');
+    if (reportType === 'individual') {
+      if (!selectedStudentId) {
+        alert('Pilih siswa terlebih dahulu');
+        return;
       }
-    } catch (e) {
-      console.error(e);
-      alert('Gagal membuat preview PDF');
-    } finally {
-      setIpcLoading(false);
+
+      try {
+        setIpcLoading(true);
+        const token = localStorage.getItem('token');
+        
+        // Call backend endpoint for PDF preview (inline)
+        const response = await axios.get(`/reports/ipc-card-preview/${selectedStudentId}`, {
+          headers: { Authorization: `Bearer ${token}` },
+          responseType: 'blob'
+        });
+
+        // Create preview URL from blob
+        const url = window.URL.createObjectURL(new Blob([response.data], { type: 'application/pdf' }));
+        setPdfPreviewUrl(url);
+      } catch (e) {
+        console.error(e);
+        alert('Gagal membuat preview PDF');
+      } finally {
+        setIpcLoading(false);
+      }
+    } else {
+      // Class report - use backend endpoint for PDF preview
+      if (!selectedClass) {
+        alert('Pilih kelas terlebih dahulu');
+        return;
+      }
+
+      try {
+        setIpcLoading(true);
+        const token = localStorage.getItem('token');
+        
+        // Call backend endpoint for class report PDF preview (inline)
+        const response = await axios.get(`/reports/leger-preview/${encodeURIComponent(selectedClass)}`, {
+          headers: { Authorization: `Bearer ${token}` },
+          responseType: 'blob'
+        });
+
+        // Create preview URL from blob
+        const url = window.URL.createObjectURL(new Blob([response.data], { type: 'application/pdf' }));
+        setPdfPreviewUrl(url);
+      } catch (e) {
+        console.error(e);
+        alert('Gagal membuat preview PDF');
+      } finally {
+        setIpcLoading(false);
+      }
     }
   };
 

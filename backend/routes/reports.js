@@ -4,6 +4,9 @@ const db = require('../config/database');
 const { auth, teacherOnly } = require('../middleware/auth');
 const { buildIpcCardBreakdown } = require('../utils/ipcCardBreakdown');
 const { calculateFullClass } = require('../utils/academicYear');
+const { generateRaportIPC, generateRaportIPCBuffer, generateLegerIPCBuffer, formatDateIndo } = require('../utils/pdfGenerator');
+const path = require('path');
+const fs = require('fs');
 
 // Helper function to check if teacher is wali kelas and get their class
 const getTeacherWaliKelasClass = async (guruId) => {
@@ -316,6 +319,560 @@ router.get('/ipc-card/:userId', auth, async (req, res) => {
     } catch (error) {
         console.error('Error fetching IPC card data:', error);
         res.status(500).json({ message: 'Server error' });
+    }
+});
+
+// Generate PDF for Individual Point Card (Download)
+router.get('/ipc-card-pdf/:userId', auth, async (req, res) => {
+    try {
+        const userId = parseInt(req.params.userId, 10);
+        if (Number.isNaN(userId)) {
+            return res.status(400).json({ message: 'ID siswa tidak valid' });
+        }
+
+        // If user is a teacher, check if the student is in their wali kelas class
+        if (req.user.role === 'guru') {
+            const waliKelasClass = await getTeacherWaliKelasClass(req.user.id);
+            if (!waliKelasClass) {
+                return res.status(403).json({ message: 'Anda bukan wali kelas' });
+            }
+            
+            // Check if the student belongs to their class
+            const [studentCheck] = await db.query(
+                `SELECT kelas FROM users WHERE id = ? AND role = 'siswa'`,
+                [userId]
+            );
+            
+            if (studentCheck.length === 0) {
+                return res.status(404).json({ message: 'Siswa tidak ditemukan' });
+            }
+            
+            if (studentCheck[0].kelas !== waliKelasClass) {
+                return res.status(403).json({ message: 'Anda hanya dapat mengakses siswa di kelas Anda' });
+            }
+        }
+
+        const cardData = await buildIpcCardBreakdown(userId);
+        if (!cardData) {
+            return res.status(404).json({ message: 'Siswa tidak ditemukan' });
+        }
+
+        const { student, points } = cardData;
+        
+        // Calculate current class based on tahun_pelajaran
+        let calculatedClass = student.kelas;
+        if (student.tahun_pelajaran && student.jurusan) {
+            calculatedClass = calculateFullClass(student.tahun_pelajaran, student.jurusan) || student.kelas;
+        }
+        
+        // Get wali kelas data
+        const [waliRows] = await db.query(
+            `SELECT u.nama AS wali_nama, u.nip AS wali_nip
+             FROM wali_kelas_assignment wka
+             JOIN users u ON wka.guru_id = u.id
+             WHERE wka.kelas = ? AND wka.tahun_ajaran = YEAR(CURDATE())
+             ORDER BY wka.id DESC
+             LIMIT 1`,
+            [calculatedClass]
+        );
+
+        const wali = waliRows.length > 0 ? waliRows[0] : null;
+
+        // Calculate totals
+        const pointAwal = Number(points.point_awal) || 80;
+        const prestasiAkademik = Number(points.prestasi_akademik) || 0;
+        const prestasiNonAkademik = Number(points.prestasi_nonakademik) || 0;
+        const jumlahPrestasi = prestasiAkademik + prestasiNonAkademik;
+        
+        const karakterTanggungJawab = Number(points.tanggung_jawab) || 0;
+        const karakterDisiplin = Number(points.disiplin) || 0;
+        const karakterKepedulian = Number(points.kepedulian) || 0;
+        const karakterKemandirian = Number(points.kemandirian) || 0;
+        const karakterSpiritual = Number(points.spiritual) || 0;
+        const karakterKejujuran = Number(points.kejujuran) || 0;
+        const karakterKepercayaanDiri = Number(points.kepercayaan_diri) || 0;
+        const jumlahKarakter = karakterTanggungJawab + karakterDisiplin + karakterKepedulian + 
+                              karakterKemandirian + karakterSpiritual + karakterKejujuran + karakterKepercayaanDiri;
+        
+        const organisasi = Number(points.organisasi) || 0;
+        const kepanitiaan = Number(points.kepanitiaan) || 0;
+        const event = Number(points.event) || 0;
+        const jumlahKeaktifan = organisasi + kepanitiaan + event;
+        
+        const pelanggaranRingan = Number(points.pelanggaran_ringan) || 0;
+        const pelanggaranSedang = Number(points.pelanggaran_sedang) || 0;
+        const pelanggaranBerat = Number(points.pelanggaran_berat) || 0;
+        const jumlahPelanggaran = pelanggaranRingan + pelanggaranSedang + pelanggaranBerat;
+        
+        const totalPointIPC = pointAwal + jumlahPrestasi + jumlahKarakter + jumlahKeaktifan - jumlahPelanggaran;
+
+        // Prepare data for template
+        const templateData = {
+            logo_path: 'header.png', // Path to logo file
+            nama_siswa: student.nama || '-',
+            kelas: calculatedClass || '-',
+            nis_nisn: student.nis || student.nisn || '-',
+            grha: student.grha || '-',
+            wali_kelas: wali?.wali_nama || 'Wali Kelas Belum Ditentukan',
+            semester: 'Ganjil',
+            tahun_pelajaran: new Date().getFullYear() + '/' + (new Date().getFullYear() + 1),
+            point_awal: pointAwal,
+            prestasi_akademik: prestasiAkademik,
+            prestasi_non_akademik: prestasiNonAkademik,
+            jumlah_prestasi: jumlahPrestasi,
+            karakter_tanggung_jawab: karakterTanggungJawab,
+            karakter_disiplin: karakterDisiplin,
+            karakter_kepedulian: karakterKepedulian,
+            karakter_kemandirian: karakterKemandirian,
+            karakter_spiritual: karakterSpiritual,
+            karakter_kejujuran: karakterKejujuran,
+            karakter_kepercayaan_diri: karakterKepercayaanDiri,
+            jumlah_karakter: jumlahKarakter,
+            organisasi: organisasi,
+            kepanitiaan: kepanitiaan,
+            event: event,
+            jumlah_keaktifan: jumlahKeaktifan,
+            pelanggaran_ringan: pelanggaranRingan,
+            pelanggaran_sedang: pelanggaranSedang,
+            pelanggaran_berat: pelanggaranBerat,
+            jumlah_pelanggaran: jumlahPelanggaran,
+            total_point_ipc: totalPointIPC,
+            nama_kepala_sekolah: 'Ketut Susila Widiarsana, S.Pd., M.Pd.',
+            nip_kepala_sekolah: '19831101 200803 1 001',
+            tanggal_cetak: formatDateIndo(),
+            nama_wali_kelas: wali?.wali_nama || 'Wali Kelas Belum Ditentukan',
+            nip_wali_kelas: wali?.wali_nip || '-'
+        };
+
+        // Generate PDF buffer directly
+        const pdfBuffer = await generateRaportIPCBuffer(templateData);
+
+        // Set proper headers for PDF (attachment for download)
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Disposition', `attachment; filename="IPC_${student.nama || 'SISWA'}.pdf"`);
+        res.setHeader('Content-Length', pdfBuffer.length);
+        
+        // Send the PDF buffer
+        res.send(pdfBuffer);
+    } catch (error) {
+        console.error('Error generating IPC card PDF:', error);
+        res.status(500).json({ message: 'Server error saat generate PDF' });
+    }
+});
+
+// Generate PDF for Individual Point Card (Preview)
+router.get('/ipc-card-preview/:userId', auth, async (req, res) => {
+    try {
+        const userId = parseInt(req.params.userId, 10);
+        if (Number.isNaN(userId)) {
+            return res.status(400).json({ message: 'ID siswa tidak valid' });
+        }
+
+        // If user is a teacher, check if the student is in their wali kelas class
+        if (req.user.role === 'guru') {
+            const waliKelasClass = await getTeacherWaliKelasClass(req.user.id);
+            if (!waliKelasClass) {
+                return res.status(403).json({ message: 'Anda bukan wali kelas' });
+            }
+            
+            // Check if the student belongs to their class
+            const [studentCheck] = await db.query(
+                `SELECT kelas FROM users WHERE id = ? AND role = 'siswa'`,
+                [userId]
+            );
+            
+            if (studentCheck.length === 0) {
+                return res.status(404).json({ message: 'Siswa tidak ditemukan' });
+            }
+            
+            if (studentCheck[0].kelas !== waliKelasClass) {
+                return res.status(403).json({ message: 'Anda hanya dapat mengakses siswa di kelas Anda' });
+            }
+        }
+
+        const cardData = await buildIpcCardBreakdown(userId);
+        if (!cardData) {
+            return res.status(404).json({ message: 'Siswa tidak ditemukan' });
+        }
+
+        const { student, points } = cardData;
+        
+        // Calculate current class based on tahun_pelajaran
+        let calculatedClass = student.kelas;
+        if (student.tahun_pelajaran && student.jurusan) {
+            calculatedClass = calculateFullClass(student.tahun_pelajaran, student.jurusan) || student.kelas;
+        }
+        
+        // Get wali kelas data
+        const [waliRows] = await db.query(
+            `SELECT u.nama AS wali_nama, u.nip AS wali_nip
+             FROM wali_kelas_assignment wka
+             JOIN users u ON wka.guru_id = u.id
+             WHERE wka.kelas = ? AND wka.tahun_ajaran = YEAR(CURDATE())
+             ORDER BY wka.id DESC
+             LIMIT 1`,
+            [calculatedClass]
+        );
+
+        const wali = waliRows.length > 0 ? waliRows[0] : null;
+
+        // Calculate totals
+        const pointAwal = Number(points.point_awal) || 80;
+        const prestasiAkademik = Number(points.prestasi_akademik) || 0;
+        const prestasiNonAkademik = Number(points.prestasi_nonakademik) || 0;
+        const jumlahPrestasi = prestasiAkademik + prestasiNonAkademik;
+        
+        const karakterTanggungJawab = Number(points.tanggung_jawab) || 0;
+        const karakterDisiplin = Number(points.disiplin) || 0;
+        const karakterKepedulian = Number(points.kepedulian) || 0;
+        const karakterKemandirian = Number(points.kemandirian) || 0;
+        const karakterSpiritual = Number(points.spiritual) || 0;
+        const karakterKejujuran = Number(points.kejujuran) || 0;
+        const karakterKepercayaanDiri = Number(points.kepercayaan_diri) || 0;
+        const jumlahKarakter = karakterTanggungJawab + karakterDisiplin + karakterKepedulian + 
+                              karakterKemandirian + karakterSpiritual + karakterKejujuran + karakterKepercayaanDiri;
+        
+        const organisasi = Number(points.organisasi) || 0;
+        const kepanitiaan = Number(points.kepanitiaan) || 0;
+        const event = Number(points.event) || 0;
+        const jumlahKeaktifan = organisasi + kepanitiaan + event;
+        
+        const pelanggaranRingan = Number(points.pelanggaran_ringan) || 0;
+        const pelanggaranSedang = Number(points.pelanggaran_sedang) || 0;
+        const pelanggaranBerat = Number(points.pelanggaran_berat) || 0;
+        const jumlahPelanggaran = pelanggaranRingan + pelanggaranSedang + pelanggaranBerat;
+        
+        const totalPointIPC = pointAwal + jumlahPrestasi + jumlahKarakter + jumlahKeaktifan - jumlahPelanggaran;
+
+        // Prepare data for template
+        const templateData = {
+            logo_path: 'header.png', // Path to logo file
+            nama_siswa: student.nama || '-',
+            kelas: calculatedClass || '-',
+            nis_nisn: student.nis || student.nisn || '-',
+            grha: student.grha || '-',
+            wali_kelas: wali?.wali_nama || 'Wali Kelas Belum Ditentukan',
+            semester: 'Ganjil',
+            tahun_pelajaran: new Date().getFullYear() + '/' + (new Date().getFullYear() + 1),
+            point_awal: pointAwal,
+            prestasi_akademik: prestasiAkademik,
+            prestasi_non_akademik: prestasiNonAkademik,
+            jumlah_prestasi: jumlahPrestasi,
+            karakter_tanggung_jawab: karakterTanggungJawab,
+            karakter_disiplin: karakterDisiplin,
+            karakter_kepedulian: karakterKepedulian,
+            karakter_kemandirian: karakterKemandirian,
+            karakter_spiritual: karakterSpiritual,
+            karakter_kejujuran: karakterKejujuran,
+            karakter_kepercayaan_diri: karakterKepercayaanDiri,
+            jumlah_karakter: jumlahKarakter,
+            organisasi: organisasi,
+            kepanitiaan: kepanitiaan,
+            event: event,
+            jumlah_keaktifan: jumlahKeaktifan,
+            pelanggaran_ringan: pelanggaranRingan,
+            pelanggaran_sedang: pelanggaranSedang,
+            pelanggaran_berat: pelanggaranBerat,
+            jumlah_pelanggaran: jumlahPelanggaran,
+            total_point_ipc: totalPointIPC,
+            nama_kepala_sekolah: 'Ketut Susila Widiarsana, S.Pd., M.Pd.',
+            nip_kepala_sekolah: '19831101 200803 1 001',
+            tanggal_cetak: formatDateIndo(),
+            nama_wali_kelas: wali?.wali_nama || 'Wali Kelas Belum Ditentukan',
+            nip_wali_kelas: wali?.wali_nip || '-'
+        };
+
+        // Generate PDF buffer directly
+        const pdfBuffer = await generateRaportIPCBuffer(templateData);
+
+        // Set proper headers for PDF (inline for preview, attachment for download)
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Disposition', `inline; filename="IPC_${student.nama || 'SISWA'}.pdf"`);
+        res.setHeader('Content-Length', pdfBuffer.length);
+        
+        // Send the PDF buffer
+        res.send(pdfBuffer);
+    } catch (error) {
+        console.error('Error generating IPC card PDF:', error);
+        res.status(500).json({ message: 'Server error saat generate PDF' });
+    }
+});
+
+// Generate PDF for Class IPC Report (Download)
+router.get('/leger-pdf/:kelas', auth, async (req, res) => {
+    try {
+        const { kelas } = req.params;
+        
+        // If user is a teacher, check if they can access this class
+        if (req.user.role === 'guru') {
+            const waliKelasClass = await getTeacherWaliKelasClass(req.user.id);
+            if (!waliKelasClass) {
+                return res.status(403).json({ message: 'Anda bukan wali kelas' });
+            }
+            if (kelas !== waliKelasClass) {
+                return res.status(403).json({ message: 'Anda hanya dapat mengakses kelas Anda' });
+            }
+        }
+
+        // Get all students in the class with their IPC breakdown
+        const [students] = await db.query(
+            `SELECT id, nama, nis, nisn, kelas, grha, ipc_total, ipc_awal, tahun_pelajaran, jurusan
+             FROM users 
+             WHERE role = 'siswa' AND kelas = ? AND (is_graduated = 0 OR is_graduated IS NULL)
+             ORDER BY nama ASC`,
+            [kelas]
+        );
+
+        if (students.length === 0) {
+            return res.status(404).json({ message: 'Tidak ada siswa di kelas ini' });
+        }
+
+        // Build IPC breakdown for each student
+        const studentsData = [];
+        for (const student of students) {
+            const cardData = await buildIpcCardBreakdown(student.id);
+            if (cardData && cardData.points) {
+                const points = cardData.points;
+                
+                const pointAwal = Number(points.point_awal) || 80;
+                const prestasiAkademik = Number(points.prestasi_akademik) || 0;
+                const prestasiNonAkademik = Number(points.prestasi_nonakademik) || 0;
+                const jumlahPrestasi = prestasiAkademik + prestasiNonAkademik;
+                
+                const karakterTanggungJawab = Number(points.tanggung_jawab) || 0;
+                const karakterDisiplin = Number(points.disiplin) || 0;
+                const karakterKepedulian = Number(points.kepedulian) || 0;
+                const karakterKemandirian = Number(points.kemandirian) || 0;
+                const karakterSpiritual = Number(points.spiritual) || 0;
+                const karakterKejujuran = Number(points.kejujuran) || 0;
+                const karakterKepercayaanDiri = Number(points.kepercayaan_diri) || 0;
+                const jumlahKarakter = karakterTanggungJawab + karakterDisiplin + karakterKepedulian + 
+                                      karakterKemandirian + karakterSpiritual + karakterKejujuran + karakterKepercayaanDiri;
+                
+                const organisasi = Number(points.organisasi) || 0;
+                const kepanitiaan = Number(points.kepanitiaan) || 0;
+                const event = Number(points.event) || 0;
+                const jumlahKeaktifan = organisasi + kepanitiaan + event;
+                
+                const pelanggaranRingan = Number(points.pelanggaran_ringan) || 0;
+                const pelanggaranSedang = Number(points.pelanggaran_sedang) || 0;
+                const pelanggaranBerat = Number(points.pelanggaran_berat) || 0;
+                const jumlahPelanggaran = pelanggaranRingan + pelanggaranSedang + pelanggaranBerat;
+                
+                const totalPointIPC = pointAwal + jumlahPrestasi + jumlahKarakter + jumlahKeaktifan - jumlahPelanggaran;
+
+                // Calculate current class
+                let calculatedClass = student.kelas;
+                if (student.tahun_pelajaran && student.jurusan) {
+                    calculatedClass = calculateFullClass(student.tahun_pelajaran, student.jurusan) || student.kelas;
+                }
+
+                studentsData.push({
+                    nama: student.nama || '-',
+                    nis: student.nis || student.nisn || '-',
+                    kelas: calculatedClass || '-',
+                    ghra: student.grha || '-',
+                    akademik: prestasiAkademik,
+                    nonAkademik: prestasiNonAkademik,
+                    jumlahPrestasi: jumlahPrestasi,
+                    tanggungJawab: karakterTanggungJawab,
+                    disiplin: karakterDisiplin,
+                    kepedulian: karakterKepedulian,
+                    kemandirian: karakterKemandirian,
+                    spiritual: karakterSpiritual,
+                    kejujuran: karakterKejujuran,
+                    kepercayaanDiri: karakterKepercayaanDiri,
+                    jumlahKarakter: jumlahKarakter,
+                    organisasi: organisasi,
+                    kepanitiaan: kepanitiaan,
+                    event: event,
+                    jumlahKeaktifan: jumlahKeaktifan,
+                    ringan: pelanggaranRingan,
+                    sedang: pelanggaranSedang,
+                    berat: pelanggaranBerat,
+                    jumlahPelanggaran: jumlahPelanggaran,
+                    totalPoint: totalPointIPC
+                });
+            }
+        }
+
+        // Get wali kelas data
+        const [waliRows] = await db.query(
+            `SELECT u.nama AS wali_nama, u.nip AS wali_nip
+             FROM wali_kelas_assignment wka
+             JOIN users u ON wka.guru_id = u.id
+             WHERE wka.kelas = ? AND wka.tahun_ajaran = YEAR(CURDATE())
+             ORDER BY wka.id DESC
+             LIMIT 1`,
+            [kelas]
+        );
+
+        const wali = waliRows.length > 0 ? waliRows[0] : null;
+
+        // Prepare data for template (new format)
+        const dataKelas = {
+            nama_kelas: kelas,
+            tahun_pelajaran: new Date().getFullYear() + '/' + (new Date().getFullYear() + 1),
+            kop_surat_path_file: 'header.png',
+            nama_kepala_sekolah: 'Ketut Susila Widiarsana, S.Pd., M.Pd.',
+            nip_kepala_sekolah: '19831101 200803 1 001',
+            tanggal_cetak: formatDateIndo(),
+            nama_wali_kelas: wali?.wali_nama || 'Wali Kelas Belum Ditentukan',
+            nip_wali_kelas: wali?.wali_nip || '-'
+        };
+
+        // Generate PDF buffer directly with new signature
+        const pdfBuffer = await generateLegerIPCBuffer(dataKelas, studentsData);
+
+        // Set proper headers for PDF (attachment for download)
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Disposition', `attachment; filename="Leger_IPC_Kelas_${kelas}.pdf"`);
+        res.setHeader('Content-Length', pdfBuffer.length);
+        
+        // Send the PDF buffer
+        res.send(pdfBuffer);
+    } catch (error) {
+        console.error('Error generating Leger IPC PDF:', error);
+        res.status(500).json({ message: 'Server error saat generate PDF' });
+    }
+});
+
+// Generate PDF for Class IPC Report (Preview)
+router.get('/leger-preview/:kelas', auth, async (req, res) => {
+    try {
+        const { kelas } = req.params;
+        
+        // If user is a teacher, check if they can access this class
+        if (req.user.role === 'guru') {
+            const waliKelasClass = await getTeacherWaliKelasClass(req.user.id);
+            if (!waliKelasClass) {
+                return res.status(403).json({ message: 'Anda bukan wali kelas' });
+            }
+            if (kelas !== waliKelasClass) {
+                return res.status(403).json({ message: 'Anda hanya dapat mengakses kelas Anda' });
+            }
+        }
+
+        // Get all students in the class with their IPC breakdown
+        const [students] = await db.query(
+            `SELECT id, nama, nis, nisn, kelas, grha, ipc_total, ipc_awal, tahun_pelajaran, jurusan
+             FROM users 
+             WHERE role = 'siswa' AND kelas = ? AND (is_graduated = 0 OR is_graduated IS NULL)
+             ORDER BY nama ASC`,
+            [kelas]
+        );
+
+        if (students.length === 0) {
+            return res.status(404).json({ message: 'Tidak ada siswa di kelas ini' });
+        }
+
+        // Build IPC breakdown for each student
+        const studentsData = [];
+        for (const student of students) {
+            const cardData = await buildIpcCardBreakdown(student.id);
+            if (cardData && cardData.points) {
+                const points = cardData.points;
+                
+                const pointAwal = Number(points.point_awal) || 80;
+                const prestasiAkademik = Number(points.prestasi_akademik) || 0;
+                const prestasiNonAkademik = Number(points.prestasi_nonakademik) || 0;
+                const jumlahPrestasi = prestasiAkademik + prestasiNonAkademik;
+                
+                const karakterTanggungJawab = Number(points.tanggung_jawab) || 0;
+                const karakterDisiplin = Number(points.disiplin) || 0;
+                const karakterKepedulian = Number(points.kepedulian) || 0;
+                const karakterKemandirian = Number(points.kemandirian) || 0;
+                const karakterSpiritual = Number(points.spiritual) || 0;
+                const karakterKejujuran = Number(points.kejujuran) || 0;
+                const karakterKepercayaanDiri = Number(points.kepercayaan_diri) || 0;
+                const jumlahKarakter = karakterTanggungJawab + karakterDisiplin + karakterKepedulian + 
+                                      karakterKemandirian + karakterSpiritual + karakterKejujuran + karakterKepercayaanDiri;
+                
+                const organisasi = Number(points.organisasi) || 0;
+                const kepanitiaan = Number(points.kepanitiaan) || 0;
+                const event = Number(points.event) || 0;
+                const jumlahKeaktifan = organisasi + kepanitiaan + event;
+                
+                const pelanggaranRingan = Number(points.pelanggaran_ringan) || 0;
+                const pelanggaranSedang = Number(points.pelanggaran_sedang) || 0;
+                const pelanggaranBerat = Number(points.pelanggaran_berat) || 0;
+                const jumlahPelanggaran = pelanggaranRingan + pelanggaranSedang + pelanggaranBerat;
+                
+                const totalPointIPC = pointAwal + jumlahPrestasi + jumlahKarakter + jumlahKeaktifan - jumlahPelanggaran;
+
+                // Calculate current class
+                let calculatedClass = student.kelas;
+                if (student.tahun_pelajaran && student.jurusan) {
+                    calculatedClass = calculateFullClass(student.tahun_pelajaran, student.jurusan) || student.kelas;
+                }
+
+                studentsData.push({
+                    nama: student.nama || '-',
+                    nis: student.nis || student.nisn || '-',
+                    kelas: calculatedClass || '-',
+                    ghra: student.grha || '-',
+                    akademik: prestasiAkademik,
+                    nonAkademik: prestasiNonAkademik,
+                    jumlahPrestasi: jumlahPrestasi,
+                    tanggungJawab: karakterTanggungJawab,
+                    disiplin: karakterDisiplin,
+                    kepedulian: karakterKepedulian,
+                    kemandirian: karakterKemandirian,
+                    spiritual: karakterSpiritual,
+                    kejujuran: karakterKejujuran,
+                    kepercayaanDiri: karakterKepercayaanDiri,
+                    jumlahKarakter: jumlahKarakter,
+                    organisasi: organisasi,
+                    kepanitiaan: kepanitiaan,
+                    event: event,
+                    jumlahKeaktifan: jumlahKeaktifan,
+                    ringan: pelanggaranRingan,
+                    sedang: pelanggaranSedang,
+                    berat: pelanggaranBerat,
+                    jumlahPelanggaran: jumlahPelanggaran,
+                    totalPoint: totalPointIPC
+                });
+            }
+        }
+
+        // Get wali kelas data
+        const [waliRows] = await db.query(
+            `SELECT u.nama AS wali_nama, u.nip AS wali_nip
+             FROM wali_kelas_assignment wka
+             JOIN users u ON wka.guru_id = u.id
+             WHERE wka.kelas = ? AND wka.tahun_ajaran = YEAR(CURDATE())
+             ORDER BY wka.id DESC
+             LIMIT 1`,
+            [kelas]
+        );
+
+        const wali = waliRows.length > 0 ? waliRows[0] : null;
+
+        // Prepare data for template (new format)
+        const dataKelas = {
+            nama_kelas: kelas,
+            tahun_pelajaran: new Date().getFullYear() + '/' + (new Date().getFullYear() + 1),
+            kop_surat_path_file: 'header.png',
+            nama_kepala_sekolah: 'Ketut Susila Widiarsana, S.Pd., M.Pd.',
+            nip_kepala_sekolah: '19831101 200803 1 001',
+            tanggal_cetak: formatDateIndo(),
+            nama_wali_kelas: wali?.wali_nama || 'Wali Kelas Belum Ditentukan',
+            nip_wali_kelas: wali?.wali_nip || '-'
+        };
+
+        // Generate PDF buffer directly with new signature
+        const pdfBuffer = await generateLegerIPCBuffer(dataKelas, studentsData);
+
+        // Set proper headers for PDF (inline for preview)
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Disposition', `inline; filename="Leger_IPC_Kelas_${kelas}.pdf"`);
+        res.setHeader('Content-Length', pdfBuffer.length);
+        
+        // Send the PDF buffer
+        res.send(pdfBuffer);
+    } catch (error) {
+        console.error('Error generating Leger IPC PDF:', error);
+        res.status(500).json({ message: 'Server error saat generate PDF' });
     }
 });
 

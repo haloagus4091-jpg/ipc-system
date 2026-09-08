@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<title>Individual Point Card</title>
+<link rel="stylesheet" href="raport-ipc.css">
+</head>
+<body>
+
+<div class="sheet">
+
+  <!-- ================= KOP SURAT ================= -->
+  <img class="kop" src="{{logo_path}}" alt="Kop Surat Sekolah">
+
+  <div class="judul">Individual Point Card</div>
+
+  <!-- ================= INFO SISWA ================= -->
+  <table class="info">
+    <tr>
+      <td class="label">Nama</td>
+      <td class="colon">:</td>
+      <td class="value">{{nama_siswa}}</td>
+      <td class="label">Kelas</td>
+      <td class="colon">:</td>
+      <td class="value">{{kelas}}</td>
+    </tr>
+    <tr>
+      <td class="label">NIS/NISN</td>
+      <td class="colon">:</td>
+      <td class="value">{{nis_nisn}}</td>
+      <td class="label">Grha</td>
+      <td class="colon">:</td>
+      <td class="value">{{grha}}</td>
+    </tr>
+    <tr>
+      <td class="label">Wali Kelas</td>
+      <td class="colon">:</td>
+      <td class="value">{{wali_kelas}}</td>
+      <td class="label">Semester</td>
+      <td class="colon">:</td>
+      <td class="value">{{semester}} - {{tahun_pelajaran}}</td>
+    </tr>
+  </table>
+
+  <!-- ================= TABEL POINT IPC ================= -->
+  <table class="ipc">
+    <colgroup>
+      <col class="no"><col class="no2"><col class="desc"><col class="pt">
+    </colgroup>
+    <thead>
+      <tr>
+        <th colspan="3">Point IPC</th>
+        <th>Point</th>
+      </tr>
+    </thead>
+    <tbody>
+
+      <tr class="section-head">
+        <td class="num">I</td>
+        <td colspan="2">Point Awal</td>
+        <td class="point">{{point_awal}}</td>
+      </tr>
+
+      <tr class="section-head">
+        <td class="num">II</td>
+        <td colspan="2">Prestasi</td>
+        <td class="point-empty"></td>
+      </tr>
+      <tr class="item"><td></td><td class="num2">1</td><td>Akademik</td><td class="point">{{prestasi_akademik}}</td></tr>
+      <tr class="item"><td></td><td class="num2">2</td><td>Non-Akademik</td><td class="point">{{prestasi_non_akademik}}</td></tr>
+      <tr class="total">
+        <td colspan="3">Jumlah Prestasi</td>
+        <td class="point">{{jumlah_prestasi}}</td>
+      </tr>
+
+      <tr class="section-head">
+        <td class="num">III</td>
+        <td colspan="2">Perkembangan Karakter</td>
+        <td class="point-empty"></td>
+      </tr>
+      <tr class="item"><td></td><td class="num2">1</td><td>Tanggung Jawab</td><td class="point">{{karakter_tanggung_jawab}}</td></tr>
+      <tr class="item"><td></td><td class="num2">2</td><td>Disiplin</td><td class="point">{{karakter_disiplin}}</td></tr>
+      <tr class="item"><td></td><td class="num2">3</td><td>Kepedulian</td><td class="point">{{karakter_kepedulian}}</td></tr>
+      <tr class="item"><td></td><td class="num2">4</td><td>Kemandirian</td><td class="point">{{karakter_kemandirian}}</td></tr>
+      <tr class="item"><td></td><td class="num2">5</td><td>Spiritual</td><td class="point">{{karakter_spiritual}}</td></tr>
+      <tr class="item"><td></td><td class="num2">6</td><td>Kejujuran</td><td class="point">{{karakter_kejujuran}}</td></tr>
+      <tr class="item"><td></td><td class="num2">7</td><td>Kepercayaan Diri</td><td class="point">{{karakter_kepercayaan_diri}}</td></tr>
+      <tr class="total">
+        <td colspan="3">Jumlah Perkembangan Karakter</td>
+        <td class="point">{{jumlah_karakter}}</td>
+      </tr>
+
+      <tr class="section-head">
+        <td class="num">IV</td>
+        <td colspan="2">Organisasi</td>
+        <td class="point">{{organisasi}}</td>
+      </tr>
+
+      <tr class="section-head">
+        <td class="num">V</td>
+        <td colspan="2">Kepanitiaan</td>
+        <td class="point">{{kepanitiaan}}</td>
+      </tr>
+
+      <tr class="section-head">
+        <td class="num">VI</td>
+        <td colspan="2">Event</td>
+        <td class="point">{{event}}</td>
+      </tr>
+
+      <tr class="total">
+        <td colspan="3">Jumlah Keaktifan</td>
+        <td class="point">{{jumlah_keaktifan}}</td>
+      </tr>
+
+      <tr class="section-head">
+        <td class="num">VII</td>
+        <td colspan="2">Pelanggaran</td>
+        <td class="point-empty"></td>
+      </tr>
+      <tr class="item"><td></td><td class="num2">1</td><td>Ringan</td><td class="point">{{pelanggaran_ringan}}</td></tr>
+      <tr class="item"><td></td><td class="num2">2</td><td>Sedang</td><td class="point">{{pelanggaran_sedang}}</td></tr>
+      <tr class="item"><td></td><td class="num2">3</td><td>Berat</td><td class="point">{{pelanggaran_berat}}</td></tr>
+      <tr class="total">
+        <td colspan="3">Jumlah Pelanggaran</td>
+        <td class="point">{{jumlah_pelanggaran}}</td>
+      </tr>
+
+      <tr class="total">
+        <td colspan="3" style="text-align:center;">TOTAL POINT IPC</td>
+        <td class="point">{{total_point_ipc}}</td>
+      </tr>
+
+    </tbody>
+  </table>
+
+  <!-- ================= TANDA TANGAN ================= -->
+  <div class="ttd">
+    <div class="kiri">
+      Mengetahui,<br>
+      Kepala SMK Negeri Bali Mandara
+      <div class="spasi"></div>
+      <div class="nama-ttd">{{nama_kepala_sekolah}}</div>
+      NIP. {{nip_kepala_sekolah}}
+    </div>
+    <div class="kanan">
+      Kubutambahan, {{tanggal_cetak}}<br>
+      Wali Kelas
+      <div class="spasi"></div>
+      <div class="nama-ttd">{{nama_wali_kelas}}</div>
+      NIP. {{nip_wali_kelas}}
+    </div>
+  </div>
+
+</div>
+</body>
+</html>

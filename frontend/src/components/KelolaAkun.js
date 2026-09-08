@@ -409,50 +409,22 @@ function KelolaAkun() {
       : `${currentYear - 1}-${currentYear}`;
     
     if (type === 'siswa') {
-      // Create multiple example rows for different class levels
-      // Menggunakan tahun pelajaran dari 2024-2025 sampai 2030-2031
-      const templateData = [
-        { 
-          Nama: 'Contoh Siswa X', 
-          NIS: '12345', 
-          NISN: '1234567890', 
-          Jurusan: 'TKJ 1', 
-          Grha: 'Airsanya', 
-          TahunPelajaran: currentAcademicYear, 
+      // Create 30 sample students with TKJ 1 and tahun pelajaran 2024-2025
+      const templateData = [];
+      const grhaOptions = ['Airsanya', 'Daksina', 'Genya', 'Madhya', 'Pascima', 'Uttara'];
+      
+      for (let i = 1; i <= 30; i++) {
+        templateData.push({
+          Nama: `Siswa TKJ 1 ${i}`,
+          NIS: `2024${String(i).padStart(3, '0')}`,
+          NISN: `123456789${String(i).padStart(2, '0')}`,
+          Jurusan: 'TKJ 1',
+          Grha: grhaOptions[i % grhaOptions.length],
+          TahunPelajaran: '2024-2025',
           Password: '123456',
-          Keterangan: 'Akan masuk kelas X (tahun masuk sama dengan tahun ajaran saat ini)'
-        },
-        { 
-          Nama: 'Contoh Siswa XI', 
-          NIS: '12346', 
-          NISN: '1234567891', 
-          Jurusan: 'TKJ 2', 
-          Grha: 'Daksina', 
-          TahunPelajaran: `${currentYear - 1}-${currentYear}`, 
-          Password: '123456',
-          Keterangan: 'Akan masuk kelas XI (tahun masuk 1 tahun sebelumnya)'
-        },
-        { 
-          Nama: 'Contoh Siswa XII', 
-          NIS: '12347', 
-          NISN: '1234567892', 
-          Jurusan: 'DPIB 1', 
-          Grha: 'Genya', 
-          TahunPelajaran: `${currentYear - 2}-${currentYear - 1}`, 
-          Password: '123456',
-          Keterangan: 'Akan masuk kelas XII (tahun masuk 2 tahun sebelumnya)'
-        },
-        { 
-          Nama: 'Contoh Siswa Lulus', 
-          NIS: '12348', 
-          NISN: '1234567893', 
-          Jurusan: 'TKR 1', 
-          Grha: 'Madhya', 
-          TahunPelajaran: `${currentYear - 3}-${currentYear - 2}`, 
-          Password: '123456',
-          Keterangan: 'Sudah lulus (tidak akan muncul di kelas aktif)'
-        }
-      ];
+          Keterangan: `Contoh data siswa ke-${i} untuk import`
+        });
+      }
 
       const ws = XLSX.utils.json_to_sheet(templateData);
       const wb = XLSX.utils.book_new();

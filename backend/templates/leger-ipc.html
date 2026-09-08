@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<title>Laporan IPC Per Kelas</title>
+<link rel="stylesheet" href="leger-ipc.css">
+</head>
+<body>
+
+<div class="sheet">
+
+  <!-- ================= KOP SURAT ================= -->
+  <!-- Satu gambar utuh (kop-surat.jpg): logo kiri, teks tengah, logo kanan sudah jadi 1 file -->
+  <img class="kop-image" src="{{kop_surat_path}}" alt="Kop Surat SMK Negeri Bali Mandara">
+
+  <div class="judul">
+    LAPORAN IPC PER KELAS<br>
+    SMK NEGERI BALI MANDARA<br>
+    TAHUN PELAJARAN {{tahun_pelajaran}}
+  </div>
+
+  <div class="info-kelas">Kelas: {{nama_kelas}}</div>
+
+  <!-- ================= TABEL LEGER IPC ================= -->
+  <table class="leger">
+    <thead>
+      <tr class="group-row">
+        <th rowspan="2" class="col-no">NO</th>
+        <th rowspan="2" class="col-nama">NAMA SISWA</th>
+        <th rowspan="2" class="col-nis">NIS/<br>NISN</th>
+        <th rowspan="2" class="col-kelas">KELAS</th>
+        <th rowspan="2" class="col-ghra">GHRA</th>
+        <th colspan="3" class="grp-prestasi">Prestasi</th>
+        <th colspan="8" class="grp-karakter">Perkembangan Karakter</th>
+        <th colspan="4" class="grp-keaktifan">Keaktifan</th>
+        <th colspan="4" class="grp-pelanggaran">Pelanggaran</th>
+        <th rowspan="2" class="col-total grp-total">Total<br>Point</th>
+      </tr>
+      <tr class="sub-row">
+        <th class="grp-prestasi">Akademik</th>
+        <th class="grp-prestasi">Non-<br>Akademik</th>
+        <th class="grp-prestasi col-jml">Jml</th>
+
+        <th class="grp-karakter">T. Jawab</th>
+        <th class="grp-karakter">Disiplin</th>
+        <th class="grp-karakter">Peduli</th>
+        <th class="grp-karakter">Mandiri</th>
+        <th class="grp-karakter">Spiritual</th>
+        <th class="grp-karakter">Jujur</th>
+        <th class="grp-karakter">P. Diri</th>
+        <th class="grp-karakter col-jml">Jml</th>
+
+        <th class="grp-keaktifan">Org.</th>
+        <th class="grp-keaktifan">Panitia</th>
+        <th class="grp-keaktifan">Event</th>
+        <th class="grp-keaktifan col-jml">Jml</th>
+
+        <th class="grp-pelanggaran">Ringan</th>
+        <th class="grp-pelanggaran">Sedang</th>
+        <th class="grp-pelanggaran">Berat</th>
+        <th class="grp-pelanggaran col-jml">Jml</th>
+      </tr>
+    </thead>
+    <tbody>
+      <!--ROWS-->
+    </tbody>
+  </table>
+
+  <div class="keterangan">
+    Ket: T. Jawab = Tanggung Jawab, Peduli = Kepedulian, P. Diri = Kepercayaan Diri, Panitia = Kepanitiaan
+  </div>
+
+  <!-- ================= TANDA TANGAN ================= -->
+  <div class="ttd">
+    <div class="kiri">
+      Mengetahui,<br>
+      Kepala SMK Negeri Bali Mandara
+      <div class="spasi"></div>
+      <div class="nama-ttd">{{nama_kepala_sekolah}}</div>
+      NIP. {{nip_kepala_sekolah}}
+    </div>
+    <div class="kanan">
+      Kubutambahan, {{tanggal_cetak}}<br>
+      Wali Kelas
+      <div class="spasi"></div>
+      <div class="nama-ttd">{{nama_wali_kelas}}</div>
+      NIP. {{nip_wali_kelas}}
+    </div>
+  </div>
+
+</div>
+</body>
+</html>
