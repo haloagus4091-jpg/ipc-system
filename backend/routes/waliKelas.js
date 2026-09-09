@@ -60,7 +60,7 @@ router.get('/class-statistics', auth, superAdminOnly, async (req, res) => {
             classes.map(async (cls) => {
                 // Get students in this class
                 const [students] = await db.query(`
-                    SELECT id, nama, nis, nisn, grha, ipc_total, foto, tahun_pelajaran, jurusan
+                    SELECT id, nama, nis, grha, ipc_total, foto, tahun_pelajaran, jurusan
                     FROM users 
                     WHERE role = 'siswa' AND kelas = ? AND (is_graduated = 0 OR is_graduated IS NULL)
                     ORDER BY nama ASC
@@ -206,7 +206,7 @@ router.get('/my-class', auth, teacherOnly, async (req, res) => {
         // Get students in this class with full details
         const [students] = await db.query(`
             SELECT 
-                u.id, u.nama, u.nis, u.nisn, u.grha, u.ipc_total, u.ipc_awal,
+                u.id, u.nama, u.nis, u.grha, u.ipc_total, u.ipc_awal,
                 u.alamat, u.no_hp, u.wali_kelas, u.foto, u.created_at, u.tahun_pelajaran, u.jurusan
             FROM users u
             WHERE u.role = 'siswa' AND u.kelas = ? AND (u.is_graduated = 0 OR u.is_graduated IS NULL)
@@ -351,7 +351,7 @@ router.get('/class-mismatches', auth, superAdminOnly, async (req, res) => {
         
         // Get all students
         const [students] = await db.query(`
-            SELECT id, nama, nis, nisn, kelas, tahun_pelajaran, jurusan, is_graduated
+            SELECT id, nama, nis, kelas, tahun_pelajaran, jurusan, is_graduated
             FROM users 
             WHERE role = 'siswa' AND (is_graduated = 0 OR is_graduated IS NULL)
         `);

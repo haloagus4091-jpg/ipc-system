@@ -13,10 +13,10 @@ router.get('/students', auth, async (req, res) => {
         }
 
         const [students] = await db.query(`
-            SELECT id, nama, nis, nisn, kelas, grha, ipc_total 
+            SELECT id, nama, nis, kelas, grha, ipc_total
             FROM users 
             WHERE role = 'siswa' 
-            AND (nama LIKE ? OR nis LIKE ? OR nisn LIKE ?)
+            AND (nama LIKE ? OR nis LIKE ?)
             LIMIT 20
         `, [`%${query}%`, `%${query}%`, `%${query}%`]);
 
@@ -53,7 +53,7 @@ router.get('/student/:userId', auth, async (req, res) => {
         const userId = req.params.userId;
 
         const [student] = await db.query(
-            'SELECT id, nama, nis, nisn, kelas, grha, ipc_total FROM users WHERE id = ? AND role = ?',
+            'SELECT id, nama, nis, kelas, grha, ipc_total FROM users WHERE id = ? AND role = ?',
             [userId, 'siswa']
         );
 

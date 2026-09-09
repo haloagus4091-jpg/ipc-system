@@ -124,8 +124,8 @@ function IpcReport({ studentId, onClose }) {
             <span className="info-value">{studentData.nama}</span>
           </div>
           <div className="info-row">
-            <span className="info-label">NIS/NISN:</span>
-            <span className="info-value">{studentData.nis}/{studentData.nisn || '-'}</span>
+            <span className="info-label">NIS:</span>
+            <span className="info-value">{studentData.nis || '-'}</span>
           </div>
           <div className="info-row">
             <span className="info-label">Kelas:</span>

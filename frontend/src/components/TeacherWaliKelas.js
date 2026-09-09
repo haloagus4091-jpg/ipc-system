@@ -363,8 +363,6 @@ function TeacherWaliKelas() {
                     <td style={{ padding: '8px' }}>{selectedStudent.nis}</td>
                   </tr>
                   <tr>
-                    <td style={{ padding: '8px', fontWeight: 'bold' }}>NISN</td>
-                    <td style={{ padding: '8px' }}>{selectedStudent.nisn || '-'}</td>
                   </tr>
                   <tr>
                     <td style={{ padding: '8px', fontWeight: 'bold' }}>Grha</td>

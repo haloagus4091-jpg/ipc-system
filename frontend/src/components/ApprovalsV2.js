@@ -265,7 +265,6 @@ function ApprovalsV2() {
                 <>
                   <td>{item.nama}</td>
                   <td>{item.nis}</td>
-                  <td>{item.nisn}</td>
                   <td>{item.kelas}</td>
                   <td>{item.requested_by_name}</td>
                   <td>

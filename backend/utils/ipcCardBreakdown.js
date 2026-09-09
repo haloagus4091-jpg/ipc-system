@@ -79,7 +79,7 @@ function calculateBreakdownTotal(points) {
 
 async function buildIpcCardBreakdown(userId) {
     const [students] = await db.query(
-        `SELECT id, nama, nis, nisn, kelas, grha, ipc_total, ipc_awal
+        `SELECT id, nama, nis, kelas, grha, ipc_total, ipc_awal
          FROM users
          WHERE id = ? AND role = 'siswa'`,
         [userId]

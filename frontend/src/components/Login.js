@@ -125,7 +125,7 @@ function Login() {
           {activeTab === 'siswa' && (
             <>
               <div className="form-group">
-                <label>NIS / NISN</label>
+                <label>NIS</label>
                 <input
                   type="text"
                   name="username"

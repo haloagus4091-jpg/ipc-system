@@ -83,7 +83,7 @@ function styleCell(cell, { fill, bold, align = "center", color } = {}) {
 const COLUMN_DEFS = [
   { key: "no", header1: "NO", merge: "v", width: 5 },
   { key: "nama", header1: "NAMA SISWA", merge: "v", width: 24, align: "left" },
-  { key: "nis", header1: "NIS/NISN", merge: "v", width: 11 },
+  { key: "nis", header1: "NIS", merge: "v", width: 11 },
   { key: "kelas", header1: "KELAS", merge: "v", width: 10 },
   { key: "ghra", header1: "GHRA", merge: "v", width: 7 },
   { key: "pointAwal", header1: "Point Awal", merge: "v", width: 10 }, // Added point awal column
@@ -406,7 +406,7 @@ function LaporanCetak({ user }) {
       const headerRow1 = [
         { content: 'NO', rowSpan: 2, styles: { valign: 'middle', halign: 'center' } },
         { content: 'NAMA SISWA', rowSpan: 2, styles: { valign: 'middle', halign: 'left' } },
-        { content: 'NIS/NISN', rowSpan: 2, styles: { valign: 'middle', halign: 'center' } },
+        { content: 'NIS', rowSpan: 2, styles: { valign: 'middle', halign: 'center' } },
         { content: 'KELAS', rowSpan: 2, styles: { valign: 'middle', halign: 'center' } },
         { content: 'GHRA', rowSpan: 2, styles: { valign: 'middle', halign: 'center' } },
         { content: 'Point\nAwal', rowSpan: 2, styles: { valign: 'middle', halign: 'center', fillColor: COLORS.headerTotal } }, // Added point awal with line break
@@ -890,14 +890,7 @@ function LaporanCetak({ user }) {
         doc.setFont('times', 'bold');
         doc.text('NIS:', 20, yPos);
         doc.setFont('times', 'normal');
-        const nisNisn = `${student.nis}` || '-';
-        doc.text(nisNisn, 20 + 20, yPos);
-        
-        yPos += 5;
-        doc.setFont('times', 'bold');
-        doc.text('NISN:', 20, yPos);
-        doc.setFont('times', 'normal');
-        doc.text(student?.nisn || '-', 20 + 20, yPos);
+        doc.text(student?.nis || '-', 20 + 20, yPos);
         
         yPos += 5;
         doc.setFont('times', 'bold');
@@ -1321,7 +1314,7 @@ function LaporanCetak({ user }) {
         ) : (
           <>
             <p style={{ marginBottom: '14px', color: 'var(--text-secondary)', fontSize: '14px' }}>
-              Format cetak menampilkan Leger IPC Individual Point Card dengan format tabel lengkap termasuk NIS/NISN, Nama, Kelas, GHRA, breakdown IPC (Prestasi, Perkembangan Karakter, Keaktifan, Pelanggaran), dan Total IPC dalam format landscape yang rapi dan profesional.
+              Format cetak menampilkan Leger IPC Individual Point Card dengan format tabel lengkap termasuk NIS, Nama, Kelas, GHRA, breakdown IPC (Prestasi, Perkembangan Karakter, Keaktifan, Pelanggaran), dan Total IPC dalam format landscape yang rapi dan profesional.
             </p>
 
             <div className="ipc-print-toolbar">

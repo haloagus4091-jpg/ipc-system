@@ -27,7 +27,6 @@ router.get('/students', auth, async (req, res) => {
                 id,
                 nama,
                 nis,
-                nisn,
                 kelas,
                 ipc_total,
                 ipc_awal,
@@ -100,7 +99,6 @@ router.get('/students/class/:kelas', auth, async (req, res) => {
                 id,
                 nama,
                 nis,
-                nisn,
                 kelas,
                 ipc_total,
                 ipc_awal,
@@ -191,7 +189,6 @@ router.get('/class-ipc/:kelas', auth, async (req, res) => {
                 id,
                 nama,
                 nis,
-                nisn,
                 kelas,
                 ipc_total,
                 ipc_awal,
@@ -411,7 +408,7 @@ router.get('/ipc-card-pdf/:userId', auth, async (req, res) => {
             logo_path: 'header.png', // Path to logo file
             nama_siswa: student.nama || '-',
             kelas: calculatedClass || '-',
-            nis_nisn: student.nis || student.nisn || '-',
+            nis: student.nis || '-',
             grha: student.grha || '-',
             wali_kelas: wali?.wali_nama || 'Wali Kelas Belum Ditentukan',
             semester: 'Ganjil',
@@ -549,7 +546,7 @@ router.get('/ipc-card-preview/:userId', auth, async (req, res) => {
             logo_path: 'header.png', // Path to logo file
             nama_siswa: student.nama || '-',
             kelas: calculatedClass || '-',
-            nis_nisn: student.nis || student.nisn || '-',
+            nis: student.nis || '-',
             grha: student.grha || '-',
             wali_kelas: wali?.wali_nama || 'Wali Kelas Belum Ditentukan',
             semester: 'Ganjil',
@@ -616,7 +613,7 @@ router.get('/leger-pdf/:kelas', auth, async (req, res) => {
 
         // Get all students in the class with their IPC breakdown
         const [students] = await db.query(
-            `SELECT id, nama, nis, nisn, kelas, grha, ipc_total, ipc_awal, tahun_pelajaran, jurusan
+            `SELECT id, nama, nis, kelas, grha, ipc_total, ipc_awal, tahun_pelajaran, jurusan
              FROM users 
              WHERE role = 'siswa' AND kelas = ? AND (is_graduated = 0 OR is_graduated IS NULL)
              ORDER BY nama ASC`,
@@ -669,7 +666,7 @@ router.get('/leger-pdf/:kelas', auth, async (req, res) => {
 
                 studentsData.push({
                     nama: student.nama || '-',
-                    nis: student.nis || student.nisn || '-',
+                    nis: student.nis || '-',
                     kelas: calculatedClass || '-',
                     ghra: student.grha || '-',
                     akademik: prestasiAkademik,
@@ -755,7 +752,7 @@ router.get('/leger-preview/:kelas', auth, async (req, res) => {
 
         // Get all students in the class with their IPC breakdown
         const [students] = await db.query(
-            `SELECT id, nama, nis, nisn, kelas, grha, ipc_total, ipc_awal, tahun_pelajaran, jurusan
+            `SELECT id, nama, nis, kelas, grha, ipc_total, ipc_awal, tahun_pelajaran, jurusan
              FROM users 
              WHERE role = 'siswa' AND kelas = ? AND (is_graduated = 0 OR is_graduated IS NULL)
              ORDER BY nama ASC`,
@@ -808,7 +805,7 @@ router.get('/leger-preview/:kelas', auth, async (req, res) => {
 
                 studentsData.push({
                     nama: student.nama || '-',
-                    nis: student.nis || student.nisn || '-',
+                    nis: student.nis || '-',
                     kelas: calculatedClass || '-',
                     ghra: student.grha || '-',
                     akademik: prestasiAkademik,

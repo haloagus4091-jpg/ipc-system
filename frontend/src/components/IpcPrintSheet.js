@@ -15,11 +15,6 @@ function formatPrintDate(date = new Date()) {
   return date.toLocaleDateString('id-ID', options);
 }
 
-function formatNisNisn(nis, nisn) {
-  if (nis && nisn) return `${nis}/${nisn}`;
-  return nis || nisn || '-';
-}
-
 function IpcPrintSheet({ student, wali, points, ipcTotal, printDate = new Date() }) {
   const breakdown = points || {
     point_awal: student?.ipc_awal ?? 80,
@@ -80,8 +75,8 @@ function IpcPrintSheet({ student, wali, points, ipcTotal, printDate = new Date()
             <span className="info-value">{student?.nama || '-'}</span>
           </div>
           <div className="info-row">
-            <span className="info-label">NIS/NISN:</span>
-            <span className="info-value">{formatNisNisn(student?.nis, student?.nisn)}</span>
+            <span className="info-label">NIS:</span>
+            <span className="info-value">{student?.nis || '-'}</span>
           </div>
           <div className="info-row">
             <span className="info-label">Wali Kelas:</span>

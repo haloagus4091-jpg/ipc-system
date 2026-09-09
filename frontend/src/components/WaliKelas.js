@@ -936,8 +936,6 @@ function WaliKelas() {
                 <div style={{ fontSize: '1rem', fontWeight: '600', color: 'var(--text-primary)' }}>{selectedStudent.nis}</div>
               </div>
               <div style={{ padding: '12px', background: 'var(--bg-tertiary)', borderRadius: 'var(--border-radius-sm)' }}>
-                <strong style={{ color: 'var(--text-secondary)', display: 'block', marginBottom: '4px', fontSize: '0.85rem' }}>NISN</strong>
-                <div style={{ fontSize: '1rem', fontWeight: '600', color: 'var(--text-primary)' }}>{selectedStudent.nisn || '-'}</div>
               </div>
               <div style={{ padding: '12px', background: 'var(--bg-tertiary)', borderRadius: 'var(--border-radius-sm)' }}>
                 <strong style={{ color: 'var(--text-secondary)', display: 'block', marginBottom: '4px', fontSize: '0.85rem' }}>Grha</strong>

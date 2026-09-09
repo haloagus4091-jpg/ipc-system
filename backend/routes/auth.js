@@ -11,10 +11,10 @@ router.post('/login', async (req, res) => {
         
         console.log('Login attempt for:', username);
         
-        // Check if username is NIS, NISN, or NIP
+        // Check if username is NIS or NIP
         const [users] = await db.query(
-            'SELECT * FROM users WHERE nis = ? OR nisn = ? OR nip = ?',
-            [username, username, username]
+            'SELECT * FROM users WHERE nis = ? OR nip = ?',
+            [username, username]
         );
 
         if (users.length === 0) {
@@ -65,7 +65,6 @@ router.post('/login', async (req, res) => {
                 id: user.id,
                 nama: user.nama,
                 nis: user.nis,
-                nisn: user.nisn,
                 nip: user.nip,
                 role: user.role,
                 kelas: user.kelas,

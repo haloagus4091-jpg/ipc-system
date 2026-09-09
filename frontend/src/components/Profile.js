@@ -3,6 +3,8 @@ import axios from 'axios';
 import API_BASE_URL from '../config';
 import StudentRecordsHistory from './StudentRecordsHistory';
 
+const JABATAN_OPTIONS = ['Guru', 'Pegawai', 'Staff'];
+
 function Profile() {
   const [profile, setProfile] = useState(null);
   const [ipcHistory, setIpcHistory] = useState([]);
@@ -188,8 +190,13 @@ function Profile() {
                 <input type="text" value={editData.no_hp || ''} onChange={(e) => setEditData({...editData, no_hp: e.target.value})} />
               </div>
               <div className="form-group">
-                <label>Detail</label>
-                <input type="text" value={editData.detail || ''} onChange={(e) => setEditData({...editData, detail: e.target.value})} />
+                <label>Jabatan</label>
+                <select value={editData.jabatan || editData.detail || ''} onChange={(e) => setEditData({...editData, jabatan: e.target.value})} required>
+                  <option value="">Pilih Jabatan</option>
+                  {JABATAN_OPTIONS.map((jabatan) => (
+                    <option key={jabatan} value={jabatan}>{jabatan}</option>
+                  ))}
+                </select>
               </div>
             </>
           )}
@@ -221,7 +228,6 @@ function Profile() {
         {user.role === 'siswa' && (
           <>
             <p><strong>NIS:</strong> {profile?.nis || '-'}</p>
-            <p><strong>NISN:</strong> {profile?.nisn || '-'}</p>
             <p><strong>Kelas:</strong> {profile?.kelas || '-'}</p>
             <p><strong>Grha:</strong> {profile?.grha || '-'}</p>
             <p><strong>Wali Kelas:</strong> {profile?.wali_kelas || '-'}</p>
@@ -230,7 +236,7 @@ function Profile() {
         {user.role === 'guru' && (
           <>
             <p><strong>NIP:</strong> {profile?.nip || '-'}</p>
-            <p><strong>Detail:</strong> {profile?.detail || '-'}</p>
+            <p><strong>Jabatan:</strong> {profile?.jabatan || profile?.detail || '-'}</p>
           </>
         )}
         {user.role === 'superadmin' && (

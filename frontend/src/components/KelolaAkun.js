@@ -6,6 +6,8 @@ import StudentDetail from './StudentDetail';
 import { KELAS_OPTIONS } from '../utils/kelasJurusan';
 import { GRHA_OPTIONS, getRowField, normalizeGrha } from '../utils/excelImport';
 
+const JABATAN_OPTIONS = ['Guru', 'Pegawai', 'Staff'];
+
 function KelolaAkun() {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -211,7 +213,6 @@ function KelolaAkun() {
       setFormData({
         nama: user.nama,
         nis: user.nis,
-        nisn: user.nisn,
         jurusan: user.jurusan,
         grha: user.grha,
         tahun_pelajaran: user.tahun_pelajaran
@@ -220,7 +221,7 @@ function KelolaAkun() {
       setFormData({
         nama: user.nama,
         nip: user.nip,
-        detail: user.detail,
+        jabatan: user.jabatan || user.detail || '',
         no_hp: user.no_hp
       });
     }
@@ -349,7 +350,6 @@ function KelolaAkun() {
             const studentData = {
               nama: nama,
               nis: getRowField(row, 'nis', 'NIS'),
-              nisn: getRowField(row, 'nisn', 'NISN'),
               jurusan,
               grha: normalizeGrha(getRowField(row, 'grha', 'Grha', 'Gra', 'GRHA')) || 'Airsanya',
               tahun_pelajaran: tahunPelajaran,
@@ -372,10 +372,19 @@ function KelolaAkun() {
             const teacherData = {
               nama: getRowField(row, 'nama', 'Nama'),
               nip: getRowField(row, 'nip', 'NIP'),
-              detail: getRowField(row, 'detail', 'Detail'),
+              jabatan: getRowField(row, 'jabatan', 'Jabatan', 'detail', 'Detail'),
               no_hp: getRowField(row, 'no_hp', 'NoHP', 'No HP', 'no hp'),
               password: getRowField(row, 'password', 'Password') || '123456'
             };
+
+            if (!JABATAN_OPTIONS.includes(teacherData.jabatan)) {
+              results.push({
+                status: 'error',
+                name: teacherData.nama,
+                error: `Jabatan tidak valid. Gunakan: ${JABATAN_OPTIONS.join(', ')}`
+              });
+              continue;
+            }
 
             await axios.post('/users/create-teacher', teacherData, {
               headers: { Authorization: `Bearer ${token}` }
@@ -418,7 +427,6 @@ function KelolaAkun() {
         templateData.push({
           Nama: `Siswa TKJ 1 ${i}`,
           NIS: `2024${String(i).padStart(3, '0')}`,
-          NISN: `123456789${String(i).padStart(2, '0')}`,
           Jurusan: 'TKJ 1',
           Grha: grhaOptions[i % grhaOptions.length],
           TahunPelajaran: currentAcademicYear,
@@ -432,7 +440,6 @@ function KelolaAkun() {
       worksheet.columns = [
         { header: 'Nama', key: 'Nama', width: 25 },
         { header: 'NIS', key: 'NIS', width: 10 },
-        { header: 'NISN', key: 'NISN', width: 15 },
         { header: 'Jurusan', key: 'Jurusan', width: 10 },
         { header: 'Grha', key: 'Grha', width: 12 },
         { header: 'TahunPelajaran', key: 'TahunPelajaran', width: 15 },
@@ -456,17 +463,17 @@ function KelolaAkun() {
       });
 
       for (let rowNumber = 2; rowNumber <= 1000; rowNumber += 1) {
-        worksheet.getCell(`D${rowNumber}`).dataValidation = validationFor(
+        worksheet.getCell(`C${rowNumber}`).dataValidation = validationFor(
           validJurusanOptions,
           'Jurusan tidak valid',
           `Pilih salah satu: ${validJurusanOptions.join(', ')}`
         );
-        worksheet.getCell(`E${rowNumber}`).dataValidation = validationFor(
+        worksheet.getCell(`D${rowNumber}`).dataValidation = validationFor(
           GRHA_OPTIONS,
           'Grha tidak valid',
           `Pilih salah satu: ${GRHA_OPTIONS.join(', ')}`
         );
-        worksheet.getCell(`F${rowNumber}`).dataValidation = validationFor(
+        worksheet.getCell(`E${rowNumber}`).dataValidation = validationFor(
           academicYearOptions,
           'Tahun Pelajaran tidak valid',
           'Pilih TahunPelajaran dari daftar yang tersedia'
@@ -484,13 +491,38 @@ function KelolaAkun() {
       URL.revokeObjectURL(blobUrl);
     } else {
       const templateData = [
-        { Nama: '', NIP: '', Detail: '', NoHP: '', Password: '123456' }
+        { Nama: '', NIP: '', Jabatan: 'Guru', NoHP: '', Password: '123456' }
       ];
 
-      const ws = XLSX.utils.json_to_sheet(templateData);
-      const wb = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb, ws, 'Template');
-      XLSX.writeFile(wb, 'template_guru.xlsx');
+      const workbook = new ExcelJS.Workbook();
+      const worksheet = workbook.addWorksheet('Template');
+      worksheet.columns = [
+        { header: 'Nama', key: 'Nama', width: 25 },
+        { header: 'NIP', key: 'NIP', width: 18 },
+        { header: 'Jabatan', key: 'Jabatan', width: 14 },
+        { header: 'NoHP', key: 'NoHP', width: 15 },
+        { header: 'Password', key: 'Password', width: 12 }
+      ];
+      templateData.forEach(row => worksheet.addRow(row));
+
+      worksheet.dataValidations.add('C2:C1000', {
+        type: 'list',
+        allowBlank: false,
+        formulae: [`"${JABATAN_OPTIONS.join(',')}"`],
+        showErrorMessage: true,
+        errorTitle: 'Jabatan tidak valid',
+        error: `Pilih salah satu: ${JABATAN_OPTIONS.join(', ')}`
+      });
+
+      const buffer = await workbook.xlsx.writeBuffer();
+      const blobUrl = URL.createObjectURL(new Blob([buffer], {
+        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+      }));
+      const link = document.createElement('a');
+      link.href = blobUrl;
+      link.download = 'template_guru.xlsx';
+      link.click();
+      URL.revokeObjectURL(blobUrl);
     }
   };
 
@@ -708,7 +740,6 @@ function KelolaAkun() {
                 {userRole === 'superadmin' && <th style={{ width: 40 }}></th>}
                 <th>Nama</th>
                 <th>{userRole === 'guru' ? 'NIS' : 'NIS/NIP'}</th>
-                {userRole !== 'guru' && <th>NISN</th>}
                 <th>Role</th>
                 <th>Kelas</th>
                 {userRole === 'superadmin' && (
@@ -738,7 +769,6 @@ function KelolaAkun() {
                   )}
                   <td>{user.nama}</td>
                   <td>{user.nis || user.nip || '-'}</td>
-                  {userRole !== 'guru' && <td>{user.nisn || '-'}</td>}
                   <td><span className={`badge badge-${user.role === 'superadmin' ? 'danger' : user.role === 'guru' ? 'warning' : 'info'}`}>{user.role}</span></td>
                   <td>
                     <>
@@ -843,10 +873,6 @@ function KelolaAkun() {
                 <div className="form-group">
                   <label>NIS</label>
                   <input type="text" value={formData.nis || ''} onChange={(e) => setFormData({...formData, nis: e.target.value})} required />
-                </div>
-                <div className="form-group">
-                  <label>NISN</label>
-                  <input type="text" value={formData.nisn || ''} onChange={(e) => setFormData({...formData, nisn: e.target.value})} required />
                 </div>
                 <div className="form-group">
                   <label>Kelas</label>
@@ -987,8 +1013,13 @@ function KelolaAkun() {
                   <input type="text" value={formData.nip || ''} onChange={(e) => setFormData({...formData, nip: e.target.value})} required />
                 </div>
                 <div className="form-group">
-                  <label>Detail</label>
-                  <input type="text" value={formData.detail || ''} onChange={(e) => setFormData({...formData, detail: e.target.value})} />
+                  <label>Jabatan</label>
+                  <select value={formData.jabatan || ''} onChange={(e) => setFormData({...formData, jabatan: e.target.value})} required>
+                    <option value="">Pilih Jabatan</option>
+                    {JABATAN_OPTIONS.map((jabatan) => (
+                      <option key={jabatan} value={jabatan}>{jabatan}</option>
+                    ))}
+                  </select>
                 </div>
                 <div className="form-group">
                   <label>No HP</label>
@@ -1039,7 +1070,7 @@ function KelolaAkun() {
               <div style={{ fontSize: '12px', color: '#666', marginBottom: '10px' }}>
                 {importModalType === 'siswa' ? (
                   <div>
-                    <strong>Format Siswa:</strong> nama, nis, nisn, jurusan, grha, tahun_pelajaran, password
+                    <strong>Format Siswa:</strong> nama, nis, jurusan, grha, tahun_pelajaran, password
                     <br />
                     <small style={{ color: '#1976d2' }}>
                       💡 Kelas akan dihitung otomatis berdasarkan tahun_pelajaran dan jurusan. 
@@ -1048,7 +1079,7 @@ function KelolaAkun() {
                   </div>
                 ) : (
                   <div>
-                    <strong>Format Guru:</strong> nama, nip, detail, no_hp, password
+                    <strong>Format Guru:</strong> nama, nip, jabatan (Guru/Pegawai/Staff), no_hp, password
                   </div>
                 )}
               </div>
@@ -1233,8 +1264,6 @@ function KelolaAkun() {
                     <input type="text" value={formData.nis || ''} onChange={(e) => setFormData({...formData, nis: e.target.value})} required />
                   </div>
                   <div className="form-group">
-                    <label>NISN</label>
-                    <input type="text" value={formData.nisn || ''} onChange={(e) => setFormData({...formData, nisn: e.target.value})} required />
                   </div>
                   <div className="form-group">
                     <label>Kelas</label>
@@ -1285,8 +1314,13 @@ function KelolaAkun() {
                     <input type="text" value={formData.nip || ''} onChange={(e) => setFormData({...formData, nip: e.target.value})} required />
                   </div>
                   <div className="form-group">
-                    <label>Detail</label>
-                    <input type="text" value={formData.detail || ''} onChange={(e) => setFormData({...formData, detail: e.target.value})} />
+                    <label>Jabatan</label>
+                    <select value={formData.jabatan || ''} onChange={(e) => setFormData({...formData, jabatan: e.target.value})} required>
+                      <option value="">Pilih Jabatan</option>
+                      {JABATAN_OPTIONS.map((jabatan) => (
+                        <option key={jabatan} value={jabatan}>{jabatan}</option>
+                      ))}
+                    </select>
                   </div>
                   <div className="form-group">
                     <label>No HP</label>
