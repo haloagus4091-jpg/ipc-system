@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import * as XLSX from 'xlsx';
+import ExcelJS from 'exceljs';
 import StudentDetail from './StudentDetail';
 import { KELAS_OPTIONS } from '../utils/kelasJurusan';
 import { GRHA_OPTIONS, getRowField, normalizeGrha } from '../utils/excelImport';
@@ -401,7 +402,7 @@ function KelolaAkun() {
     }
   };
 
-  const downloadTemplate = (type) => {
+  const downloadTemplate = async (type) => {
     const currentYear = new Date().getFullYear();
     const currentMonth = new Date().getMonth();
     const currentAcademicYear = currentMonth >= 6 
@@ -409,7 +410,7 @@ function KelolaAkun() {
       : `${currentYear - 1}-${currentYear}`;
     
     if (type === 'siswa') {
-      // Create 30 sample students with TKJ 1 and tahun pelajaran 2024-2025
+      // Create 30 sample students with TKJ 1 and the current academic year
       const templateData = [];
       const grhaOptions = ['Airsanya', 'Daksina', 'Genya', 'Madhya', 'Pascima', 'Uttara'];
       
@@ -420,29 +421,67 @@ function KelolaAkun() {
           NISN: `123456789${String(i).padStart(2, '0')}`,
           Jurusan: 'TKJ 1',
           Grha: grhaOptions[i % grhaOptions.length],
-          TahunPelajaran: '2024-2025',
-          Password: '123456',
-          Keterangan: `Contoh data siswa ke-${i} untuk import`
+          TahunPelajaran: currentAcademicYear,
+          Password: '123456'
         });
       }
 
-      const ws = XLSX.utils.json_to_sheet(templateData);
-      const wb = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb, ws, 'Template');
-      
-      // Set column widths
-      ws['!cols'] = [
-        { wch: 25 }, // Nama
-        { wch: 10 }, // NIS
-        { wch: 15 }, // NISN
-        { wch: 10 }, // Jurusan
-        { wch: 12 }, // Grha
-        { wch: 15 }, // TahunPelajaran
-        { wch: 12 }, // Password
-        { wch: 60 }  // Keterangan
+      const workbook = new ExcelJS.Workbook();
+      const worksheet = workbook.addWorksheet('Template');
+
+      worksheet.columns = [
+        { header: 'Nama', key: 'Nama', width: 25 },
+        { header: 'NIS', key: 'NIS', width: 10 },
+        { header: 'NISN', key: 'NISN', width: 15 },
+        { header: 'Jurusan', key: 'Jurusan', width: 10 },
+        { header: 'Grha', key: 'Grha', width: 12 },
+        { header: 'TahunPelajaran', key: 'TahunPelajaran', width: 15 },
+        { header: 'Password', key: 'Password', width: 12 }
       ];
-      
-      XLSX.writeFile(wb, 'template_siswa.xlsx');
+      templateData.forEach(row => worksheet.addRow(row));
+
+      const validJurusanOptions = ['TKJ 1', 'TKJ 2', 'DPIB 1', 'DPIB 2', 'TKR 1', 'TKR 2'];
+      const academicYearOptions = [];
+      for (let year = currentYear - 3; year <= currentYear + 3; year += 1) {
+        academicYearOptions.push(`${year}-${year + 1}`);
+      }
+
+      const validationFor = (formulae, errorTitle, error) => ({
+        type: 'list',
+        allowBlank: false,
+        formulae: [`"${formulae.join(',')}"`],
+        showErrorMessage: true,
+        errorTitle,
+        error
+      });
+
+      for (let rowNumber = 2; rowNumber <= 1000; rowNumber += 1) {
+        worksheet.getCell(`D${rowNumber}`).dataValidation = validationFor(
+          validJurusanOptions,
+          'Jurusan tidak valid',
+          `Pilih salah satu: ${validJurusanOptions.join(', ')}`
+        );
+        worksheet.getCell(`E${rowNumber}`).dataValidation = validationFor(
+          GRHA_OPTIONS,
+          'Grha tidak valid',
+          `Pilih salah satu: ${GRHA_OPTIONS.join(', ')}`
+        );
+        worksheet.getCell(`F${rowNumber}`).dataValidation = validationFor(
+          academicYearOptions,
+          'Tahun Pelajaran tidak valid',
+          'Pilih TahunPelajaran dari daftar yang tersedia'
+        );
+      }
+
+      const buffer = await workbook.xlsx.writeBuffer();
+      const blobUrl = URL.createObjectURL(new Blob([buffer], {
+        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+      }));
+      const link = document.createElement('a');
+      link.href = blobUrl;
+      link.download = 'template_siswa.xlsx';
+      link.click();
+      URL.revokeObjectURL(blobUrl);
     } else {
       const templateData = [
         { Nama: '', NIP: '', Detail: '', NoHP: '', Password: '123456' }
