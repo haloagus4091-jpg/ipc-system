@@ -27,18 +27,20 @@ function InputEvent() {
   const [allEvent, setAllEvent] = useState([]);
   const [loadingIndex, setLoadingIndex] = useState(false);
   const editModal = useEditModal();
+  const [ipcConfig, setIpcConfig] = useState([]);
+  const [calculatedPoint, setCalculatedPoint] = useState(0);
 
   const grhaOptions = [
     'Airsanya', 'Daksina', 'Genya', 'Madhya', 'Nairiti', 'Pascima', 'Purwa', 'Uttara', 'Wayabhya'
   ];
 
   const tingkatOptions = [
-    { value: 'sekolah', label: 'Sekolah (2 point)' },
-    { value: 'kecamatan', label: 'Kecamatan (4 point)' },
-    { value: 'kabupaten', label: 'Kabupaten (6 point)' },
-    { value: 'provinsi', label: 'Provinsi (8 point)' },
-    { value: 'nasional', label: 'Nasional (10 point)' },
-    { value: 'internasional', label: 'Internasional (12 point)' }
+    { value: 'sekolah', label: 'Sekolah' },
+    { value: 'kecamatan', label: 'Kecamatan' },
+    { value: 'kabupaten', label: 'Kabupaten' },
+    { value: 'provinsi', label: 'Provinsi' },
+    { value: 'nasional', label: 'Nasional' },
+    { value: 'internasional', label: 'Internasional' }
   ];
 
   // useEffect(() => {
@@ -48,6 +50,7 @@ function InputEvent() {
   useEffect(() => {
     fetchUserSubmissions();
     checkAccess();
+    fetchIpcConfig();
     // Get user role from localStorage
     const user = JSON.parse(localStorage.getItem('user') || '{}');
     setUserRole(user.role || '');
@@ -113,6 +116,26 @@ function InputEvent() {
     }
   };
 
+  const fetchIpcConfig = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.get('/ipc-config/active', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setIpcConfig(response.data);
+    } catch (error) {
+      console.error('Error fetching IPC config:', error);
+    }
+  };
+
+  const calculatePoint = (tingkat) => {
+    const eventConfigs = ipcConfig['event'] || [];
+    const config = eventConfigs.find(
+      c => c.field1 === tingkat
+    );
+    return config ? config.point_value : 0;
+  };
+
   // const checkPermission = async () => {
   //   const user = JSON.parse(localStorage.getItem('user'));
   //   if (user?.role === 'superadmin') {
@@ -142,6 +165,12 @@ function InputEvent() {
     // Auto-fill student data when NIS is entered
     if (name === 'nis' && value.length >= 1) {
       fetchStudentData(value);
+    }
+
+    // Calculate point when tingkat changes
+    if (name === 'tingkat') {
+      const point = calculatePoint(value);
+      setCalculatedPoint(point);
     }
   };
 
@@ -486,9 +515,27 @@ function InputEvent() {
           <label>Tingkat Event</label>
           <select name="tingkat" value={formData.tingkat} onChange={handleChange}>
             {tingkatOptions.map(tingkat => (
-              <option key={tingkat.value} value={tingkat.value}>{tingkat.label}</option>
+              <option key={tingkat.value} value={tingkat.value}>{tingkat.label} {formData.tingkat === tingkat.value && calculatedPoint ? `(${calculatedPoint} point)` : ''}</option>
             ))}
           </select>
+        </div>
+
+        <div className="form-group" style={{ 
+          padding: '12px', 
+          background: '#EAFBF3',
+          borderRadius: '4px',
+          marginTop: '12px'
+        }}>
+          <label style={{ fontWeight: '600', marginBottom: '4px', display: 'block' }}>
+            Point IPC yang akan didapatkan:
+          </label>
+          <span style={{ 
+            fontSize: '18px', 
+            fontWeight: '700',
+            color: '#0F7A55'
+          }}>
+            +{calculatedPoint}
+          </span>
         </div>
 
         <div className="form-group">

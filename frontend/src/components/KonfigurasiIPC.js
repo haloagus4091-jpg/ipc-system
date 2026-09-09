@@ -93,6 +93,19 @@ function KonfigurasiIPC() {
     }
   };
 
+  const handleToggleActive = async (configId, currentStatus) => {
+    try {
+      const token = localStorage.getItem('token');
+      await axios.put(`/ipc-config/${configId}`, { is_active: !currentStatus }, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setMessage(`Konfigurasi berhasil ${!currentStatus ? 'diaktifkan' : 'dinonaktifkan'}!`);
+      fetchConfigs();
+    } catch (error) {
+      setMessage(error.response?.data?.message || 'Gagal mengubah status konfigurasi');
+    }
+  };
+
   const handleResetDefaults = async () => {
     if (!window.confirm('Apakah Anda yakin ingin mereset semua konfigurasi ke nilai default? Semua perubahan yang Anda buat akan hilang.')) return;
 
@@ -117,6 +130,42 @@ function KonfigurasiIPC() {
   };
 
   const categoryConfigs = configs.filter(c => c.category === activeCategory);
+
+  const getHeaderLabel1 = (category) => {
+    const labels = {
+      prestasi: 'Jenis',
+      organisasi: 'Nama Organisasi',
+      kepanitiaan: 'Jabatan',
+      event: 'Tingkat Event',
+      pelanggaran: 'Jenis Pelanggaran',
+      perilaku: 'Nama Karakter'
+    };
+    return labels[category] || 'Field 1';
+  };
+
+  const getHeaderLabel2 = (category) => {
+    const labels = {
+      prestasi: 'Tingkat',
+      organisasi: 'Jabatan',
+      kepanitiaan: '-',
+      event: '-',
+      pelanggaran: '-',
+      perilaku: 'Tingkat Penilaian'
+    };
+    return labels[category] || 'Field 2';
+  };
+
+  const getHeaderLabel3 = (category) => {
+    const labels = {
+      prestasi: 'Juara',
+      organisasi: '-',
+      kepanitiaan: '-',
+      event: '-',
+      pelanggaran: 'Deskripsi Detail',
+      perilaku: '-'
+    };
+    return labels[category] || 'Field 3';
+  };
 
   if (userRole !== 'superadmin') {
     return (
@@ -226,8 +275,9 @@ function KonfigurasiIPC() {
           <table className="table">
             <thead>
               <tr>
-                <th>Indikator</th>
-                <th>Sub-Indikator</th>
+                <th>{getHeaderLabel1(activeCategory)}</th>
+                <th>{getHeaderLabel2(activeCategory)}</th>
+                <th>{getHeaderLabel3(activeCategory)}</th>
                 <th>Point</th>
                 <th>Deskripsi</th>
                 <th>Status</th>
@@ -237,8 +287,9 @@ function KonfigurasiIPC() {
             <tbody>
               {categoryConfigs.map(config => (
                 <tr key={config.id}>
-                  <td style={{ fontWeight: 600 }}>{config.indicator}</td>
-                  <td>{config.sub_indicator || '-'}</td>
+                  <td style={{ fontWeight: 600 }}>{config.field1 || '-'}</td>
+                  <td>{config.field2 || '-'}</td>
+                  <td>{config.field3 || '-'}</td>
                   <td>
                     <span
                       style={{
@@ -255,9 +306,20 @@ function KonfigurasiIPC() {
                   </td>
                   <td style={{ fontSize: 13, color: '#6B7080' }}>{config.description || '-'}</td>
                   <td>
-                    <span className={`badge badge-${config.is_active ? 'success' : 'secondary'}`}>
-                      {config.is_active ? 'Aktif' : 'Non-Aktif'}
-                    </span>
+                    <button
+                      onClick={() => handleToggleActive(config.id, config.is_active)}
+                      className={`btn ${config.is_active ? 'btn-success' : 'btn-secondary'}`}
+                      style={{ 
+                        padding: '4px 12px', 
+                        fontSize: 12, 
+                        minWidth: '80px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 4
+                      }}
+                    >
+                      {config.is_active ? '✓ Aktif' : '✗ Non-Aktif'}
+                    </button>
                   </td>
                   <td>
                     <button
@@ -315,27 +377,42 @@ function KonfigurasiIPC() {
               });
             }}>
               <div className="form-group">
-                <label>Indikator</label>
+                <label>{getHeaderLabel1(activeCategory)}</label>
                 <input
                   type="text"
-                  name="indicator"
-                  defaultValue={editingConfig.indicator}
+                  name="field1"
+                  defaultValue={editingConfig.field1 || '-'}
                   disabled
                   className="form-control"
-                  style={{ background: '#F7F8FB' }}
+                  style={{ background: '#F7F8FB', color: '#6B7080' }}
                 />
               </div>
-              <div className="form-group">
-                <label>Sub-Indikator</label>
-                <input
-                  type="text"
-                  name="sub_indicator"
-                  defaultValue={editingConfig.sub_indicator || ''}
-                  disabled
-                  className="form-control"
-                  style={{ background: '#F7F8FB' }}
-                />
-              </div>
+              {getHeaderLabel2(activeCategory) !== '-' && (
+                <div className="form-group">
+                  <label>{getHeaderLabel2(activeCategory)}</label>
+                  <input
+                    type="text"
+                    name="field2"
+                    defaultValue={editingConfig.field2 || '-'}
+                    disabled
+                    className="form-control"
+                    style={{ background: '#F7F8FB', color: '#6B7080' }}
+                  />
+                </div>
+              )}
+              {getHeaderLabel3(activeCategory) !== '-' && (
+                <div className="form-group">
+                  <label>{getHeaderLabel3(activeCategory)}</label>
+                  <input
+                    type="text"
+                    name="field3"
+                    defaultValue={editingConfig.field3 || '-'}
+                    disabled
+                    className="form-control"
+                    style={{ background: '#F7F8FB', color: '#6B7080' }}
+                  />
+                </div>
+              )}
               <div className="form-group">
                 <label>Point Value</label>
                 <input
@@ -344,6 +421,7 @@ function KonfigurasiIPC() {
                   defaultValue={editingConfig.point_value}
                   required
                   className="form-control"
+                  placeholder="Masukkan nilai point"
                 />
               </div>
               <div className="form-group">
@@ -353,6 +431,7 @@ function KonfigurasiIPC() {
                   defaultValue={editingConfig.description || ''}
                   className="form-control"
                   rows={3}
+                  placeholder="Masukkan deskripsi konfigurasi"
                 />
               </div>
               <div className="form-group">
@@ -405,70 +484,184 @@ function KonfigurasiIPC() {
             borderRadius: 12,
             padding: 24,
             width: '100%',
-            maxWidth: 500,
+            maxWidth: 450,
             maxHeight: '90vh',
             overflowY: 'auto'
           }}>
-            <h3 style={{ marginBottom: 20 }}>Tambah Konfigurasi Baru</h3>
+            <h3 style={{ marginBottom: 8, fontSize: 18, fontWeight: 600 }}>Tambah Konfigurasi</h3>
+            <p style={{ marginBottom: 20, fontSize: 13, color: '#6B7080' }}>
+              Kategori: <strong>{categories.find(c => c.key === activeCategory)?.label}</strong>
+            </p>
             <form onSubmit={(e) => {
               e.preventDefault();
               handleAddConfig({
                 category: activeCategory,
-                indicator: e.target.indicator.value,
-                sub_indicator: e.target.sub_indicator.value || null,
+                field1: e.target.field1.value,
+                field2: e.target.field2?.value || null,
+                field3: e.target.field3?.value || null,
                 point_value: parseInt(e.target.point_value.value),
                 description: e.target.description.value,
                 is_active: true
               });
             }}>
-              <div className="form-group">
-                <label>Indikator</label>
-                <input
-                  type="text"
-                  name="indicator"
-                  required
-                  className="form-control"
-                  placeholder="Contoh: juara, jabatan, tingkat"
-                />
+              <div className="form-group" style={{ marginBottom: 16 }}>
+                <label style={{ display: 'block', marginBottom: 6, fontSize: 13, fontWeight: 500 }}>{getHeaderLabel1(activeCategory)} *</label>
+                {activeCategory === 'prestasi' && (
+                  <select name="field1" required className="form-control" style={{ fontSize: 14 }}>
+                    <option value="">Pilih Jenis</option>
+                    <option value="akademik">Akademik</option>
+                    <option value="nonakademik">Non-Akademik</option>
+                  </select>
+                )}
+                {activeCategory === 'perilaku' && (
+                  <select name="field1" required className="form-control" style={{ fontSize: 14 }}>
+                    <option value="">Pilih Karakter</option>
+                    <option value="tanggung_jawab">Tanggung Jawab</option>
+                    <option value="disiplin">Disiplin</option>
+                    <option value="kepedulian">Kepedulian</option>
+                    <option value="kemandirian">Kemandirian</option>
+                    <option value="spiritual">Spiritual</option>
+                    <option value="kejujuran">Kejujuran</option>
+                    <option value="kepercayaan_diri">Kepercayaan Diri</option>
+                  </select>
+                )}
+                {activeCategory === 'pelanggaran' && (
+                  <select name="field1" required className="form-control" style={{ fontSize: 14 }}>
+                    <option value="">Pilih Jenis Pelanggaran</option>
+                    <option value="ringan">Ringan</option>
+                    <option value="sedang">Sedang</option>
+                    <option value="berat">Berat</option>
+                  </select>
+                )}
+                {activeCategory === 'kepanitiaan' && (
+                  <select name="field1" required className="form-control" style={{ fontSize: 14 }}>
+                    <option value="">Pilih Jabatan</option>
+                    <option value="ketua">Ketua</option>
+                    <option value="wakil ketua">Wakil Ketua</option>
+                    <option value="sekretaris">Sekretaris</option>
+                    <option value="bendahara">Bendahara</option>
+                    <option value="koordinator">Koordinator</option>
+                    <option value="anggota">Anggota</option>
+                  </select>
+                )}
+                {activeCategory === 'organisasi' && (
+                  <select name="field1" required className="form-control" style={{ fontSize: 14 }}>
+                    <option value="">Pilih Organisasi</option>
+                    <option value="OSIS">OSIS</option>
+                    <option value="KY">KY</option>
+                    <option value="MPK">MPK</option>
+                    <option value="PRAMUKA">PRAMUKA</option>
+                    <option value="PKS">PKS</option>
+                    <option value="PMR">PMR</option>
+                    <option value="PASKIBRAKA">PASKIBRAKA</option>
+                  </select>
+                )}
+                {activeCategory === 'event' && (
+                  <select name="field1" required className="form-control" style={{ fontSize: 14 }}>
+                    <option value="">Pilih Tingkat Event</option>
+                    <option value="sekolah">Sekolah</option>
+                    <option value="kecamatan">Kecamatan</option>
+                    <option value="kabupaten">Kabupaten</option>
+                    <option value="provinsi">Provinsi</option>
+                    <option value="nasional">Nasional</option>
+                    <option value="internasional">Internasional</option>
+                  </select>
+                )}
               </div>
-              <div className="form-group">
-                <label>Sub-Indikator (Opsional)</label>
-                <input
-                  type="text"
-                  name="sub_indicator"
-                  className="form-control"
-                  placeholder="Contoh: juara 1, ketua, sekolah"
-                />
-              </div>
-              <div className="form-group">
-                <label>Point Value</label>
+              {getHeaderLabel2(activeCategory) !== '-' && (
+                <div className="form-group" style={{ marginBottom: 16 }}>
+                  <label style={{ display: 'block', marginBottom: 6, fontSize: 13, fontWeight: 500 }}>{getHeaderLabel2(activeCategory)} *</label>
+                  {activeCategory === 'prestasi' && (
+                    <select name="field2" required className="form-control" style={{ fontSize: 14 }}>
+                      <option value="">Pilih Tingkat</option>
+                      <option value="kecamatan">Kecamatan</option>
+                      <option value="kabupaten">Kabupaten</option>
+                      <option value="provinsi">Provinsi</option>
+                      <option value="nasional">Nasional</option>
+                      <option value="internasional">Internasional</option>
+                    </select>
+                  )}
+                  {activeCategory === 'organisasi' && (
+                    <select name="field2" required className="form-control" style={{ fontSize: 14 }}>
+                      <option value="">Pilih Jabatan</option>
+                      <option value="ketua">Ketua</option>
+                      <option value="wakil ketua">Wakil Ketua</option>
+                      <option value="sekretaris">Sekretaris</option>
+                      <option value="bendahara">Bendahara</option>
+                      <option value="koordinator">Koordinator</option>
+                      <option value="anggota">Anggota</option>
+                    </select>
+                  )}
+                  {activeCategory === 'perilaku' && (
+                    <select name="field2" required className="form-control" style={{ fontSize: 14 }}>
+                      <option value="">Pilih Tingkat</option>
+                      <option value="sangat baik">Sangat Baik</option>
+                      <option value="baik">Baik</option>
+                      <option value="cukup baik">Cukup Baik</option>
+                      <option value="kurang baik">Kurang Baik</option>
+                    </select>
+                  )}
+                </div>
+              )}
+              {getHeaderLabel3(activeCategory) !== '-' && (
+                <div className="form-group" style={{ marginBottom: 16 }}>
+                  <label style={{ display: 'block', marginBottom: 6, fontSize: 13, fontWeight: 500 }}>{getHeaderLabel3(activeCategory)} *</label>
+                  {activeCategory === 'prestasi' && (
+                    <select name="field3" required className="form-control" style={{ fontSize: 14 }}>
+                      <option value="">Pilih Juara</option>
+                      <option value="juara 1">Juara 1</option>
+                      <option value="juara 2">Juara 2</option>
+                      <option value="juara 3">Juara 3</option>
+                      <option value="harapan 1">Harapan 1</option>
+                      <option value="harapan 2">Harapan 2</option>
+                      <option value="harapan 3">Harapan 3</option>
+                      <option value="finalis">Finalis</option>
+                      <option value="peserta">Peserta</option>
+                    </select>
+                  )}
+                  {activeCategory === 'pelanggaran' && (
+                    <input
+                      type="text"
+                      name="field3"
+                      className="form-control"
+                      placeholder="Deskripsi detail pelanggaran..."
+                      style={{ fontSize: 14 }}
+                    />
+                  )}
+                </div>
+              )}
+              <div className="form-group" style={{ marginBottom: 16 }}>
+                <label style={{ display: 'block', marginBottom: 6, fontSize: 13, fontWeight: 500 }}>Nilai Point *</label>
                 <input
                   type="number"
                   name="point_value"
                   required
                   className="form-control"
-                  placeholder="Contoh: 8, -5, 3"
+                  placeholder="Masukkan nilai point"
+                  style={{ fontSize: 14 }}
                 />
               </div>
-              <div className="form-group">
-                <label>Deskripsi</label>
+              <div className="form-group" style={{ marginBottom: 20 }}>
+                <label style={{ display: 'block', marginBottom: 6, fontSize: 13, fontWeight: 500 }}>Deskripsi</label>
                 <textarea
                   name="description"
                   className="form-control"
-                  rows={3}
-                  placeholder="Deskripsi indikator..."
+                  rows={2}
+                  placeholder="Deskripsi singkat..."
+                  style={{ fontSize: 14 }}
                 />
               </div>
-              <div style={{ display: 'flex', gap: 8, marginTop: 20 }}>
-                <button type="submit" className="btn btn-primary" disabled={saving}>
-                  {saving ? 'Menyimpan...' : 'Simpan'}
-                </button>
+              <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
                 <button
                   type="button"
                   onClick={() => setShowAddModal(false)}
                   className="btn btn-secondary"
+                  style={{ padding: '8px 16px', fontSize: 14 }}
                 >
                   Batal
+                </button>
+                <button type="submit" className="btn btn-primary" disabled={saving} style={{ padding: '8px 16px', fontSize: 14 }}>
+                  {saving ? 'Menyimpan...' : 'Simpan'}
                 </button>
               </div>
             </form>

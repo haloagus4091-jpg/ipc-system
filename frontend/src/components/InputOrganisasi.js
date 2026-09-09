@@ -27,18 +27,30 @@ function InputOrganisasi() {
   const [allOrganisasi, setAllOrganisasi] = useState([]);
   const [loadingIndex, setLoadingIndex] = useState(false);
   const editModal = useEditModal();
+  const [ipcConfig, setIpcConfig] = useState([]);
+  const [calculatedPoint, setCalculatedPoint] = useState(0);
 
   const grhaOptions = [
     'Airsanya', 'Daksina', 'Genya', 'Madhya', 'Nairiti', 'Pascima', 'Purwa', 'Uttara', 'Wayabhya'
   ];
 
   const jabatanOptions = [
-    { value: 'ketua', label: 'Ketua Organisasi (5 point)' },
-    { value: 'wakil ketua', label: 'Wakil Ketua (4 point)' },
-    { value: 'sekretaris', label: 'Sekretaris (4 point)' },
-    { value: 'bendahara', label: 'Bendahara (3 point)' },
-    { value: 'koordinator', label: 'Koordinator (2 point)' },
-    { value: 'anggota', label: 'Anggota (1 point)' }
+    { value: 'ketua', label: 'Ketua' },
+    { value: 'wakil ketua', label: 'Wakil Ketua' },
+    { value: 'sekretaris', label: 'Sekretaris' },
+    { value: 'bendahara', label: 'Bendahara' },
+    { value: 'koordinator', label: 'Koordinator' },
+    { value: 'anggota', label: 'Anggota' }
+  ];
+
+  const organisasiOptions = [
+    { value: 'OSIS', label: 'OSIS' },
+    { value: 'KY', label: 'KY' },
+    { value: 'MPK', label: 'MPK' },
+    { value: 'PRAMUKA', label: 'PRAMUKA' },
+    { value: 'PKS', label: 'PKS' },
+    { value: 'PMR', label: 'PMR' },
+    { value: 'PASKIBRAKA', label: 'PASKIBRAKA' }
   ];
 
   // useEffect(() => {
@@ -48,6 +60,7 @@ function InputOrganisasi() {
   useEffect(() => {
     fetchUserSubmissions();
     checkAccess();
+    fetchIpcConfig();
     // Get user role from localStorage
     const user = JSON.parse(localStorage.getItem('user') || '{}');
     setUserRole(user.role || '');
@@ -113,6 +126,26 @@ function InputOrganisasi() {
     }
   };
 
+  const fetchIpcConfig = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.get('/ipc-config/active', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setIpcConfig(response.data);
+    } catch (error) {
+      console.error('Error fetching IPC config:', error);
+    }
+  };
+
+  const calculatePoint = (kategori, jabatan) => {
+    const organisasiConfigs = ipcConfig['organisasi'] || [];
+    const config = organisasiConfigs.find(
+      c => c.field1 === kategori && c.field2 === jabatan
+    );
+    return config ? config.point_value : 0;
+  };
+
 
   // const checkPermission = async () => {
   //   const user = JSON.parse(localStorage.getItem('user'));
@@ -143,6 +176,15 @@ function InputOrganisasi() {
     // Auto-fill student data when NIS is entered
     if (name === 'nis' && value.length >= 1) {
       fetchStudentData(value);
+    }
+
+    // Calculate point when kategori_organisasi or jabatan_organisasi changes
+    if (name === 'kategori_organisasi' || name === 'jabatan_organisasi') {
+      const newFormData = name === 'kategori_organisasi' || name === 'jabatan_organisasi' 
+        ? { ...formData, [name]: value } 
+        : formData;
+      const point = calculatePoint(newFormData.kategori_organisasi, newFormData.jabatan_organisasi);
+      setCalculatedPoint(point);
     }
   };
 
@@ -472,25 +514,43 @@ function InputOrganisasi() {
         </div>
 
         <div className="form-group">
-          <label>Jabatan Organisasi</label>
-          <select name="jabatan_organisasi" value={formData.jabatan_organisasi} onChange={handleChange} required>
-            <option value="">Pilih Jabatan</option>
-            {jabatanOptions.map(jabatan => (
-              <option key={jabatan.value} value={jabatan.value}>{jabatan.label}</option>
+          <label>Kategori Organisasi</label>
+          <select name="kategori_organisasi" value={formData.kategori_organisasi} onChange={handleChange} required>
+            <option value="">Pilih Organisasi</option>
+            {organisasiOptions.map(org => (
+              <option key={org.value} value={org.value}>{org.label}</option>
             ))}
           </select>
         </div>
 
         <div className="form-group">
-          <label>Kategori Organisasi</label>
-          <input
-            type="text"
-            name="kategori_organisasi"
-            value={formData.kategori_organisasi}
-            onChange={handleChange}
-            placeholder="Nama organisasi"
-          />
+          <label>Jabatan Organisasi</label>
+          <select name="jabatan_organisasi" value={formData.jabatan_organisasi} onChange={handleChange} required>
+            <option value="">Pilih Jabatan</option>
+            {jabatanOptions.map(jabatan => (
+              <option key={jabatan.value} value={jabatan.value}>{jabatan.label} {formData.jabatan_organisasi === jabatan.value && calculatedPoint ? `(${calculatedPoint} point)` : ''}</option>
+            ))}
+          </select>
         </div>
+
+        <div className="form-group" style={{ 
+          padding: '12px', 
+          background: '#EAFBF3',
+          borderRadius: '4px',
+          marginTop: '12px'
+        }}>
+          <label style={{ fontWeight: '600', marginBottom: '4px', display: 'block' }}>
+            Point IPC yang akan didapatkan:
+          </label>
+          <span style={{ 
+            fontSize: '18px', 
+            fontWeight: '700',
+            color: '#0F7A55'
+          }}>
+            +{calculatedPoint}
+          </span>
+        </div>
+
         <div className="form-group">
           <label>Foto Bukti</label>
           <input type="file" onChange={handleFileChange} accept="image/*" />

@@ -27,21 +27,24 @@ function InputPerilaku() {
   const [loadingIndex, setLoadingIndex] = useState(false);
   const [userRole, setUserRole] = useState('');
   const editModal = useEditModal();
+  const [ipcConfig, setIpcConfig] = useState([]);
+  const [calculatedPoints, setCalculatedPoints] = useState({});
 
   const grhaOptions = [
     'Airsanya', 'Daksina', 'Genya', 'Madhya', 'Nairiti', 'Pascima', 'Purwa', 'Uttara', 'Wayabhya'
   ];
 
   const karakterOptions = [
-    { value: 'kurang baik', label: 'Kurang Baik (1 point)' },
-    { value: 'cukup baik', label: 'Cukup Baik (2 point)' },
-    { value: 'baik', label: 'Baik (3 point)' },
-    { value: 'sangat baik', label: 'Sangat Baik (4 point)' }
+    { value: 'kurang baik', label: 'Kurang Baik' },
+    { value: 'cukup baik', label: 'Cukup Baik' },
+    { value: 'baik', label: 'Baik' },
+    { value: 'sangat baik', label: 'Sangat Baik' }
   ];
 
   useEffect(() => {
     const user = JSON.parse(localStorage.getItem('user') || '{}');
     setUserRole(user.role || '');
+    fetchIpcConfig();
     if (user.role === 'superadmin') {
       fetchAllPerilaku();
     }
@@ -60,6 +63,26 @@ function InputPerilaku() {
     } finally {
       setLoadingIndex(false);
     }
+  };
+
+  const fetchIpcConfig = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.get('/ipc-config/active', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setIpcConfig(response.data);
+    } catch (error) {
+      console.error('Error fetching IPC config:', error);
+    }
+  };
+
+  const calculatePoint = (karakter, tingkat) => {
+    const perilakuConfigs = ipcConfig['perilaku'] || [];
+    const config = perilakuConfigs.find(
+      c => c.field1 === karakter && c.field2 === tingkat
+    );
+    return config ? config.point_value : 0;
   };
 
   // useEffect(() => {
@@ -99,6 +122,13 @@ function InputPerilaku() {
     // Auto-fill student data when NIS is entered
     if (name === 'nis' && value.length >= 1) {
       fetchStudentData(value);
+    }
+
+    // Calculate point when karakter values change
+    const karakterFields = ['tanggung_jawab', 'disiplin', 'kepedulian', 'kemandirian', 'spiritual', 'kejujuran', 'kepercayaan_diri'];
+    if (karakterFields.includes(name)) {
+      const point = calculatePoint(name, value);
+      setCalculatedPoints(prev => ({ ...prev, [name]: point }));
     }
   };
 
@@ -346,7 +376,7 @@ function InputPerilaku() {
               <select name="tanggung_jawab" value={formData.tanggung_jawab} onChange={handleChange} required>
                 <option value="">Pilih Nilai</option>
                 {karakterOptions.map(karakter => (
-                  <option key={karakter.value} value={karakter.value}>{karakter.label}</option>
+                  <option key={karakter.value} value={karakter.value}>{karakter.label} {formData.tanggung_jawab === karakter.value && calculatedPoints.tanggung_jawab ? `(${calculatedPoints.tanggung_jawab} point)` : ''}</option>
                 ))}
               </select>
             </div>
@@ -355,7 +385,7 @@ function InputPerilaku() {
               <select name="disiplin" value={formData.disiplin} onChange={handleChange} required>
                 <option value="">Pilih Nilai</option>
                 {karakterOptions.map(karakter => (
-                  <option key={karakter.value} value={karakter.value}>{karakter.label}</option>
+                  <option key={karakter.value} value={karakter.value}>{karakter.label} {formData.disiplin === karakter.value && calculatedPoints.disiplin ? `(${calculatedPoints.disiplin} point)` : ''}</option>
                 ))}
               </select>
             </div>
@@ -364,7 +394,7 @@ function InputPerilaku() {
               <select name="kepedulian" value={formData.kepedulian} onChange={handleChange} required>
                 <option value="">Pilih Nilai</option>
                 {karakterOptions.map(karakter => (
-                  <option key={karakter.value} value={karakter.value}>{karakter.label}</option>
+                  <option key={karakter.value} value={karakter.value}>{karakter.label} {formData.kepedulian === karakter.value && calculatedPoints.kepedulian ? `(${calculatedPoints.kepedulian} point)` : ''}</option>
                 ))}
               </select>
             </div>
@@ -373,7 +403,7 @@ function InputPerilaku() {
               <select name="kemandirian" value={formData.kemandirian} onChange={handleChange} required>
                 <option value="">Pilih Nilai</option>
                 {karakterOptions.map(karakter => (
-                  <option key={karakter.value} value={karakter.value}>{karakter.label}</option>
+                  <option key={karakter.value} value={karakter.value}>{karakter.label} {formData.kemandirian === karakter.value && calculatedPoints.kemandirian ? `(${calculatedPoints.kemandirian} point)` : ''}</option>
                 ))}
               </select>
             </div>
@@ -382,7 +412,7 @@ function InputPerilaku() {
               <select name="spiritual" value={formData.spiritual} onChange={handleChange} required>
                 <option value="">Pilih Nilai</option>
                 {karakterOptions.map(karakter => (
-                  <option key={karakter.value} value={karakter.value}>{karakter.label}</option>
+                  <option key={karakter.value} value={karakter.value}>{karakter.label} {formData.spiritual === karakter.value && calculatedPoints.spiritual ? `(${calculatedPoints.spiritual} point)` : ''}</option>
                 ))}
               </select>
             </div>
@@ -391,7 +421,7 @@ function InputPerilaku() {
               <select name="kejujuran" value={formData.kejujuran} onChange={handleChange} required>
                 <option value="">Pilih Nilai</option>
                 {karakterOptions.map(karakter => (
-                  <option key={karakter.value} value={karakter.value}>{karakter.label}</option>
+                  <option key={karakter.value} value={karakter.value}>{karakter.label} {formData.kejujuran === karakter.value && calculatedPoints.kejujuran ? `(${calculatedPoints.kejujuran} point)` : ''}</option>
                 ))}
               </select>
             </div>
@@ -400,11 +430,29 @@ function InputPerilaku() {
               <select name="kepercayaan_diri" value={formData.kepercayaan_diri} onChange={handleChange} required>
                 <option value="">Pilih Nilai</option>
                 {karakterOptions.map(karakter => (
-                  <option key={karakter.value} value={karakter.value}>{karakter.label}</option>
+                  <option key={karakter.value} value={karakter.value}>{karakter.label} {formData.kepercayaan_diri === karakter.value && calculatedPoints.kepercayaan_diri ? `(${calculatedPoints.kepercayaan_diri} point)` : ''}</option>
                 ))}
               </select>
             </div>
           </div>
+        </div>
+
+        <div className="form-group" style={{ 
+          padding: '12px', 
+          background: '#EAFBF3',
+          borderRadius: '4px',
+          marginTop: '12px'
+        }}>
+          <label style={{ fontWeight: '600', marginBottom: '4px', display: 'block' }}>
+            Total Point IPC yang akan didapatkan:
+          </label>
+          <span style={{ 
+            fontSize: '18px', 
+            fontWeight: '700',
+            color: '#0F7A55'
+          }}>
+            +{Object.values(calculatedPoints).reduce((a, b) => a + b, 0)}
+          </span>
         </div>
 
         <button

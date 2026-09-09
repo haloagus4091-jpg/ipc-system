@@ -27,23 +27,26 @@ function InputKepanitiaan() {
   const [allKepanitiaan, setAllKepanitiaan] = useState([]);
   const [loadingIndex, setLoadingIndex] = useState(false);
   const editModal = useEditModal();
+  const [ipcConfig, setIpcConfig] = useState([]);
+  const [calculatedPoint, setCalculatedPoint] = useState(0);
 
   const grhaOptions = [
     'Airsanya', 'Daksina', 'Genya', 'Madhya', 'Nairiti', 'Pascima', 'Purwa', 'Uttara', 'Wayabhya'
   ];
 
   const jabatanOptions = [
-    { value: 'ketua', label: 'Ketua Kepanitiaan (5 point)' },
-    { value: 'wakil ketua', label: 'Wakil Ketua (4 point)' },
-    { value: 'sekretaris', label: 'Sekretaris (4 point)' },
-    { value: 'bendahara', label: 'Bendahara (3 point)' },
-    { value: 'koordinator', label: 'Koordinator (2 point)' },
-    { value: 'anggota', label: 'Anggota (1 point)' }
+    { value: 'ketua', label: 'Ketua' },
+    { value: 'wakil ketua', label: 'Wakil Ketua' },
+    { value: 'sekretaris', label: 'Sekretaris' },
+    { value: 'bendahara', label: 'Bendahara' },
+    { value: 'koordinator', label: 'Koordinator' },
+    { value: 'anggota', label: 'Anggota' }
   ];
 
   useEffect(() => {
     fetchUserSubmissions();
     checkAccess();
+    fetchIpcConfig();
     // Get user role from localStorage
     const user = JSON.parse(localStorage.getItem('user') || '{}');
     setUserRole(user.role || '');
@@ -109,6 +112,26 @@ function InputKepanitiaan() {
     }
   };
 
+  const fetchIpcConfig = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.get('/ipc-config/active', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setIpcConfig(response.data);
+    } catch (error) {
+      console.error('Error fetching IPC config:', error);
+    }
+  };
+
+  const calculatePoint = (jabatan) => {
+    const kepanitiaanConfigs = ipcConfig['kepanitiaan'] || [];
+    const config = kepanitiaanConfigs.find(
+      c => c.field1 === jabatan
+    );
+    return config ? config.point_value : 0;
+  };
+
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData({ ...formData, [name]: value });
@@ -116,6 +139,12 @@ function InputKepanitiaan() {
     // Auto-fill student data when NIS is entered
     if (name === 'nis' && value.length >= 1) {
       fetchStudentData(value);
+    }
+
+    // Calculate point when jabatan_kepanitiaan changes
+    if (name === 'jabatan_kepanitiaan') {
+      const point = calculatePoint(value);
+      setCalculatedPoint(point);
     }
   };
 
@@ -435,7 +464,7 @@ function InputKepanitiaan() {
           <select name="jabatan_kepanitiaan" value={formData.jabatan_kepanitiaan} onChange={handleChange} required>
             <option value="">Pilih Jabatan</option>
             {jabatanOptions.map(jabatan => (
-              <option key={jabatan.value} value={jabatan.value}>{jabatan.label}</option>
+              <option key={jabatan.value} value={jabatan.value}>{jabatan.label} {formData.jabatan_kepanitiaan === jabatan.value && calculatedPoint ? `(${calculatedPoint} point)` : ''}</option>
             ))}
           </select>
         </div>
@@ -450,6 +479,25 @@ function InputKepanitiaan() {
             placeholder="Nama kepanitiaan"
           />
         </div>
+
+        <div className="form-group" style={{ 
+          padding: '12px', 
+          background: '#EAFBF3',
+          borderRadius: '4px',
+          marginTop: '12px'
+        }}>
+          <label style={{ fontWeight: '600', marginBottom: '4px', display: 'block' }}>
+            Point IPC yang akan didapatkan:
+          </label>
+          <span style={{ 
+            fontSize: '18px', 
+            fontWeight: '700',
+            color: '#0F7A55'
+          }}>
+            +{calculatedPoint}
+          </span>
+        </div>
+
         <div className="form-group">
           <label>Foto Bukti</label>
           <input type="file" onChange={handleFileChange} accept="image/*" />

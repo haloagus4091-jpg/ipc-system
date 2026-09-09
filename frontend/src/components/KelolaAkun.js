@@ -190,19 +190,16 @@ function KelolaAkun() {
       return;
     }
 
-    const roles = [...new Set(selectable.map((u) => u.role))];
-    if (roles.length > 1) {
-      setMessage('Filter menampilkan siswa dan guru. Filter per role dulu sebelum pilih semua.');
-      return;
-    }
-
-    setSelectionRole(roles[0]);
+    // Allow selecting all regardless of role mixing
     setSelectedIds(selectable.map((u) => u.id));
+    setSelectionRole(null); // Reset selection role to allow mixed selection
   };
 
   const isUserSelectable = (user) => user.role !== 'superadmin';
   const isUserDisabled = (user) => {
     if (!isUserSelectable(user)) return true;
+    // Only disable if selectionRole is set and user role doesn't match
+    // If selectionRole is null, allow mixed selection
     if (!selectionRole) return false;
     return user.role !== selectionRole;
   };
@@ -579,223 +576,283 @@ function KelolaAkun() {
   }
 
   return (
-    <div>
-      <h2>Kelola Akun</h2>
-      {message && <div className="alert alert-success">{message}</div>}
-      
-      <div style={{ marginBottom: '20px' }}>
-        {/* Debug: show current role */}
-        <small style={{ color: '#666', display: 'block', marginBottom: '10px' }}>
-          Role: {userRole || 'loading...'}
-        </small>
-        
-        {/* Buat Akun Siswa - available for superadmin and guru */}
-        {(userRole === 'superadmin' || userRole === 'guru') && (
-          <button className="btn btn-primary" onClick={() => { setShowCreateModal(true); setCreateModalType('student'); setFormData({}); }} style={{ marginRight: '10px' }}>
-            + Buat Akun Siswa
-          </button>
-        )}
-        
-        {/* Buat Akun Guru - only for superadmin */}
-        {userRole === 'superadmin' && (
-          <button className="btn btn-success" onClick={() => { setShowCreateModal(true); setCreateModalType('teacher'); setFormData({}); }} style={{ marginRight: '10px' }}>
-            + Buat Akun Guru
-          </button>
-        )}
+    <div style={{ fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, sans-serif', background: '#f5f5f5', padding: '20px', color: '#333', minHeight: '100vh' }}>
+      <div style={{ maxWidth: '1200px', margin: '0 auto', background: 'white', borderRadius: '8px', padding: '24px', boxShadow: '0 1px 3px rgba(0, 0, 0, 0.08)' }}>
+        <div style={{ marginBottom: '24px' }}>
+          <h1 style={{ fontSize: '24px', fontWeight: '600', color: '#1a1a1a', marginBottom: '8px', margin: 0 }}>Kelola Akun</h1>
+          <p style={{ fontSize: '13px', color: '#666', margin: 0 }}>Role: {userRole || 'loading...'}</p>
+        </div>
 
-        {/* Import from Excel - only for superadmin */}
-        {userRole === 'superadmin' && (
-          <>
-            <button className="btn btn-warning" onClick={handleValidateClasses} disabled={validatingClasses} style={{ marginRight: '10px' }}>
-              {validatingClasses ? 'Memvalidasi...' : 'Validasi Kelas'}
-            </button>
-            <button className="btn btn-info" onClick={() => { setShowImportModal(true); setImportModalType('siswa'); setExcelFile(null); setImportResults([]); }} style={{ marginRight: '10px' }}>
-              📥 Import Siswa
-            </button>
-            <button className="btn btn-info" onClick={() => { setShowImportModal(true); setImportModalType('guru'); setExcelFile(null); setImportResults([]); }} style={{ marginRight: '10px' }}>
-              📥 Import Guru
-            </button>
-          </>
-        )}
-      </div>
+        {message && <div style={{ padding: '12px 16px', background: '#d4edda', border: '1px solid #c3e6cb', borderRadius: '4px', color: '#155724', marginBottom: '20px' }}>{message}</div>}
 
-
-      {/* Filters */}
-      <div className="card" style={{ marginBottom: '20px', padding: '15px' }}>
-        <h4>Filter</h4>
-        <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'flex-end' }}>
-          {userRole === 'superadmin' && (
-            <div style={{ flex: '1', minWidth: '150px' }}>
-              <label>Role</label>
-              <select
-                value={filters.role}
-                onChange={(e) => handleFilterChange('role', e.target.value)}
-                className="form-control"
-              >
-                <option value="">Semua Role</option>
-                <option value="superadmin">Superadmin</option>
-                <option value="guru">Guru</option>
-                <option value="siswa">Siswa</option>
-              </select>
-            </div>
+        <div style={{ display: 'flex', gap: '12px', marginBottom: '24px', flexWrap: 'wrap' }}>
+          {(userRole === 'superadmin' || userRole === 'guru') && (
+            <button 
+              onClick={() => { setShowCreateModal(true); setCreateModalType('student'); setFormData({}); }}
+              style={{ 
+                padding: '10px 16px', border: 'none', borderRadius: '4px', fontSize: '14px', fontWeight: '500', cursor: 'pointer',
+                background: '#1e88e5', color: 'white', display: 'inline-flex', alignItems: 'center', gap: '6px',
+                transition: 'all 0.3s ease'
+              }}
+              onMouseOver={(e) => { e.target.style.background = '#1565c0'; e.target.style.transform = 'translateY(-2px)'; e.target.style.boxShadow = '0 4px 8px rgba(30, 136, 229, 0.3)'; }}
+              onMouseOut={(e) => { e.target.style.background = '#1e88e5'; e.target.style.transform = 'translateY(0)'; e.target.style.boxShadow = 'none'; }}
+            >
+              <i className="fas fa-plus"></i> Buat Akun Siswa
+            </button>
           )}
-          <div style={{ flex: '1', minWidth: '150px' }}>
-            <label>Kelas</label>
-            <select
-              value={filters.kelas}
-              onChange={(e) => handleFilterChange('kelas', e.target.value)}
-              className="form-control"
+          
+          {userRole === 'superadmin' && (
+            <button 
+              onClick={() => { setShowCreateModal(true); setCreateModalType('teacher'); setFormData({}); }}
+              style={{ 
+                padding: '10px 16px', border: 'none', borderRadius: '4px', fontSize: '14px', fontWeight: '500', cursor: 'pointer',
+                background: '#43a047', color: 'white', display: 'inline-flex', alignItems: 'center', gap: '6px',
+                transition: 'all 0.3s ease'
+              }}
+              onMouseOver={(e) => { e.target.style.background = '#388e3c'; e.target.style.transform = 'translateY(-2px)'; e.target.style.boxShadow = '0 4px 8px rgba(67, 160, 71, 0.3)'; }}
+              onMouseOut={(e) => { e.target.style.background = '#43a047'; e.target.style.transform = 'translateY(0)'; e.target.style.boxShadow = 'none'; }}
             >
-              <option value="">Semua Kelas</option>
-              {KELAS_OPTIONS.map(k => <option key={k} value={k}>{k}</option>)}
-            </select>
-          </div>
-          <div style={{ flex: '1', minWidth: '150px' }}>
-            <label>Grha</label>
-            <select
-              value={filters.grha}
-              onChange={(e) => handleFilterChange('grha', e.target.value)}
-              className="form-control"
-            >
-              <option value="">Semua Grha</option>
-              {grhaOptions.map(grha => <option key={grha} value={grha}>{grha}</option>)}
-            </select>
-          </div>
+              <i className="fas fa-plus"></i> Buat Akun Guru
+            </button>
+          )}
+
           {userRole === 'superadmin' && (
             <>
-              <div style={{ flex: '1', minWidth: '150px' }}>
-                <label>Jurusan</label>
-                <select
-                  value={filters.jurusan}
-                  onChange={(e) => handleFilterChange('jurusan', e.target.value)}
-                  className="form-control"
-                >
-                  <option value="">Semua Jurusan</option>
-                  <option value="TKJ 1">TKJ 1</option>
-                  <option value="TKJ 2">TKJ 2</option>
-                  <option value="DPIB 1">DPIB 1</option>
-                  <option value="DPIB 2">DPIB 2</option>
-                  <option value="TKR 1">TKR 1</option>
-                  <option value="TKR 2">TKR 2</option>
-                </select>
-              </div>
-              <div style={{ flex: '1', minWidth: '150px' }}>
-                <label>Tahun Pelajaran</label>
-                <select
-                  value={filters.tahun_pelajaran}
-                  onChange={(e) => handleFilterChange('tahun_pelajaran', e.target.value)}
-                  className="form-control"
-                >
-                  <option value="">Semua Tahun</option>
-                  {(() => {
-                    // Opsi tahun pelajaran dari 2024-2025 sampai 2030-2031
-                    const options = [];
-                    for (let year = 2024; year <= 2030; year++) {
-                      options.push(`${year}-${year + 1}`);
-                    }
-                    return options.map(year => (
-                      <option key={year} value={year}>{year}</option>
-                    ));
-                  })()}
-                </select>
-              </div>
+              <button 
+                onClick={handleValidateClasses} 
+                disabled={validatingClasses}
+                style={{ 
+                  padding: '10px 16px', border: 'none', borderRadius: '4px', fontSize: '14px', fontWeight: '500', cursor: validatingClasses ? 'not-allowed' : 'pointer',
+                  background: '#ffa726', color: 'white', display: 'inline-flex', alignItems: 'center', gap: '6px',
+                  transition: 'all 0.3s ease', opacity: validatingClasses ? 0.6 : 1
+                }}
+                onMouseOver={(e) => { if (!validatingClasses) { e.target.style.background = '#fb8c00'; e.target.style.transform = 'translateY(-2px)'; e.target.style.boxShadow = '0 4px 8px rgba(255, 167, 38, 0.3)'; } }}
+                onMouseOut={(e) => { e.target.style.background = '#ffa726'; e.target.style.transform = 'translateY(0)'; e.target.style.boxShadow = 'none'; }}
+              >
+                {validatingClasses ? 'Memvalidasi...' : 'Validasi Kelas'}
+              </button>
+              <button 
+                onClick={() => { setShowImportModal(true); setImportModalType('siswa'); setExcelFile(null); setImportResults([]); }}
+                style={{ 
+                  padding: '10px 16px', border: 'none', borderRadius: '4px', fontSize: '14px', fontWeight: '500', cursor: 'pointer',
+                  background: '#1e88e5', color: 'white', display: 'inline-flex', alignItems: 'center', gap: '6px',
+                  transition: 'all 0.3s ease'
+                }}
+                onMouseOver={(e) => { e.target.style.background = '#1565c0'; e.target.style.transform = 'translateY(-2px)'; e.target.style.boxShadow = '0 4px 8px rgba(30, 136, 229, 0.3)'; }}
+                onMouseOut={(e) => { e.target.style.background = '#1e88e5'; e.target.style.transform = 'translateY(0)'; e.target.style.boxShadow = 'none'; }}
+              >
+                <i className="fas fa-download"></i> Import Siswa
+              </button>
+              <button 
+                onClick={() => { setShowImportModal(true); setImportModalType('guru'); setExcelFile(null); setImportResults([]); }}
+                style={{ 
+                  padding: '10px 16px', border: 'none', borderRadius: '4px', fontSize: '14px', fontWeight: '500', cursor: 'pointer',
+                  background: '#1e88e5', color: 'white', display: 'inline-flex', alignItems: 'center', gap: '6px',
+                  transition: 'all 0.3s ease'
+                }}
+                onMouseOver={(e) => { e.target.style.background = '#1565c0'; e.target.style.transform = 'translateY(-2px)'; e.target.style.boxShadow = '0 4px 8px rgba(30, 136, 229, 0.3)'; }}
+                onMouseOut={(e) => { e.target.style.background = '#1e88e5'; e.target.style.transform = 'translateY(0)'; e.target.style.boxShadow = 'none'; }}
+              >
+                <i className="fas fa-download"></i> Import Guru
+              </button>
             </>
           )}
-          <button className="btn btn-secondary" onClick={resetFilters}>Reset</button>
         </div>
-      </div>
 
-
-
-      <div className="card">
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12, flexWrap: 'wrap', gap: 10 }}>
-          <h3 style={{ margin: 0 }}>{userRole === 'guru' ? 'Daftar Siswa' : 'Daftar Pengguna'}</h3>
-          {userRole === 'superadmin' && (
-            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-              <button type="button" className="btn btn-secondary" onClick={selectAllFiltered} style={{ fontSize: 13 }}>
-                Pilih Semua (filter)
-              </button>
-              {selectedIds.length > 0 && (
-                <>
-                  <button type="button" className="btn btn-danger" onClick={handleBulkDelete} style={{ fontSize: 13 }}>
-                    Hapus ({selectedIds.length})
-                  </button>
-                  <button type="button" className="btn btn-secondary" onClick={clearSelection} style={{ fontSize: 13 }}>
-                    Batal Pilih
-                  </button>
-                </>
-              )}
+        {/* Filters */}
+        <div style={{ background: '#f9f9f9', border: '1px solid #e0e0e0', borderRadius: '4px', padding: '16px', marginBottom: '24px' }}>
+          <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', alignItems: 'flex-end' }}>
+            {userRole === 'superadmin' && (
+              <div style={{ flex: '1', minWidth: '160px' }}>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: '#666', marginBottom: '6px' }}>Role</label>
+                <select
+                  value={filters.role}
+                  onChange={(e) => handleFilterChange('role', e.target.value)}
+                  style={{ 
+                    width: '100%', padding: '8px 12px', border: '1px solid #d0d0d0', borderRadius: '4px', 
+                    fontSize: '13px', background: 'white', color: '#333', transition: 'all 0.3s ease'
+                  }}
+                  onFocus={(e) => { e.target.style.borderColor = '#1e88e5'; e.target.style.boxShadow = '0 0 0 2px rgba(30, 136, 229, 0.1)'; }}
+                  onBlur={(e) => { e.target.style.borderColor = '#d0d0d0'; e.target.style.boxShadow = 'none'; }}
+                >
+                  <option value="">Semua Role</option>
+                  <option value="superadmin">Superadmin</option>
+                  <option value="guru">Guru</option>
+                  <option value="siswa">Siswa</option>
+                </select>
+              </div>
+            )}
+            <div style={{ flex: '1', minWidth: '160px' }}>
+              <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: '#666', marginBottom: '6px' }}>Kelas</label>
+              <select
+                value={filters.kelas}
+                onChange={(e) => handleFilterChange('kelas', e.target.value)}
+                style={{ 
+                  width: '100%', padding: '8px 12px', border: '1px solid #d0d0d0', borderRadius: '4px', 
+                  fontSize: '13px', background: 'white', color: '#333', transition: 'all 0.3s ease'
+                }}
+                onFocus={(e) => { e.target.style.borderColor = '#1e88e5'; e.target.style.boxShadow = '0 0 0 2px rgba(30, 136, 229, 0.1)'; }}
+                onBlur={(e) => { e.target.style.borderColor = '#d0d0d0'; e.target.style.boxShadow = 'none'; }}
+              >
+                <option value="">Semua Kelas</option>
+                {KELAS_OPTIONS.map(k => <option key={k} value={k}>{k}</option>)}
+              </select>
             </div>
-          )}
+            <div style={{ flex: '1', minWidth: '160px' }}>
+              <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: '#666', marginBottom: '6px' }}>Grha</label>
+              <select
+                value={filters.grha}
+                onChange={(e) => handleFilterChange('grha', e.target.value)}
+                style={{ 
+                  width: '100%', padding: '8px 12px', border: '1px solid #d0d0d0', borderRadius: '4px', 
+                  fontSize: '13px', background: 'white', color: '#333', transition: 'all 0.3s ease'
+                }}
+                onFocus={(e) => { e.target.style.borderColor = '#1e88e5'; e.target.style.boxShadow = '0 0 0 2px rgba(30, 136, 229, 0.1)'; }}
+                onBlur={(e) => { e.target.style.borderColor = '#d0d0d0'; e.target.style.boxShadow = 'none'; }}
+              >
+                <option value="">Semua Grha</option>
+                {grhaOptions.map(grha => <option key={grha} value={grha}>{grha}</option>)}
+              </select>
+            </div>
+            {userRole === 'superadmin' && (
+              <>
+                <div style={{ flex: '1', minWidth: '160px' }}>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: '#666', marginBottom: '6px' }}>Jurusan</label>
+                  <select
+                    value={filters.jurusan}
+                    onChange={(e) => handleFilterChange('jurusan', e.target.value)}
+                    style={{ 
+                      width: '100%', padding: '8px 12px', border: '1px solid #d0d0d0', borderRadius: '4px', 
+                      fontSize: '13px', background: 'white', color: '#333', transition: 'all 0.3s ease'
+                    }}
+                    onFocus={(e) => { e.target.style.borderColor = '#1e88e5'; e.target.style.boxShadow = '0 0 0 2px rgba(30, 136, 229, 0.1)'; }}
+                    onBlur={(e) => { e.target.style.borderColor = '#d0d0d0'; e.target.style.boxShadow = 'none'; }}
+                  >
+                    <option value="">Semua Jurusan</option>
+                    <option value="TKJ 1">TKJ 1</option>
+                    <option value="TKJ 2">TKJ 2</option>
+                    <option value="DPIB 1">DPIB 1</option>
+                    <option value="DPIB 2">DPIB 2</option>
+                    <option value="TKR 1">TKR 1</option>
+                    <option value="TKR 2">TKR 2</option>
+                  </select>
+                </div>
+                <div style={{ flex: '1', minWidth: '160px' }}>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: '#666', marginBottom: '6px' }}>Tahun Pelajaran</label>
+                  <select
+                    value={filters.tahun_pelajaran}
+                    onChange={(e) => handleFilterChange('tahun_pelajaran', e.target.value)}
+                    style={{ 
+                      width: '100%', padding: '8px 12px', border: '1px solid #d0d0d0', borderRadius: '4px', 
+                      fontSize: '13px', background: 'white', color: '#333', transition: 'all 0.3s ease'
+                    }}
+                    onFocus={(e) => { e.target.style.borderColor = '#1e88e5'; e.target.style.boxShadow = '0 0 0 2px rgba(30, 136, 229, 0.1)'; }}
+                    onBlur={(e) => { e.target.style.borderColor = '#d0d0d0'; e.target.style.boxShadow = 'none'; }}
+                  >
+                    <option value="">Semua Tahun</option>
+                    {(() => {
+                      const options = [];
+                      for (let year = 2024; year <= 2030; year++) {
+                        options.push(`${year}-${year + 1}`);
+                      }
+                      return options.map(year => (
+                        <option key={year} value={year}>{year}</option>
+                      ));
+                    })()}
+                  </select>
+                </div>
+              </>
+            )}
+            <button 
+              onClick={resetFilters}
+              style={{ 
+                padding: '8px 14px', background: '#f5f5f5', border: '1px solid #d0d0d0', borderRadius: '4px', 
+                fontSize: '13px', cursor: 'pointer', color: '#666', transition: 'all 0.3s ease'
+              }}
+              onMouseOver={(e) => { e.target.style.background = '#efefef'; e.target.style.borderColor = '#bbb'; }}
+              onMouseOut={(e) => { e.target.style.background = '#f5f5f5'; e.target.style.borderColor = '#d0d0d0'; }}
+            >
+              Reset
+            </button>
+          </div>
         </div>
-        {userRole === 'superadmin' && selectionRole && (
-          <p style={{ fontSize: 13, color: '#666', marginBottom: 12 }}>
-            Mode pilihan: <strong>{selectionRole === 'siswa' ? 'Siswa' : 'Guru'}</strong> — hanya role yang sama yang bisa dipilih.
-          </p>
-        )}
-        <div style={{ overflowX: 'auto' }}>
-          <table className="table">
-            <thead>
+
+        {/* Table */}
+        <div style={{ overflowX: 'auto', marginBottom: '24px', border: '1px solid #d0d0d0', borderRadius: '4px' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
+            <thead style={{ background: '#f9f9f9', borderBottom: '1px solid #d0d0d0' }}>
               <tr>
-                {userRole === 'superadmin' && <th style={{ width: 40 }}></th>}
-                <th>Nama</th>
-                <th>{userRole === 'guru' ? 'NIS' : 'NIS/NIP'}</th>
-                <th>Role</th>
-                <th>Kelas</th>
+                {userRole === 'superadmin' && <th style={{ padding: '12px', textAlign: 'left', fontWeight: '600', color: '#333', borderRight: '1px solid #e0e0e0', width: '30px' }}></th>}
+                <th style={{ padding: '12px', textAlign: 'left', fontWeight: '600', color: '#333', borderRight: '1px solid #e0e0e0' }}>Nama</th>
+                <th style={{ padding: '12px', textAlign: 'left', fontWeight: '600', color: '#333', borderRight: '1px solid #e0e0e0', width: '90px' }}>{userRole === 'guru' ? 'NIS' : 'NIS/NIP'}</th>
+                {userRole !== 'guru' && <th style={{ padding: '12px', textAlign: 'left', fontWeight: '600', color: '#333', borderRight: '1px solid #e0e0e0', width: '80px' }}>NISN</th>}
+                <th style={{ padding: '12px', textAlign: 'left', fontWeight: '600', color: '#333', borderRight: '1px solid #e0e0e0', width: '80px' }}>Role</th>
+                <th style={{ padding: '12px', textAlign: 'left', fontWeight: '600', color: '#333', borderRight: '1px solid #e0e0e0', width: '100px' }}>Kelas</th>
                 {userRole === 'superadmin' && (
                   <>
-                    <th>Jurusan</th>
-                    <th>Tahun Pelajaran</th>
+                    <th style={{ padding: '12px', textAlign: 'left', fontWeight: '600', color: '#333', borderRight: '1px solid #e0e0e0', width: '100px' }}>Jurusan</th>
+                    <th style={{ padding: '12px', textAlign: 'left', fontWeight: '600', color: '#333', borderRight: '1px solid #e0e0e0', width: '100px' }}>Tahun Pelajaran</th>
                   </>
                 )}
-                <th>IPC Total</th>
-                <th>Aksi</th>
+                <th style={{ padding: '12px', textAlign: 'left', fontWeight: '600', color: '#333', borderRight: '1px solid #e0e0e0', width: '90px' }}>IPC Total</th>
+                <th style={{ padding: '12px', textAlign: 'left', fontWeight: '600', color: '#333', width: '80px' }}>Aksi</th>
               </tr>
             </thead>
             <tbody>
               {filteredUsers.map(user => (
-                <tr key={user.id} style={isUserDisabled(user) && selectionRole ? { opacity: 0.45 } : undefined}>
+                <tr 
+                  key={user.id} 
+                  style={{ 
+                    transition: 'all 0.2s ease',
+                    ...(isUserDisabled(user) && selectionRole ? { opacity: 0.45 } : {})
+                  }}
+                  onMouseOver={(e) => { if (!isUserDisabled(user) || !selectionRole) e.currentTarget.style.background = '#f0f7ff'; }}
+                  onMouseOut={(e) => { e.currentTarget.style.background = ''; }}
+                >
                   {userRole === 'superadmin' && (
-                    <td>
+                    <td style={{ padding: '10px 12px', borderRight: '1px solid #e0e0e0', borderBottom: '1px solid #e0e0e0' }}>
                       {isUserSelectable(user) && (
                         <input
                           type="checkbox"
                           checked={selectedIds.includes(user.id)}
                           disabled={isUserDisabled(user)}
                           onChange={() => toggleUserSelection(user)}
+                          style={{ cursor: 'pointer' }}
                         />
                       )}
                     </td>
                   )}
-                  <td>{user.nama}</td>
-                  <td>{user.nis || user.nip || '-'}</td>
-                  <td><span className={`badge badge-${user.role === 'superadmin' ? 'danger' : user.role === 'guru' ? 'warning' : 'info'}`}>{user.role}</span></td>
-                  <td>
-                    <>
-                      {user.is_graduated ? (
-                        <span style={{ color: '#999', fontStyle: 'italic' }}>{user.kelas || '-'}</span>
-                      ) : (
-                        user.kelas || '-'
-                      )}
-                      { /* user.is_graduated && <span className="badge badge-secondary" style={{ marginLeft: '5px' }}>Lulus</span> */}
-                    </>
+                  <td style={{ padding: '10px 12px', color: '#333', borderRight: '1px solid #e0e0e0', borderBottom: '1px solid #e0e0e0' }}>{user.nama}</td>
+                  <td style={{ padding: '10px 12px', color: '#333', borderRight: '1px solid #e0e0e0', borderBottom: '1px solid #e0e0e0' }}>{user.nis || user.nip || '-'}</td>
+                  {userRole !== 'guru' && <td style={{ padding: '10px 12px', color: '#333', borderRight: '1px solid #e0e0e0', borderBottom: '1px solid #e0e0e0' }}>{user.nisn || '-'}</td>}
+                  <td style={{ padding: '10px 12px', borderRight: '1px solid #e0e0e0', borderBottom: '1px solid #e0e0e0' }}>
+                    <span style={{ 
+                      display: 'inline-block', padding: '4px 8px', borderRadius: '3px', fontSize: '11px', fontWeight: '500', textAlign: 'center', minWidth: '50px',
+                      background: user.role === 'superadmin' ? '#ef5350' : user.role === 'guru' ? '#ffc107' : '#b3e5fc',
+                      color: user.role === 'superadmin' ? 'white' : user.role === 'guru' ? 'white' : '#01579b'
+                    }}>
+                      {user.role.toUpperCase()}
+                    </span>
+                  </td>
+                  <td style={{ padding: '10px 12px', borderRight: '1px solid #e0e0e0', borderBottom: '1px solid #e0e0e0' }}>
+                    {user.is_graduated ? (
+                      <span style={{ color: '#999', fontStyle: 'italic' }}>{user.kelas || '-'}</span>
+                    ) : (
+                      user.kelas || '-'
+                    )}
                   </td>
                   {userRole === 'superadmin' && (
                     <>
-                      <td>
+                      <td style={{ padding: '10px 12px', borderRight: '1px solid #e0e0e0', borderBottom: '1px solid #e0e0e0' }}>
                         {user.jurusan ? (
                           <span style={{ 
-                            fontSize: '11px',
-                            backgroundColor: '#fff3e0',
-                            color: '#e65100',
-                            padding: '2px 6px',
-                            borderRadius: '4px'
+                            fontSize: '11px', backgroundColor: '#fff3e0', color: '#e65100', padding: '2px 6px', borderRadius: '4px'
                           }}>
                             {user.jurusan}
                           </span>
                         ) : '-'}
                       </td>
-                      <td>
+                      <td style={{ padding: '10px 12px', borderRight: '1px solid #e0e0e0', borderBottom: '1px solid #e0e0e0' }}>
                         {user.tahun_pelajaran ? (
                           <span style={{ 
                             fontSize: '11px',
@@ -810,7 +867,7 @@ function KelolaAkun() {
                       </td>
                     </>
                   )}
-                  <td>
+                  <td style={{ padding: '10px 12px', borderRight: '1px solid #e0e0e0', borderBottom: '1px solid #e0e0e0' }}>
                     <span style={{ 
                       color: (user.ipc_total ?? 0) < 0 ? '#dc2626' : 'inherit',
                       fontWeight: (user.ipc_total ?? 0) < 0 ? 'bold' : 'normal'
@@ -818,21 +875,76 @@ function KelolaAkun() {
                       {(user.ipc_total ?? 0) < 0 ? `${user.ipc_total ?? 0} (MINUS)` : (user.ipc_total ?? 0)}
                     </span>
                   </td>
-                  <td>
+                  <td style={{ padding: '10px 12px', borderBottom: '1px solid #e0e0e0' }}>
                     {userRole === 'superadmin' && user.role !== 'superadmin' && (
-                      <>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                         {user.role === 'siswa' && (
-                          <button className="btn btn-primary" onClick={() => setDetailStudent(user)} style={{ padding: '5px 10px', marginRight: '5px' }}>Detail</button>
+                          <button 
+                            onClick={() => setDetailStudent(user)}
+                            style={{ 
+                              padding: '6px 10px', border: 'none', borderRadius: '3px', 
+                              fontSize: '11px', fontWeight: '600', cursor: 'pointer', color: 'white',
+                              background: '#1e88e5', transition: 'all 0.2s ease', width: '100%', textAlign: 'center'
+                            }}
+                            onMouseOver={(e) => { e.target.style.background = '#1565c0'; e.target.style.transform = 'translateY(-1px)'; e.target.style.boxShadow = '0 2px 4px rgba(30, 136, 229, 0.3)'; }}
+                            onMouseOut={(e) => { e.target.style.background = '#1e88e5'; e.target.style.transform = 'translateY(0)'; e.target.style.boxShadow = 'none'; }}
+                          >
+                            Detail
+                          </button>
                         )}
-                        <button className="btn btn-info" onClick={() => { handleEditUser(user); setShowEditBiodataModal(true); }} style={{ padding: '5px 10px', marginRight: '5px' }}>Edit Biodata</button>
-                        <button className="btn btn-danger" onClick={() => handleDeleteUser(user.id)} style={{ padding: '5px 10px' }}>Hapus</button>
-                      </>
+                        <button 
+                          onClick={() => { handleEditUser(user); setShowEditBiodataModal(true); }}
+                          style={{ 
+                            padding: '6px 10px', border: 'none', borderRadius: '3px', 
+                            fontSize: '11px', fontWeight: '600', cursor: 'pointer', color: 'white',
+                            background: '#00bcd4', transition: 'all 0.2s ease', width: '100%', textAlign: 'center'
+                          }}
+                          onMouseOver={(e) => { e.target.style.background = '#00acc1'; e.target.style.transform = 'translateY(-1px)'; e.target.style.boxShadow = '0 2px 4px rgba(0, 188, 212, 0.3)'; }}
+                          onMouseOut={(e) => { e.target.style.background = '#00bcd4'; e.target.style.transform = 'translateY(0)'; e.target.style.boxShadow = 'none'; }}
+                        >
+                          Edit
+                        </button>
+                        <button 
+                          onClick={() => handleDeleteUser(user.id)}
+                          style={{ 
+                            padding: '6px 10px', border: 'none', borderRadius: '3px', 
+                            fontSize: '11px', fontWeight: '600', cursor: 'pointer', color: 'white',
+                            background: '#ef5350', transition: 'all 0.2s ease', width: '100%', textAlign: 'center'
+                          }}
+                          onMouseOver={(e) => { e.target.style.background = '#e53935'; e.target.style.transform = 'translateY(-1px)'; e.target.style.boxShadow = '0 2px 4px rgba(239, 83, 80, 0.3)'; }}
+                          onMouseOut={(e) => { e.target.style.background = '#ef5350'; e.target.style.transform = 'translateY(0)'; e.target.style.boxShadow = 'none'; }}
+                        >
+                          Hapus
+                        </button>
+                      </div>
                     )}
                     {userRole === 'guru' && user.role === 'siswa' && (
-                      <>
-                        <button className="btn btn-primary" onClick={() => setDetailStudent(user)} style={{ padding: '5px 10px', marginRight: '5px' }}>Detail</button>
-                        <button className="btn btn-info" onClick={() => { handleEditUser(user); setShowEditBiodataModal(true); }} style={{ padding: '5px 10px' }}>Edit Biodata</button>
-                      </>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                        <button 
+                          onClick={() => setDetailStudent(user)}
+                          style={{ 
+                            padding: '6px 10px', border: 'none', borderRadius: '3px', 
+                            fontSize: '11px', fontWeight: '600', cursor: 'pointer', color: 'white',
+                            background: '#1e88e5', transition: 'all 0.2s ease', width: '100%', textAlign: 'center'
+                          }}
+                          onMouseOver={(e) => { e.target.style.background = '#1565c0'; e.target.style.transform = 'translateY(-1px)'; e.target.style.boxShadow = '0 2px 4px rgba(30, 136, 229, 0.3)'; }}
+                          onMouseOut={(e) => { e.target.style.background = '#1e88e5'; e.target.style.transform = 'translateY(0)'; e.target.style.boxShadow = 'none'; }}
+                        >
+                          Detail
+                        </button>
+                        <button 
+                          onClick={() => { handleEditUser(user); setShowEditBiodataModal(true); }}
+                          style={{ 
+                            padding: '6px 10px', border: 'none', borderRadius: '3px', 
+                            fontSize: '11px', fontWeight: '600', cursor: 'pointer', color: 'white',
+                            background: '#00bcd4', transition: 'all 0.2s ease', width: '100%', textAlign: 'center'
+                          }}
+                          onMouseOver={(e) => { e.target.style.background = '#00acc1'; e.target.style.transform = 'translateY(-1px)'; e.target.style.boxShadow = '0 2px 4px rgba(0, 188, 212, 0.3)'; }}
+                          onMouseOut={(e) => { e.target.style.background = '#00bcd4'; e.target.style.transform = 'translateY(0)'; e.target.style.boxShadow = 'none'; }}
+                        >
+                          Edit
+                        </button>
+                      </div>
                     )}
                   </td>
                 </tr>
@@ -840,6 +952,59 @@ function KelolaAkun() {
             </tbody>
           </table>
         </div>
+
+        {/* Bulk Actions */}
+        {userRole === 'superadmin' && (
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '16px', borderTop: '1px solid #e0e0e0' }}>
+            <div style={{ fontSize: '12px', color: '#999' }}>
+              Menampilkan {filteredUsers.length} pengguna
+            </div>
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <button 
+                onClick={selectAllFiltered}
+                style={{ 
+                  padding: '6px 12px', border: '1px solid #d0d0d0', background: 'white', borderRadius: '3px', 
+                  fontSize: '12px', cursor: 'pointer', color: '#333'
+                }}
+                onMouseOver={(e) => { e.target.style.background = '#f5f5f5'; e.target.style.borderColor = '#bbb'; }}
+                onMouseOut={(e) => { e.target.style.background = 'white'; e.target.style.borderColor = '#d0d0d0'; }}
+              >
+                Pilih Semua
+              </button>
+              {selectedIds.length > 0 && (
+                <>
+                  <button 
+                    onClick={handleBulkDelete}
+                    style={{ 
+                      padding: '6px 12px', border: '1px solid #d0d0d0', background: '#dc3545', borderRadius: '3px', 
+                      fontSize: '12px', cursor: 'pointer', color: 'white'
+                    }}
+                    onMouseOver={(e) => { e.target.style.background = '#c82333'; }}
+                    onMouseOut={(e) => { e.target.style.background = '#dc3545'; }}
+                  >
+                    Hapus ({selectedIds.length})
+                  </button>
+                  <button 
+                    onClick={clearSelection}
+                    style={{ 
+                      padding: '6px 12px', border: '1px solid #d0d0d0', background: 'white', borderRadius: '3px', 
+                      fontSize: '12px', cursor: 'pointer', color: '#333'
+                    }}
+                    onMouseOver={(e) => { e.target.style.background = '#f5f5f5'; e.target.style.borderColor = '#bbb'; }}
+                    onMouseOut={(e) => { e.target.style.background = 'white'; e.target.style.borderColor = '#d0d0d0'; }}
+                  >
+                    Batal
+                  </button>
+                </>
+              )}
+            </div>
+          </div>
+        )}
+        {userRole === 'superadmin' && selectionRole && (
+          <p style={{ fontSize: '13px', color: '#666', marginTop: '12px' }}>
+            Mode pilihan: <strong>{selectionRole === 'siswa' ? 'Siswa' : 'Guru'}</strong> — hanya role yang sama yang bisa dipilih.
+          </p>
+        )}
       </div>
 
       {detailStudent && (
@@ -1308,7 +1473,7 @@ function KelolaAkun() {
                   </div>
                 </>
               ) : (
-                <>
+                <> 
                   <div className="form-group">
                     <label>NIP</label>
                     <input type="text" value={formData.nip || ''} onChange={(e) => setFormData({...formData, nip: e.target.value})} required />

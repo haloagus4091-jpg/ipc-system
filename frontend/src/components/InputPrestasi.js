@@ -32,6 +32,8 @@ function InputPrestasi() {
   const [loadingIndex, setLoadingIndex] = useState(false);
   const [userRole, setUserRole] = useState('');
   const editModal = useEditModal();
+  const [ipcConfig, setIpcConfig] = useState([]);
+  const [calculatedPoint, setCalculatedPoint] = useState(0);
 
   const grhaOptions = [
     'Airsanya', 'Daksina', 'Genya', 'Madhya', 'Nairiti', 'Pascima', 'Purwa', 'Uttara', 'Wayabhya'
@@ -42,6 +44,7 @@ function InputPrestasi() {
     setUserRole(user.role || '');
     fetchTeachers();
     fetchUserSubmissions();
+    fetchIpcConfig();
     checkAccess();
     if (user.role === 'superadmin') {
       fetchAllPrestasi();
@@ -189,6 +192,26 @@ function InputPrestasi() {
     }
   };
 
+  const fetchIpcConfig = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.get('/ipc-config/active', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setIpcConfig(response.data);
+    } catch (error) {
+      console.error('Error fetching IPC config:', error);
+    }
+  };
+
+  const calculatePoint = (jenis, tingkat, juara) => {
+    const prestasiConfigs = ipcConfig['prestasi'] || [];
+    const config = prestasiConfigs.find(
+      c => c.field1 === jenis && c.field2 === tingkat && c.field3 === juara
+    );
+    return config ? config.point_value : 0;
+  };
+
   const handleChange = (e) => {
     const { name, value } = e.target;
     if (name === 'kelas') {
@@ -199,6 +222,15 @@ function InputPrestasi() {
 
     if (name === 'nis' && value.length >= 1) {
       fetchStudentData(value);
+    }
+
+    // Calculate point when jenis, kategori (tingkat), or juara changes
+    if (name === 'jenis' || name === 'kategori' || name === 'juara') {
+      const newFormData = name === 'jenis' || name === 'kategori' || name === 'juara' 
+        ? { ...formData, [name]: value } 
+        : formData;
+      const point = calculatePoint(newFormData.jenis, newFormData.kategori, newFormData.juara);
+      setCalculatedPoint(point);
     }
   };
 
@@ -493,7 +525,7 @@ function InputPrestasi() {
             </select>
           </div>
           <div className="form-group">
-            <label>Kategori</label>
+            <label>Kategori (Tingkat)</label>
             <select name="kategori" value={formData.kategori} onChange={handleChange}>
               <option value="kecamatan">Kecamatan</option>
               <option value="kabupaten">Kabupaten</option>
@@ -502,6 +534,24 @@ function InputPrestasi() {
               <option value="internasional">Internasional</option>
             </select>
           </div>
+        </div>
+
+        <div className="form-group" style={{ 
+          padding: '12px', 
+          background: calculatedPoint > 0 ? '#EAFBF3' : '#FEE2E2',
+          borderRadius: '4px',
+          marginTop: '12px'
+        }}>
+          <label style={{ fontWeight: '600', marginBottom: '4px', display: 'block' }}>
+            Point IPC yang akan didapatkan:
+          </label>
+          <span style={{ 
+            fontSize: '18px', 
+            fontWeight: '700',
+            color: calculatedPoint > 0 ? '#0F7A55' : '#DC2626'
+          }}>
+            {calculatedPoint > 0 ? '+' : ''}{calculatedPoint}
+          </span>
         </div>
 
         <button

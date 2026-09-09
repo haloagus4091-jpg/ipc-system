@@ -23,20 +23,23 @@ function InputPelanggaran() {
   const [loadingIndex, setLoadingIndex] = useState(false);
   const [userRole, setUserRole] = useState('');
   const editModal = useEditModal();
+  const [ipcConfig, setIpcConfig] = useState([]);
+  const [calculatedPoint, setCalculatedPoint] = useState(0);
 
   const grhaOptions = [
     'Airsanya', 'Daksina', 'Genya', 'Madhya', 'Nairiti', 'Pascima', 'Purwa', 'Uttara', 'Wayabhya'
   ];
 
   const jenisOptions = [
-    { value: 'ringan', label: 'Ringan (-1 point)' },
-    { value: 'sedang', label: 'Sedang (-5 point)' },
-    { value: 'berat', label: 'Berat (-25 point)' }
+    { value: 'ringan', label: 'Ringan' },
+    { value: 'sedang', label: 'Sedang' },
+    { value: 'berat', label: 'Berat' }
   ];
 
   useEffect(() => {
     const user = JSON.parse(localStorage.getItem('user') || '{}');
     setUserRole(user.role || '');
+    fetchIpcConfig();
     if (user.role === 'superadmin') {
       fetchAllPelanggaran();
     }
@@ -55,6 +58,26 @@ function InputPelanggaran() {
     } finally {
       setLoadingIndex(false);
     }
+  };
+
+  const fetchIpcConfig = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.get('/ipc-config/active', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setIpcConfig(response.data);
+    } catch (error) {
+      console.error('Error fetching IPC config:', error);
+    }
+  };
+
+  const calculatePoint = (jenis) => {
+    const pelanggaranConfigs = ipcConfig['pelanggaran'] || [];
+    const config = pelanggaranConfigs.find(
+      c => c.field1 === jenis
+    );
+    return config ? config.point_value : 0;
   };
 
   // useEffect(() => {
@@ -90,6 +113,12 @@ function InputPelanggaran() {
     // Auto-fill student data when NIS is entered
     if (name === 'nis' && value.length >= 1) {
       fetchStudentData(value);
+    }
+
+    // Calculate point when jenis_pelanggaran changes
+    if (name === 'jenis_pelanggaran') {
+      const point = calculatePoint(value);
+      setCalculatedPoint(point);
     }
   };
 
@@ -392,9 +421,27 @@ function InputPelanggaran() {
           <label>Jenis Pelanggaran</label>
           <select name="jenis_pelanggaran" value={formData.jenis_pelanggaran} onChange={handleChange}>
             {jenisOptions.map(jenis => (
-              <option key={jenis.value} value={jenis.value}>{jenis.label}</option>
+              <option key={jenis.value} value={jenis.value}>{jenis.label} {formData.jenis_pelanggaran === jenis.value && calculatedPoint ? `(${calculatedPoint} point)` : ''}</option>
             ))}
           </select>
+        </div>
+
+        <div className="form-group" style={{ 
+          padding: '12px', 
+          background: '#FEE2E2',
+          borderRadius: '4px',
+          marginTop: '12px'
+        }}>
+          <label style={{ fontWeight: '600', marginBottom: '4px', display: 'block' }}>
+            Point IPC yang akan dikurangi:
+          </label>
+          <span style={{ 
+            fontSize: '18px', 
+            fontWeight: '700',
+            color: '#DC2626'
+          }}>
+            {calculatedPoint}
+          </span>
         </div>
 
         <div className="form-group">
