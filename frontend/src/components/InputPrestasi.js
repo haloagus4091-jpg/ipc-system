@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
-import { KELAS_OPTIONS, applyKelasChange } from '../utils/kelasJurusan';
 import EditModal from './EditModal';
 import useEditModal from '../hooks/useEditModal';
 import API_BASE_URL from '../config';
@@ -54,6 +53,7 @@ function InputPrestasi() {
     if (user.role === 'superadmin') {
       fetchAllPrestasi();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const fetchAllPrestasi = async () => {
@@ -236,11 +236,7 @@ function InputPrestasi() {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    if (name === 'kelas') {
-      setFormData(prev => applyKelasChange(prev, value));
-    } else {
-      setFormData({ ...formData, [name]: value });
-    }
+    setFormData({ ...formData, [name]: value });
 
     // Reset auto-fill flag if user clears the field
     if ((name === 'nis' || name === 'nama') && value === '') {
@@ -531,15 +527,15 @@ function InputPrestasi() {
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
           <div className="form-group">
             <label>Kelas</label>
-            <select name="kelas" 
-            value={formData.kelas} 
-            onChange={handleChange} required>
-              <option value="">Pilih Kelas</option>
-              {KELAS_OPTIONS.map(kelas => (
-                <option key={kelas} value={kelas}>{kelas}</option>
-              ))}
-            </select>
-            <p className="form-helper-text">Data diisi otomatis dari NIS</p>
+            <input 
+              type="text" 
+              name="kelas" 
+              value={formData.kelas} 
+              onChange={handleChange} 
+              disabled
+              style={{ backgroundColor: '#f0f0f0', cursor: 'not-allowed' }}
+            />
+            <small style={{ color: '#666', fontSize: '12px' }}>Auto-filled from student data</small>
           </div>
           <div className="form-group">
             <label>Grha</label>
@@ -663,17 +659,14 @@ function InputPrestasi() {
 
         <div className="form-group">
           <label>Kelas</label>
-          <select 
+          <input 
+            type="text" 
             value={editModal.editFormData.kelas || ''} 
-            required
-            disabled={true}
             onChange={(e) => editModal.setEditFormData({ ...editModal.editFormData, kelas: e.target.value })}
-          >
-            <option value="">Pilih Kelas</option>
-            {KELAS_OPTIONS.map(kelas => (
-              <option key={kelas} value={kelas}>{kelas}</option>
-            ))}
-          </select>
+            disabled
+            style={{ backgroundColor: '#f0f0f0', cursor: 'not-allowed' }}
+          />
+          <small style={{ color: '#666', fontSize: '12px' }}>Auto-filled from student data</small>
         </div>
 
         <div className="form-group">

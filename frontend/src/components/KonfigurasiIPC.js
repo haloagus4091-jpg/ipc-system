@@ -15,6 +15,8 @@ function KonfigurasiIPC() {
   const [userRole, setUserRole] = useState('');
   const [organisasiOptions, setOrganisasiOptions] = useState([]);
   const [organisasiName, setOrganisasiName] = useState('');
+  const [perilakuRatings, setPerilakuRatings] = useState([]);
+  const [perilakuRatingName, setPerilakuRatingName] = useState('');
 
   const categories = [
     { key: 'prestasi', label: 'Prestasi', icon: '🏆' },
@@ -30,6 +32,7 @@ function KonfigurasiIPC() {
     setUserRole(user.role || '');
     fetchConfigs();
     fetchOrganisasiOptions();
+    fetchPerilakuRatings();
   }, []);
 
   const fetchOrganisasiOptions = async () => {
@@ -42,6 +45,54 @@ function KonfigurasiIPC() {
     } catch (error) {
       console.error('Error fetching organisasi options:', error);
       setMessage('Gagal memuat daftar organisasi');
+    }
+  };
+
+  const fetchPerilakuRatings = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.get('/ipc-config/perilaku-ratings', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (!Array.isArray(response.data)) {
+        throw new Error('Invalid perilaku rating response');
+      }
+      setPerilakuRatings(response.data);
+    } catch (error) {
+      console.error('Error fetching perilaku ratings:', error);
+      setMessage('Gagal memuat daftar tingkat penilaian');
+    }
+  };
+
+  const addPerilakuRating = async (event) => {
+    event.preventDefault();
+    try {
+      setSaving(true);
+      const token = localStorage.getItem('token');
+      await axios.post('/ipc-config/perilaku-ratings', { name: perilakuRatingName }, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setPerilakuRatingName('');
+      setMessage('Tingkat penilaian berhasil ditambahkan!');
+      await fetchPerilakuRatings();
+    } catch (error) {
+      setMessage(error.response?.data?.message || 'Gagal menambahkan tingkat penilaian');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const deletePerilakuRating = async (rating) => {
+    if (!window.confirm(`Hapus tingkat penilaian ${rating.name}?`)) return;
+    try {
+      const token = localStorage.getItem('token');
+      await axios.delete(`/ipc-config/perilaku-ratings/${rating.id}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setMessage('Tingkat penilaian berhasil dihapus!');
+      fetchPerilakuRatings();
+    } catch (error) {
+      setMessage(error.response?.data?.message || 'Gagal menghapus tingkat penilaian');
     }
   };
 
@@ -199,7 +250,7 @@ function KonfigurasiIPC() {
       organisasi: 'Nama Organisasi',
       kepanitiaan: 'Jabatan',
       event: 'Tingkat Event',
-      pelanggaran: 'Jenis Pelanggaran',
+      pelanggaran: 'Tingkat Pelanggaran',
       perilaku: 'Nama Karakter'
     };
     return labels[category] || 'Field 1';
@@ -217,9 +268,26 @@ function KonfigurasiIPC() {
     return labels[category] || 'Field 2';
   };
 
+  const FIXED_KARAKTER_OPTIONS = [
+    'tanggung_jawab',
+    'disiplin',
+    'kepedulian',
+    'kemandirian',
+    'spiritual',
+    'kejujuran',
+    'kepercayaan_diri'
+  ];
+
+  const showAddField2 = ['prestasi', 'organisasi', 'perilaku'].includes(activeCategory) ||
+    (activeCategory === 'pelanggaran' && pelanggaranAddType === 'detail');
+  const showTableField2 = !['kepanitiaan', 'event'].includes(activeCategory) &&
+    !(activeCategory === 'pelanggaran' && pelanggaranSection === 'severity');
+  const showEditField2 = ['prestasi', 'organisasi', 'perilaku'].includes(activeCategory) ||
+    (activeCategory === 'pelanggaran' && Boolean(editingConfig?.field2));
+
   const tableFields = [
     { key: 'field1', label: activeCategory === 'pelanggaran' ? (pelanggaranSection === 'severity' ? 'Tingkat Pelanggaran' : 'Detail Pelanggaran') : getHeaderLabel1(activeCategory) },
-    { key: 'field2', label: activeCategory === 'pelanggaran' && pelanggaranSection === 'detail' ? 'Tingkat Pelanggaran' : getHeaderLabel2(activeCategory) }
+    { key: 'field2', label: showTableField2 ? (activeCategory === 'pelanggaran' && pelanggaranSection === 'detail' ? 'Tingkat Pelanggaran' : getHeaderLabel2(activeCategory)) : '' }
   ].filter(field => field.label);
   const showDescription = !(activeCategory === 'pelanggaran' && pelanggaranSection === 'detail');
 
@@ -337,6 +405,51 @@ function KonfigurasiIPC() {
                 {label}
               </button>
             ))}
+          </div>
+        )}
+
+        {activeCategory === 'perilaku' && (
+          <div className="card" style={{ marginBottom: 20, background: '#F8FAFF' }}>
+            <h4>Daftar Tingkat Penilaian</h4>
+            <form onSubmit={addPerilakuRating} style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
+              <input
+                value={perilakuRatingName}
+                onChange={event => setPerilakuRatingName(event.target.value)}
+                placeholder="Contoh: Kurang Baik, Cukup Baik, Baik, Sangat Baik"
+                required
+                className="form-control"
+              />
+              <button className="btn btn-primary" disabled={saving}>Tambah</button>
+            </form>
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+              {perilakuRatings.length === 0 ? (
+                <p style={{ color: '#6B7080' }}>Belum ada tingkat penilaian yang tersedia.</p>
+              ) : perilakuRatings.map(rating => (
+                <span
+                  key={rating.id}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 6,
+                    padding: '8px 12px',
+                    background: '#F8FAFF',
+                    border: '1px solid #E7E8EE',
+                    borderRadius: 6,
+                    fontWeight: 600
+                  }}
+                >
+                  {rating.name.replace(/_/g, ' ')}
+                  <button
+                    type="button"
+                    className="btn btn-danger"
+                    onClick={() => deletePerilakuRating(rating)}
+                    style={{ padding: '2px 6px', fontSize: 11 }}
+                  >
+                    Hapus
+                  </button>
+                </span>
+              ))}
+            </div>
           </div>
         )}
 
@@ -499,9 +612,9 @@ function KonfigurasiIPC() {
                   style={{ background: '#F7F8FB', color: '#6B7080' }}
                 />
               </div>
-              {(getHeaderLabel2(activeCategory) || (activeCategory === 'pelanggaran' && editingConfig.field2)) && (
+              {showEditField2 && (
                 <div className="form-group">
-                  <label>{activeCategory === 'pelanggaran' ? 'Detail Pelanggaran' : getHeaderLabel2(activeCategory)}</label>
+                  <label>{activeCategory === 'pelanggaran' ? 'Tingkat Pelanggaran' : getHeaderLabel2(activeCategory)}</label>
                   <input
                     type="text"
                     name="field2"
@@ -625,13 +738,11 @@ function KonfigurasiIPC() {
                 {activeCategory === 'perilaku' && (
                   <select name="field1" required className="form-control" style={{ fontSize: 14 }}>
                     <option value="">Pilih Karakter</option>
-                    <option value="tanggung_jawab">Tanggung Jawab</option>
-                    <option value="disiplin">Disiplin</option>
-                    <option value="kepedulian">Kepedulian</option>
-                    <option value="kemandirian">Kemandirian</option>
-                    <option value="spiritual">Spiritual</option>
-                    <option value="kejujuran">Kejujuran</option>
-                    <option value="kepercayaan_diri">Kepercayaan Diri</option>
+                    {FIXED_KARAKTER_OPTIONS.map(karakter => (
+                      <option key={karakter} value={karakter}>
+                        {karakter.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                      </option>
+                    ))}
                   </select>
                 )}
                 {activeCategory === 'pelanggaran' && pelanggaranAddType === 'severity' && (
@@ -685,7 +796,7 @@ function KonfigurasiIPC() {
                   </select>
                 )}
               </div>
-              {(getHeaderLabel2(activeCategory) || (activeCategory === 'pelanggaran' && pelanggaranAddType === 'detail')) && (
+              {showAddField2 && (
                 <div className="form-group" style={{ marginBottom: 16 }}>
                   <label style={{ display: 'block', marginBottom: 6, fontSize: 13, fontWeight: 500 }}>
                     {activeCategory === 'pelanggaran' ? 'Tingkat Pelanggaran' : getHeaderLabel2(activeCategory)} *
@@ -711,6 +822,16 @@ function KonfigurasiIPC() {
                     ))}
                     </select>
                   )}
+                  {activeCategory === 'perilaku' && (
+                    <select name="field2" required className="form-control" style={{ fontSize: 14 }}>
+                      <option value="">Pilih Tingkat Penilaian</option>
+                      {perilakuRatings.filter(rating => rating.is_active).map(rating => (
+                        <option key={rating.id} value={rating.name}>
+                          {rating.name.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                        </option>
+                      ))}
+                    </select>
+                  )}
                   {activeCategory === 'organisasi' && (
                     <select name="field2" required className="form-control" style={{ fontSize: 14 }}>
                       <option value="">Pilih Jabatan</option>
@@ -720,15 +841,6 @@ function KonfigurasiIPC() {
                       <option value="bendahara">Bendahara</option>
                       <option value="koordinator">Koordinator</option>
                       <option value="anggota">Anggota</option>
-                    </select>
-                  )}
-                  {activeCategory === 'perilaku' && (
-                    <select name="field2" required className="form-control" style={{ fontSize: 14 }}>
-                      <option value="">Pilih Tingkat</option>
-                      <option value="sangat baik">Sangat Baik</option>
-                      <option value="baik">Baik</option>
-                      <option value="cukup baik">Cukup Baik</option>
-                      <option value="kurang baik">Kurang Baik</option>
                     </select>
                   )}
                 </div>

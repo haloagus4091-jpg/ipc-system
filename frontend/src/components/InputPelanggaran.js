@@ -18,7 +18,6 @@ function InputPelanggaran() {
   const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(false);
   const [isAutoFilled, setIsAutoFilled] = useState(false);
-  const [nisLoading, setNisLoading] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [allPelanggaran, setAllPelanggaran] = useState([]);
   const [loadingIndex, setLoadingIndex] = useState(false);
@@ -40,12 +39,6 @@ function InputPelanggaran() {
     'Airsanya', 'Daksina', 'Genya', 'Madhya', 'Nairiti', 'Pascima', 'Purwa', 'Uttara', 'Wayabhya'
   ];
 
-  const jenisOptions = [
-    { value: 'ringan', label: 'Ringan' },
-    { value: 'sedang', label: 'Sedang' },
-    { value: 'berat', label: 'Berat' }
-  ];
-
   useEffect(() => {
     const user = JSON.parse(localStorage.getItem('user') || '{}');
     setUserRole(user.role || '');
@@ -54,6 +47,7 @@ function InputPelanggaran() {
       fetchAllPelanggaran();
     }
     fetchStudents();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const fetchAllPelanggaran = async () => {
@@ -101,8 +95,6 @@ function InputPelanggaran() {
     }
   };
 
-  const calculatePoint = (jenis) => {
-    const pelanggaranConfigs = ipcConfig['pelanggaran'] || [];
   const calculatePoint = (jenis, configData = ipcConfig) => {
     const pelanggaranConfigs = configData.pelanggaran || [];
     const config = pelanggaranConfigs.find(

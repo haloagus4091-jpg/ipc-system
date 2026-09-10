@@ -55,6 +55,7 @@ function InputOrganisasi() {
     checkAccess();
     fetchIpcConfig();
     fetchOrganisasiOptions();
+    fetchStudents();
     // Get user role from localStorage
     const user = JSON.parse(localStorage.getItem('user') || '{}');
     setUserRole(user.role || '');
@@ -72,6 +73,18 @@ function InputOrganisasi() {
       setOrganisasiOptions(response.data.filter(option => option.is_active));
     } catch (error) {
       console.error('Error fetching organisasi options:', error);
+    }
+  };
+
+  const fetchStudents = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.get('/users', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setStudents(response.data.filter(user => user.role === 'siswa'));
+    } catch (error) {
+      console.error('Error fetching students:', error);
     }
   };
 
@@ -151,7 +164,7 @@ function InputOrganisasi() {
         c.field2?.trim().toLowerCase() === jabatan?.trim().toLowerCase()
     );
     return config ? config.point_value : 0;
-  });
+  }, [ipcConfig]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;

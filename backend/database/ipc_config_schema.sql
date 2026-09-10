@@ -11,6 +11,14 @@ CREATE TABLE IF NOT EXISTS ipc_organisasi (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
 
+CREATE TABLE IF NOT EXISTS ipc_perilaku_karakter (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(100) NOT NULL UNIQUE,
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+
 -- Main IPC Configuration Table
 DROP TABLE IF EXISTS ipc_config;
 CREATE TABLE ipc_config (
@@ -95,6 +103,10 @@ INSERT INTO ipc_config (category, field1, field2, field3, point_value, descripti
 ('perilaku', 'kepercayaan_diri', 'baik', NULL, 4, 'Karakter kepercayaan diri baik'),
 ('perilaku', 'kepercayaan_diri', 'cukup baik', NULL, 3, 'Karakter kepercayaan diri cukup baik'),
 ('perilaku', 'kepercayaan_diri', 'kurang baik', NULL, 1, 'Karakter kepercayaan diri kurang baik');
+
+INSERT IGNORE INTO ipc_perilaku_karakter (name)
+SELECT DISTINCT field1 FROM ipc_config
+WHERE category = 'perilaku' AND field1 IS NOT NULL;
 
 -- PELANGGARAN Configuration
 CREATE TABLE IF NOT EXISTS ipc_pelanggaran_level (

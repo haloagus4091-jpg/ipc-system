@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { KELAS_OPTIONS, applyKelasChange } from '../utils/kelasJurusan';
 import Select from 'react-select';
 import EditModal from './EditModal';
 import useEditModal from '../hooks/useEditModal';
@@ -22,15 +21,10 @@ function InputPerilaku() {
   const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(false);
   const [isAutoFilled, setIsAutoFilled] = useState(false);
-  const [nisLoading, setNisLoading] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [allPerilaku, setAllPerilaku] = useState([]);
   const [loadingIndex, setLoadingIndex] = useState(false);
   const [userRole, setUserRole] = useState('');
-  const [hasAccess, setHasAccess] = useState(true);
-  const [checkingAccess, setCheckingAccess] = useState(true);
-  const [accessMessage, setAccessMessage] = useState('');
-  const [submissions, setSubmissions] = useState([]);
   const editModal = useEditModal();
   const [ipcConfig, setIpcConfig] = useState([]);
   const [calculatedPoints, setCalculatedPoints] = useState({});
@@ -40,17 +34,21 @@ function InputPerilaku() {
     'Airsanya', 'Daksina', 'Genya', 'Madhya', 'Nairiti', 'Pascima', 'Purwa', 'Uttara', 'Wayabhya'
   ];
 
-  const karakterOptions = [
-    { value: 'kurang baik', label: 'Kurang Baik' },
-    { value: 'cukup baik', label: 'Cukup Baik' },
-    { value: 'baik', label: 'Baik' },
-    { value: 'sangat baik', label: 'Sangat Baik' }
+  const FIXED_KARAKTER_FIELDS = [
+    'tanggung_jawab',
+    'disiplin',
+    'kepedulian',
+    'kemandirian',
+    'spiritual',
+    'kejujuran',
+    'kepercayaan_diri'
   ];
 
+  const [perilakuRatings, setPerilakuRatings] = useState([]);
+
   useEffect(() => {
-    fetchUserSubmissions();
-    checkAccess();
     fetchIpcConfig();
+    fetchPerilakuRatings();
     fetchStudents();
     // Get user role from localStorage
     const user = JSON.parse(localStorage.getItem('user') || '{}');
@@ -59,6 +57,7 @@ function InputPerilaku() {
       fetchAllPerilaku();
     }
   }, []);
+
 
   const fetchAllPerilaku = async () => {
     try {
@@ -75,48 +74,6 @@ function InputPerilaku() {
     }
   };
 
-  const checkAccess = async () => {
-    try {
-      const token = localStorage.getItem('token');
-      const user = JSON.parse(localStorage.getItem('user') || '{}');
-      
-      // Superadmin always has access
-      if (user.role === 'superadmin') {
-        setHasAccess(true);
-        setCheckingAccess(false);
-        return;
-      }
-      
-      const response = await axios.get('/input-access/status/my-access', {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      
-      const canInputPerilaku = response.data.perilaku;
-      setHasAccess(canInputPerilaku);
-      
-      if (!canInputPerilaku) {
-        setAccessMessage('Anda tidak memiliki izin untuk input data perilaku. Silakan hubungi SuperAdmin.');
-      }
-    } catch (error) {
-      console.error('Error checking access:', error);
-      setHasAccess(true);
-    } finally {
-      setCheckingAccess(false);
-    }
-  };
-
-  const fetchUserSubmissions = async () => {
-    try {
-      const token = localStorage.getItem('token');
-      const response = await axios.get('/approvals-v2/user-submissions', {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      setSubmissions(response.data.perilaku || []);
-    } catch (error) {
-      console.error('Error fetching submissions:', error);
-    }
-  };
-
   const fetchIpcConfig = async () => {
     try {
       const token = localStorage.getItem('token');
@@ -126,6 +83,21 @@ function InputPerilaku() {
       setIpcConfig(response.data);
     } catch (error) {
       console.error('Error fetching IPC config:', error);
+    }
+  };
+
+  const fetchPerilakuRatings = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.get('/ipc-config/perilaku-ratings', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (!Array.isArray(response.data)) {
+        throw new Error('Invalid perilaku rating response');
+      }
+      setPerilakuRatings(response.data);
+    } catch (error) {
+      console.error('Error fetching perilaku ratings:', error);
     }
   };
 
@@ -150,13 +122,20 @@ function InputPerilaku() {
     return config ? config.point_value : 0;
   };
 
+  const getPerilakuRatingOptions = () => {
+    return perilakuRatings
+      .filter(rating => rating.is_active)
+      .map(rating => ({
+        value: rating.name,
+        label: rating.name.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())
+      }));
+  };
+
+  const karakterOptions = getPerilakuRatingOptions();
+
   const handleChange = (e) => {
     const { name, value } = e.target;
-    if (name === 'kelas') {
-      setFormData(prev => applyKelasChange(prev, value));
-    } else {
-      setFormData({ ...formData, [name]: value });
-    }
+    setFormData({ ...formData, [name]: value });
 
     // Reset auto-fill flag if user clears the field
     if ((name === 'nis' || name === 'nama') && value === '') {
@@ -205,7 +184,6 @@ function InputPerilaku() {
 
   const fetchStudentData = async (nis) => {
     try {
-      setNisLoading(true);
       const token = localStorage.getItem('token');
       const response = await axios.get(`/users/nis/${nis}`, {
         headers: { Authorization: `Bearer ${token}` }
@@ -223,14 +201,11 @@ function InputPerilaku() {
     } catch (error) {
       // Student not found or error, don't auto-fill
       console.log('Student not found or error fetching data');
-    } finally {
-      setNisLoading(false);
     }
   };
 
   const fetchStudentDataByName = async (nama) => {
     try {
-      setNisLoading(true);
       const token = localStorage.getItem('token');
       const response = await axios.get(`/users/nama/${nama}`, {
         headers: { Authorization: `Bearer ${token}` }
@@ -248,8 +223,6 @@ function InputPerilaku() {
     } catch (error) {
       // Student not found or error, don't auto-fill
       console.log('Student not found or error fetching data');
-    } finally {
-      setNisLoading(false);
     }
   };
 
@@ -441,12 +414,15 @@ function InputPerilaku() {
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
           <div className="form-group">
             <label>Kelas</label>
-            <select name="kelas" value={formData.kelas} onChange={handleChange} required>
-              <option value="">Pilih Kelas</option>
-              {KELAS_OPTIONS.map(kelas => (
-                <option key={kelas} value={kelas}>{kelas}</option>
-              ))}
-            </select>
+            <input 
+              type="text" 
+              name="kelas" 
+              value={formData.kelas} 
+              onChange={handleChange} 
+              disabled
+              style={{ backgroundColor: '#f0f0f0', cursor: 'not-allowed' }}
+            />
+            <small style={{ color: '#666', fontSize: '12px' }}>Auto-filled from student data</small>
           </div>
           <div className="form-group">
             <label>Grha</label>
@@ -588,15 +564,14 @@ function InputPerilaku() {
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
           <div className="form-group">
             <label>Kelas</label>
-            <select 
+            <input 
+              type="text" 
               value={editModal.editFormData.kelas || ''} 
               onChange={(e) => editModal.setEditFormData({ ...editModal.editFormData, kelas: e.target.value })}
-            >
-              <option value="">Pilih Kelas</option>
-              {KELAS_OPTIONS.map(kelas => (
-                <option key={kelas} value={kelas}>{kelas}</option>
-              ))}
-            </select>
+              disabled
+              style={{ backgroundColor: '#f0f0f0', cursor: 'not-allowed' }}
+            />
+            <small style={{ color: '#666', fontSize: '12px' }}>Auto-filled from student data</small>
           </div>
         </div>
 

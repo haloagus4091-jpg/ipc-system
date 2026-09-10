@@ -763,6 +763,7 @@ function LaporanCetak({ user }) {
     return null;
   };
 
+  // eslint-disable-next-line no-unused-vars
   const generatePdfBlob = async () => {
     let data = [];
 

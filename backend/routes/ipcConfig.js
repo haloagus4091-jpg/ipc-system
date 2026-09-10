@@ -13,6 +13,26 @@ async function getOrganisasiOptions(activeOnly = false) {
     return rows;
 }
 
+async function getPerilakuCharacters(activeOnly = false) {
+    const [rows] = await db.query(
+        `SELECT id, name, is_active, created_at, updated_at
+         FROM ipc_perilaku_karakter
+         ${activeOnly ? 'WHERE is_active = TRUE' : ''}
+         ORDER BY name`
+    );
+    return rows;
+}
+
+async function getPerilakuRatings(activeOnly = false) {
+    const [rows] = await db.query(
+        `SELECT id, name, is_active, created_at, updated_at
+         FROM ipc_perilaku_tingkat
+         ${activeOnly ? 'WHERE is_active = TRUE' : ''}
+         ORDER BY name`
+    );
+    return rows;
+}
+
 async function getPelanggaranConfigs(activeOnly = false) {
     const activeClause = activeOnly ? 'WHERE l.is_active = TRUE' : '';
     const [rows] = await db.query(`
@@ -165,6 +185,98 @@ router.delete('/organisasi-options/:id', auth, superAdminOnly, async (req, res) 
         res.json({ message: 'Organisasi berhasil dihapus' });
     } catch (error) {
         console.error('Error deleting organisasi option:', error);
+        res.status(500).json({ message: 'Server error' });
+    }
+});
+
+router.get('/perilaku-characters', auth, async (req, res) => {
+    try {
+        res.json(await getPerilakuCharacters(true));
+    } catch (error) {
+        console.error('Error fetching perilaku characters:', error);
+        res.status(500).json({ message: 'Server error' });
+    }
+});
+
+router.post('/perilaku-characters', auth, superAdminOnly, async (req, res) => {
+    try {
+        const { name } = req.body;
+        if (!name?.trim()) return res.status(400).json({ message: 'Nama karakter wajib diisi' });
+        const [result] = await db.query(
+            'INSERT INTO ipc_perilaku_karakter (name, is_active) VALUES (?, TRUE)', [name.trim()]
+        );
+        const options = await getPerilakuCharacters();
+        res.status(201).json(options.find(option => option.id === result.insertId));
+    } catch (error) {
+        if (error.code === 'ER_DUP_ENTRY') return res.status(400).json({ message: 'Karakter sudah terdaftar' });
+        console.error('Error creating perilaku character:', error);
+        res.status(500).json({ message: 'Server error' });
+    }
+});
+
+router.delete('/perilaku-characters/:id', auth, superAdminOnly, async (req, res) => {
+    try {
+        const [option] = await db.query('SELECT name FROM ipc_perilaku_karakter WHERE id = ?', [req.params.id]);
+        if (!option.length) return res.status(404).json({ message: 'Karakter tidak ditemukan' });
+        const [configs] = await db.query(
+            `SELECT COUNT(*) count FROM ipc_config WHERE category = 'perilaku' AND field1 = ?`,
+            [option[0].name]
+        );
+        if (configs[0].count > 0) {
+            return res.status(409).json({
+                message: `Karakter ${option[0].name} tidak dapat dihapus karena masih memiliki konfigurasi point IPC`
+            });
+        }
+        await db.query('DELETE FROM ipc_perilaku_karakter WHERE id = ?', [req.params.id]);
+        res.json({ message: 'Karakter berhasil dihapus' });
+    } catch (error) {
+        console.error('Error deleting perilaku character:', error);
+        res.status(500).json({ message: 'Server error' });
+    }
+});
+
+router.get('/perilaku-ratings', auth, async (req, res) => {
+    try {
+        res.json(await getPerilakuRatings(true));
+    } catch (error) {
+        console.error('Error fetching perilaku ratings:', error);
+        res.status(500).json({ message: 'Server error' });
+    }
+});
+
+router.post('/perilaku-ratings', auth, superAdminOnly, async (req, res) => {
+    try {
+        const { name } = req.body;
+        if (!name?.trim()) return res.status(400).json({ message: 'Nama tingkat penilaian wajib diisi' });
+        const [result] = await db.query(
+            'INSERT INTO ipc_perilaku_tingkat (name, is_active) VALUES (?, TRUE)', [name.trim()]
+        );
+        const options = await getPerilakuRatings();
+        res.status(201).json(options.find(option => option.id === result.insertId));
+    } catch (error) {
+        if (error.code === 'ER_DUP_ENTRY') return res.status(400).json({ message: 'Tingkat penilaian sudah terdaftar' });
+        console.error('Error creating perilaku rating:', error);
+        res.status(500).json({ message: 'Server error' });
+    }
+});
+
+router.delete('/perilaku-ratings/:id', auth, superAdminOnly, async (req, res) => {
+    try {
+        const [option] = await db.query('SELECT name FROM ipc_perilaku_tingkat WHERE id = ?', [req.params.id]);
+        if (!option.length) return res.status(404).json({ message: 'Tingkat penilaian tidak ditemukan' });
+        const [configs] = await db.query(
+            `SELECT COUNT(*) count FROM ipc_config WHERE category = 'perilaku' AND field2 = ?`,
+            [option[0].name]
+        );
+        if (configs[0].count > 0) {
+            return res.status(409).json({
+                message: `Tingkat penilaian ${option[0].name} tidak dapat dihapus karena masih memiliki konfigurasi point IPC`
+            });
+        }
+        await db.query('DELETE FROM ipc_perilaku_tingkat WHERE id = ?', [req.params.id]);
+        res.json({ message: 'Tingkat penilaian berhasil dihapus' });
+    } catch (error) {
+        console.error('Error deleting perilaku rating:', error);
         res.status(500).json({ message: 'Server error' });
     }
 });

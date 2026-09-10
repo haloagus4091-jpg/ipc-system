@@ -3,10 +3,18 @@ import axios from 'axios';
 import * as XLSX from 'xlsx';
 import ExcelJS from 'exceljs';
 import StudentDetail from './StudentDetail';
-import { KELAS_OPTIONS } from '../utils/kelasJurusan';
 import { GRHA_OPTIONS, getRowField, normalizeGrha } from '../utils/excelImport';
 
 const JABATAN_OPTIONS = ['Guru', 'Pegawai', 'Staff'];
+
+const KELAS_OPTIONS = [
+  'X TKJ 1', 'X TKJ 2', 'X TKR 1', 'X TKR 2',
+  'X DPIB 1', 'X DPIB 2',
+  'XI TKJ 1', 'XI TKJ 2', 'XI TKR 1', 'XI TKR 2',
+  'XI DPIB 1', 'XI DPIB 2',
+  'XII TKJ 1', 'XII TKJ 2', 'XII TKR 1', 'XII TKR 2',
+  'XII DPIB 1', 'XII DPIB 2'
+];
 
 function KelolaAkun() {
   const [users, setUsers] = useState([]);
