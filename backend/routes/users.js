@@ -121,6 +121,28 @@ router.get('/nis/:nis', auth, async (req, res) => {
     }
 });
 
+// Get student data by name (for auto-fill in input forms) - MUST BE BEFORE /:id
+router.get('/nama/:nama', auth, async (req, res) => {
+    try {
+        console.log('Fetching student by name:', req.params.nama);
+        const [users] = await db.query(
+            'SELECT id, nama, nis, kelas, grha FROM users WHERE nama = ? AND role = ?',
+            [req.params.nama, 'siswa']
+        );
+        
+        console.log('Found students:', users.length);
+        
+        if (users.length === 0) {
+            return res.status(404).json({ message: 'Siswa tidak ditemukan' });
+        }
+        
+        res.json(users[0]);
+    } catch (error) {
+        console.error('Error fetching student by name:', error);
+        res.status(500).json({ message: 'Server error' });
+    }
+});
+
 // Get all users (Superadmin and Teacher)
 router.get('/', auth, teacherOrSuperAdmin, async (req, res) => {
     try {

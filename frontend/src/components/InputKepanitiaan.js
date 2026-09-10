@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import Select from 'react-select';
 import EditModal from './EditModal';
 import useEditModal from '../hooks/useEditModal';
 import API_BASE_URL from '../config';
@@ -22,13 +23,13 @@ function InputKepanitiaan() {
   const [checkingAccess, setCheckingAccess] = useState(true);
   const [accessMessage, setAccessMessage] = useState('');
   const [isAutoFilled, setIsAutoFilled] = useState(false);
-  const [nisLoading, setNisLoading] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [allKepanitiaan, setAllKepanitiaan] = useState([]);
   const [loadingIndex, setLoadingIndex] = useState(false);
   const editModal = useEditModal();
   const [ipcConfig, setIpcConfig] = useState([]);
   const [calculatedPoint, setCalculatedPoint] = useState(0);
+  const [students, setStudents] = useState([]);
 
   const grhaOptions = [
     'Airsanya', 'Daksina', 'Genya', 'Madhya', 'Nairiti', 'Pascima', 'Purwa', 'Uttara', 'Wayabhya'
@@ -50,6 +51,10 @@ function InputKepanitiaan() {
     // Get user role from localStorage
     const user = JSON.parse(localStorage.getItem('user') || '{}');
     setUserRole(user.role || '');
+    fetchUserSubmissions();
+    fetchIpcConfig();
+    fetchStudents();
+    checkAccess();
     if (user.role === 'superadmin') {
       fetchAllKepanitiaan();
     }
@@ -124,6 +129,19 @@ function InputKepanitiaan() {
     }
   };
 
+  const fetchStudents = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.get('/users', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const studentList = response.data.filter(user => user.role === 'siswa');
+      setStudents(studentList);
+    } catch (error) {
+      console.error('Error fetching students:', error);
+    }
+  };
+
   const calculatePoint = (jabatan) => {
     const kepanitiaanConfigs = ipcConfig['kepanitiaan'] || [];
     const config = kepanitiaanConfigs.find(
@@ -136,9 +154,19 @@ function InputKepanitiaan() {
     const { name, value } = e.target;
     setFormData({ ...formData, [name]: value });
 
+    // Reset auto-fill flag if user clears the field
+    if ((name === 'nis' || name === 'nama') && value === '') {
+      setIsAutoFilled(false);
+    }
+
     // Auto-fill student data when NIS is entered
     if (name === 'nis' && value.length >= 1) {
       fetchStudentData(value);
+    }
+
+    // Auto-fill student data when nama is entered
+    if (name === 'nama' && value.length >= 1) {
+      fetchStudentDataByName(value);
     }
 
     // Calculate point when jabatan_kepanitiaan changes
@@ -148,9 +176,30 @@ function InputKepanitiaan() {
     }
   };
 
+  const handleStudentSelect = (selectedOption) => {
+    if (selectedOption) {
+      setFormData(prev => ({
+        ...prev,
+        nama: selectedOption.nama,
+        nis: selectedOption.nis,
+        kelas: selectedOption.kelas || '',
+        grha: selectedOption.grha || ''
+      }));
+      setIsAutoFilled(true);
+    } else {
+      setFormData(prev => ({
+        ...prev,
+        nama: '',
+        nis: '',
+        kelas: '',
+        grha: ''
+      }));
+      setIsAutoFilled(false);
+    }
+  };
+
   const fetchStudentData = async (nis) => {
     try {
-      setNisLoading(true);
       const token = localStorage.getItem('token');
       const response = await axios.get(`/users/nis/${nis}`, {
         headers: { Authorization: `Bearer ${token}` }
@@ -168,8 +217,28 @@ function InputKepanitiaan() {
     } catch (error) {
       // Student not found or error, don't auto-fill
       console.log('Student not found or error fetching data');
-    } finally {
-      setNisLoading(false);
+    }
+  };
+
+  const fetchStudentDataByName = async (nama) => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.get(`/users/nama/${nama}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      if (response.data) {
+        setFormData(prev => ({
+          ...prev,
+          nis: response.data.nis || '',
+          kelas: response.data.kelas || '',
+          grha: response.data.grha || ''
+        }));
+        setIsAutoFilled(true);
+      }
+    } catch (error) {
+      // Student not found or error, don't auto-fill
+      console.log('Student not found or error fetching data');
     }
   };
 
@@ -406,28 +475,37 @@ function InputKepanitiaan() {
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
           <div className="form-group">
             <label>Nama <span className="required">*</span></label>
-            <input
-              type="text"
-              name="nama"
-              value={formData.nama}
-              onChange={handleChange}
-              placeholder="Nama siswa"
-              required
-              disabled={isAutoFilled}
-              style={{ backgroundColor: isAutoFilled ? '#f0f0f0' : '' }}
+            <Select
+              value={students.find(s => s.nama === formData.nama && s.nis === formData.nis) ? { value: formData.nama, label: formData.nama, nama: formData.nama, nis: formData.nis, kelas: formData.kelas, grha: formData.grha } : null}
+              onChange={(selected) => handleStudentSelect(selected)}
+              options={students.map(student => ({ value: student.nama, label: `${student.nama} (${student.nis})`, nama: student.nama, nis: student.nis, kelas: student.kelas, grha: student.grha }))}
+              placeholder="Cari nama siswa..."
+              isSearchable
+              isClearable
+              styles={{
+                control: (provided) => ({
+                  ...provided,
+                  minHeight: '40px'
+                })
+              }}
             />
             {isAutoFilled && <p className="form-helper-text">Data diisi otomatis dari NIS</p>}
           </div>
           <div className="form-group">
             <label>NIS <span className="required">*</span></label>
-            <input
-              type="text"
-              name="nis"
-              value={formData.nis}
-              onChange={handleChange}
-              placeholder="Masukkan NIS siswa"
-              required
-              className={nisLoading ? 'auto-fill-loading' : (isAutoFilled ? 'auto-fill-success' : 'nis-input-highlight')}
+            <Select
+              value={students.find(s => s.nis === formData.nis) ? { value: formData.nis, label: formData.nis, nama: formData.nama, nis: formData.nis, kelas: formData.kelas, grha: formData.grha } : null}
+              onChange={(selected) => handleStudentSelect(selected)}
+              options={students.map(student => ({ value: student.nis, label: `${student.nis} - ${student.nama}`, nama: student.nama, nis: student.nis, kelas: student.kelas, grha: student.grha }))}
+              placeholder="Cari NIS siswa..."
+              isSearchable
+              isClearable
+              styles={{
+                control: (provided) => ({
+                  ...provided,
+                  minHeight: '40px'
+                })
+              }}
             />
             <p className="form-helper-text">Masukkan NIS untuk mengisi data siswa secara otomatis</p>
           </div>
@@ -441,8 +519,6 @@ function InputKepanitiaan() {
               name="kelas" 
               value={formData.kelas} 
               onChange={handleChange} 
-              disabled 
-              style={{ backgroundColor: '#f0f0f0', cursor: 'not-allowed' }}
               placeholder="Auto-filled from student data"
               required
             />
@@ -450,7 +526,7 @@ function InputKepanitiaan() {
           </div>
           <div className="form-group">
             <label>Grha</label>
-            <select name="grha" value={formData.grha} onChange={handleChange} disabled={isAutoFilled} style={{ backgroundColor: isAutoFilled ? '#f0f0f0' : '' }}>
+            <select name="grha" value={formData.grha} onChange={handleChange}>
               <option value="">Pilih Grha</option>
               {grhaOptions.map(grha => (
                 <option key={grha} value={grha}>{grha}</option>

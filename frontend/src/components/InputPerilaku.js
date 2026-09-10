@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { KELAS_OPTIONS, applyKelasChange } from '../utils/kelasJurusan';
+import Select from 'react-select';
 import EditModal from './EditModal';
 import useEditModal from '../hooks/useEditModal';
 
@@ -26,9 +27,14 @@ function InputPerilaku() {
   const [allPerilaku, setAllPerilaku] = useState([]);
   const [loadingIndex, setLoadingIndex] = useState(false);
   const [userRole, setUserRole] = useState('');
+  const [hasAccess, setHasAccess] = useState(true);
+  const [checkingAccess, setCheckingAccess] = useState(true);
+  const [accessMessage, setAccessMessage] = useState('');
+  const [submissions, setSubmissions] = useState([]);
   const editModal = useEditModal();
   const [ipcConfig, setIpcConfig] = useState([]);
   const [calculatedPoints, setCalculatedPoints] = useState({});
+  const [students, setStudents] = useState([]);
 
   const grhaOptions = [
     'Airsanya', 'Daksina', 'Genya', 'Madhya', 'Nairiti', 'Pascima', 'Purwa', 'Uttara', 'Wayabhya'
@@ -42,9 +48,13 @@ function InputPerilaku() {
   ];
 
   useEffect(() => {
+    fetchUserSubmissions();
+    checkAccess();
+    fetchIpcConfig();
+    fetchStudents();
+    // Get user role from localStorage
     const user = JSON.parse(localStorage.getItem('user') || '{}');
     setUserRole(user.role || '');
-    fetchIpcConfig();
     if (user.role === 'superadmin') {
       fetchAllPerilaku();
     }
@@ -65,6 +75,48 @@ function InputPerilaku() {
     }
   };
 
+  const checkAccess = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const user = JSON.parse(localStorage.getItem('user') || '{}');
+      
+      // Superadmin always has access
+      if (user.role === 'superadmin') {
+        setHasAccess(true);
+        setCheckingAccess(false);
+        return;
+      }
+      
+      const response = await axios.get('/input-access/status/my-access', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      const canInputPerilaku = response.data.perilaku;
+      setHasAccess(canInputPerilaku);
+      
+      if (!canInputPerilaku) {
+        setAccessMessage('Anda tidak memiliki izin untuk input data perilaku. Silakan hubungi SuperAdmin.');
+      }
+    } catch (error) {
+      console.error('Error checking access:', error);
+      setHasAccess(true);
+    } finally {
+      setCheckingAccess(false);
+    }
+  };
+
+  const fetchUserSubmissions = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.get('/approvals-v2/user-submissions', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setSubmissions(response.data.perilaku || []);
+    } catch (error) {
+      console.error('Error fetching submissions:', error);
+    }
+  };
+
   const fetchIpcConfig = async () => {
     try {
       const token = localStorage.getItem('token');
@@ -77,6 +129,19 @@ function InputPerilaku() {
     }
   };
 
+  const fetchStudents = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.get('/users', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const studentList = response.data.filter(user => user.role === 'siswa');
+      setStudents(studentList);
+    } catch (error) {
+      console.error('Error fetching students:', error);
+    }
+  };
+
   const calculatePoint = (karakter, tingkat) => {
     const perilakuConfigs = ipcConfig['perilaku'] || [];
     const config = perilakuConfigs.find(
@@ -84,32 +149,6 @@ function InputPerilaku() {
     );
     return config ? config.point_value : 0;
   };
-
-  // useEffect(() => {
-  //   checkPermission();
-  // }, []);
-
-  // const checkPermission = async () => {
-  //   const user = JSON.parse(localStorage.getItem('user'));
-  //   if (user?.role === 'superadmin') {
-  //     setHasPermission(true);
-  //     setCheckingPermission(false);
-  //     return;
-  //   }
-
-  //   try {
-  //     const token = localStorage.getItem('token');
-  //     const response = await axios.get('/permissions/' + user.id, {
-  //       headers: { Authorization: `Bearer ${token}` }
-  //     });
-  //     setHasPermission(response.data.can_input_perilaku === true);
-  //   } catch (error) {
-  //     console.error('Error checking permission:', error);
-  //     setHasPermission(false);
-  //   } finally {
-  //     setCheckingPermission(false);
-  //   }
-  // };
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -119,9 +158,19 @@ function InputPerilaku() {
       setFormData({ ...formData, [name]: value });
     }
 
+    // Reset auto-fill flag if user clears the field
+    if ((name === 'nis' || name === 'nama') && value === '') {
+      setIsAutoFilled(false);
+    }
+
     // Auto-fill student data when NIS is entered
     if (name === 'nis' && value.length >= 1) {
       fetchStudentData(value);
+    }
+
+    // Auto-fill student data when nama is entered
+    if (name === 'nama' && value.length >= 1) {
+      fetchStudentDataByName(value);
     }
 
     // Calculate point when karakter values change
@@ -129,6 +178,28 @@ function InputPerilaku() {
     if (karakterFields.includes(name)) {
       const point = calculatePoint(name, value);
       setCalculatedPoints(prev => ({ ...prev, [name]: point }));
+    }
+  };
+
+  const handleStudentSelect = (selectedOption) => {
+    if (selectedOption) {
+      setFormData(prev => ({
+        ...prev,
+        nama: selectedOption.nama,
+        nis: selectedOption.nis,
+        kelas: selectedOption.kelas || '',
+        grha: selectedOption.grha || ''
+      }));
+      setIsAutoFilled(true);
+    } else {
+      setFormData(prev => ({
+        ...prev,
+        nama: '',
+        nis: '',
+        kelas: '',
+        grha: ''
+      }));
+      setIsAutoFilled(false);
     }
   };
 
@@ -144,6 +215,31 @@ function InputPerilaku() {
         setFormData(prev => ({
           ...prev,
           nama: response.data.nama || '',
+          kelas: response.data.kelas || '',
+          grha: response.data.grha || ''
+        }));
+        setIsAutoFilled(true);
+      }
+    } catch (error) {
+      // Student not found or error, don't auto-fill
+      console.log('Student not found or error fetching data');
+    } finally {
+      setNisLoading(false);
+    }
+  };
+
+  const fetchStudentDataByName = async (nama) => {
+    try {
+      setNisLoading(true);
+      const token = localStorage.getItem('token');
+      const response = await axios.get(`/users/nama/${nama}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      if (response.data) {
+        setFormData(prev => ({
+          ...prev,
+          nis: response.data.nis || '',
           kelas: response.data.kelas || '',
           grha: response.data.grha || ''
         }));
@@ -224,20 +320,6 @@ function InputPerilaku() {
       editModal.setIsLoading(false);
     }
   };
-
-  // Permission checking disabled for now
-  // if (checkingPermission) {
-  //   return <div className="loading"><div className="spinner"></div></div>;
-  // }
-
-  // if (!hasPermission) {
-  //   return (
-  //     <div className="card">
-  //       <h2>Akses Ditolak</h2>
-  //       <p>Anda tidak memiliki izin untuk mengakses halaman ini. Silakan hubungi SuperAdmin.</p>
- //     </div>
-  //   );
-  // }
 
   return (
     <div className="card">
@@ -320,28 +402,37 @@ function InputPerilaku() {
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
           <div className="form-group">
             <label>Nama <span className="required">*</span></label>
-            <input
-              type="text"
-              name="nama"
-              value={formData.nama}
-              onChange={handleChange}
-              placeholder="Nama siswa"
-              required
-              disabled={isAutoFilled}
-              style={{ backgroundColor: isAutoFilled ? '#f0f0f0' : '' }}
+            <Select
+              value={students.find(s => s.nama === formData.nama && s.nis === formData.nis) ? { value: formData.nama, label: formData.nama, nama: formData.nama, nis: formData.nis, kelas: formData.kelas, grha: formData.grha } : null}
+              onChange={(selected) => handleStudentSelect(selected)}
+              options={students.map(student => ({ value: student.nama, label: `${student.nama} (${student.nis})`, nama: student.nama, nis: student.nis, kelas: student.kelas, grha: student.grha }))}
+              placeholder="Cari nama siswa..."
+              isSearchable
+              isClearable
+              styles={{
+                control: (provided) => ({
+                  ...provided,
+                  minHeight: '40px'
+                })
+              }}
             />
             {isAutoFilled && <p className="form-helper-text">Data diisi otomatis dari NIS</p>}
           </div>
           <div className="form-group">
             <label>NIS <span className="required">*</span></label>
-            <input
-              type="text"
-              name="nis"
-              value={formData.nis}
-              onChange={handleChange}
-              placeholder="Masukkan NIS siswa"
-              required
-              className={nisLoading ? 'auto-fill-loading' : (isAutoFilled ? 'auto-fill-success' : 'nis-input-highlight')}
+            <Select
+              value={students.find(s => s.nis === formData.nis) ? { value: formData.nis, label: formData.nis, nama: formData.nama, nis: formData.nis, kelas: formData.kelas, grha: formData.grha } : null}
+              onChange={(selected) => handleStudentSelect(selected)}
+              options={students.map(student => ({ value: student.nis, label: `${student.nis} - ${student.nama}`, nama: student.nama, nis: student.nis, kelas: student.kelas, grha: student.grha }))}
+              placeholder="Cari NIS siswa..."
+              isSearchable
+              isClearable
+              styles={{
+                control: (provided) => ({
+                  ...provided,
+                  minHeight: '40px'
+                })
+              }}
             />
             <p className="form-helper-text">Masukkan NIS untuk mengisi data siswa secara otomatis</p>
           </div>
@@ -350,7 +441,7 @@ function InputPerilaku() {
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
           <div className="form-group">
             <label>Kelas</label>
-            <select name="kelas" value={formData.kelas} onChange={handleChange} required disabled={isAutoFilled} style={{ backgroundColor: isAutoFilled ? '#f0f0f0' : '' }}>
+            <select name="kelas" value={formData.kelas} onChange={handleChange} required>
               <option value="">Pilih Kelas</option>
               {KELAS_OPTIONS.map(kelas => (
                 <option key={kelas} value={kelas}>{kelas}</option>
@@ -359,7 +450,7 @@ function InputPerilaku() {
           </div>
           <div className="form-group">
             <label>Grha</label>
-            <select name="grha" value={formData.grha} onChange={handleChange} disabled={isAutoFilled} style={{ backgroundColor: isAutoFilled ? '#f0f0f0' : '' }}>
+            <select name="grha" value={formData.grha} onChange={handleChange}>
               <option value="">Pilih Grha</option>
               {grhaOptions.map(grha => (
                 <option key={grha} value={grha}>{grha}</option>
