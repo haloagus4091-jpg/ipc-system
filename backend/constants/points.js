@@ -2,6 +2,7 @@
 // Now integrated with database configuration system
 
 const { getIPCConfig } = require('../utils/ipcConfig');
+const db = require('../config/database');
 
 // Default values as fallback
 const PRESTASI_POINTS = {
@@ -58,10 +59,22 @@ const PERILAKU_POINTS = {
 // Enhanced calculate functions that use database configuration
 const calculatePrestasiPoints = async (juara, kategori) => {
     try {
+        const [configuredPoints] = await db.query(
+            `SELECT point_value
+             FROM ipc_config
+             WHERE category = 'prestasi'
+               AND is_active = TRUE
+               AND field1 = ?
+               AND field2 = ?
+             LIMIT 1`,
+            [kategori, juara]
+        );
+        if (configuredPoints[0]) {
+            return configuredPoints[0].point_value;
+        }
+
         const config = await getIPCConfig();
-        const juaraPoint = config.prestasi?.juara?.[juara] || PRESTASI_POINTS[juara]?.[kategori] || 0;
-        const kategoriMultiplier = config.prestasi?.kategori?.[kategori] || 1;
-        return juaraPoint * kategoriMultiplier;
+        return config.prestasi?.juara?.[juara] || PRESTASI_POINTS[juara]?.[kategori] || 0;
     } catch (error) {
         console.error('Error calculating prestasi points:', error);
         return PRESTASI_POINTS[juara]?.[kategori] || 0;
@@ -78,8 +91,22 @@ const calculateEventPoints = async (tingkat) => {
     }
 };
 
-const calculateOrganisasiPoints = async (jabatan) => {
+const calculateOrganisasiPoints = async (kategori, jabatan) => {
     try {
+        const [configuredPoints] = await db.query(
+            `SELECT point_value
+             FROM ipc_config
+             WHERE category = 'organisasi'
+               AND is_active = TRUE
+               AND field1 = ?
+               AND field2 = ?
+             LIMIT 1`,
+            [kategori, jabatan]
+        );
+        if (configuredPoints[0]) {
+            return configuredPoints[0].point_value;
+        }
+
         const config = await getIPCConfig();
         return config.organisasi?.jabatan?.[jabatan] || ORGANISASI_POINTS[jabatan?.toLowerCase()] || ORGANISASI_POINTS[jabatan] || 0;
     } catch (error) {
@@ -100,8 +127,36 @@ const calculateKepanitiaanPoints = async (jabatan) => {
 
 const calculatePelanggaranPoints = async (jenis) => {
     try {
-        const config = await getIPCConfig();
-        return config.pelanggaran?.jenis?.[jenis] || PELANGGARAN_POINTS[jenis?.toLowerCase()] || 0;
+        const [configs] = await db.query(
+            `SELECT level.point_value AS point_value
+             FROM ipc_pelanggaran_level level
+             LEFT JOIN ipc_pelanggaran_detail detail
+               ON detail.level_id = level.id AND detail.name = ?
+             WHERE (level.name = ? OR detail.name = ?)
+               AND level.is_active = TRUE
+               AND (detail.id IS NULL OR detail.is_active = TRUE)
+             LIMIT 1`,
+            [jenis, jenis, jenis]
+        );
+        if (configs[0]) {
+            return configs[0].point_value;
+        }
+
+        const [legacyConfigs] = await db.query(
+            `SELECT COALESCE(level_config.point_value, detail_config.point_value) AS point_value
+             FROM ipc_config detail_config
+             LEFT JOIN ipc_config level_config
+               ON level_config.category = detail_config.category
+              AND level_config.field1 = detail_config.field2
+              AND level_config.field2 IS NULL
+              AND level_config.is_active = TRUE
+             WHERE detail_config.category = ?
+               AND (detail_config.field1 = ? OR detail_config.field2 = ?)
+               AND detail_config.is_active = TRUE
+             LIMIT 1`,
+            ['pelanggaran', jenis, jenis]
+        );
+        return legacyConfigs[0]?.point_value ?? (PELANGGARAN_POINTS[jenis?.toLowerCase()] || 0);
     } catch (error) {
         console.error('Error calculating pelanggaran points:', error);
         return PELANGGARAN_POINTS[jenis?.toLowerCase()] || 0;

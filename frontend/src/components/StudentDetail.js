@@ -6,6 +6,7 @@ import StudentRecordsHistory from './StudentRecordsHistory';
 function StudentDetail({ student, onClose }) {
     const [records, setRecords] = useState(null);
     const [ipcHistory, setIpcHistory] = useState([]);
+    const [ipcCard, setIpcCard] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
     const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
@@ -34,6 +35,10 @@ function StudentDetail({ student, onClose }) {
                 ]);
                 setRecords(recordsRes.data);
                 setIpcHistory(historyRes.data || []);
+                const ipcCardRes = await axios.get(`/reports/ipc-card/${student.id}`, {
+                    headers: { Authorization: `Bearer ${token}` }
+                });
+                setIpcCard(ipcCardRes.data);
             } catch (err) {
                 setError(err.response?.data?.message || 'Gagal memuat detail siswa');
             } finally {
@@ -47,6 +52,21 @@ function StudentDetail({ student, onClose }) {
     const avatarUrl = student?.foto
         ? `${API_BASE_URL.replace('/api', '')}${student.foto}`
         : null;
+    const ipcGroups = [
+        { title: 'Dasar', rows: [['Point Awal', 'point_awal']] },
+        { title: 'Prestasi', rows: [['Akademik', 'prestasi_akademik'], ['Nonakademik', 'prestasi_nonakademik']] },
+        {
+            title: 'Perkembangan Karakter',
+            rows: [
+                ['Tanggung Jawab', 'tanggung_jawab'], ['Disiplin', 'disiplin'],
+                ['Kepedulian', 'kepedulian'], ['Kemandirian', 'kemandirian'],
+                ['Spiritual', 'spiritual'], ['Kejujuran', 'kejujuran'],
+                ['Kepercayaan Diri', 'kepercayaan_diri']
+            ]
+        },
+        { title: 'Keaktifan', rows: [['Organisasi', 'organisasi'], ['Kepanitiaan', 'kepanitiaan'], ['Event', 'event']] },
+        { title: 'Pelanggaran', rows: [['Ringan', 'pelanggaran_ringan'], ['Sedang', 'pelanggaran_sedang'], ['Berat', 'pelanggaran_berat']] }
+    ];
 
     return (
         <div style={{
@@ -127,6 +147,35 @@ function StudentDetail({ student, onClose }) {
                                 showAllTabs
                             />
                         )}
+
+                        <div className="card">
+                            <h3>Detail IPC</h3>
+                            {ipcCard?.points ? (
+                                <div style={{ display: 'grid', gap: 16 }}>
+                                    {ipcGroups.map((group) => (
+                                        <div key={group.title}>
+                                            <strong style={{ display: 'block', marginBottom: 8 }}>{group.title}</strong>
+                                            <div style={{ display: 'grid', gap: 6 }}>
+                                                {group.rows.map(([label, key]) => {
+                                                    const value = Number(ipcCard.points[key]) || 0;
+                                                    const displayValue = group.title === 'Pelanggaran' ? -value : value;
+                                                    return (
+                                                        <div key={key} style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid var(--border-color)', paddingBottom: 4 }}>
+                                                            <span>{label}</span>
+                                                            <strong style={{ color: displayValue < 0 ? '#dc2626' : 'inherit' }}>
+                                                                {displayValue > 0 ? '+' : ''}{displayValue}
+                                                            </strong>
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            ) : (
+                                <p className="text-muted">Detail IPC belum tersedia</p>
+                            )}
+                        </div>
 
                         <div className="card">
                             <h3>Riwayat IPC</h3>

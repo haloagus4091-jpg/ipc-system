@@ -3,14 +3,22 @@
 
 -- ==================== IPC CONFIGURATION TABLES ====================
 
+CREATE TABLE IF NOT EXISTS ipc_organisasi (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(100) NOT NULL UNIQUE,
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+
 -- Main IPC Configuration Table
 DROP TABLE IF EXISTS ipc_config;
 CREATE TABLE ipc_config (
     id INT AUTO_INCREMENT PRIMARY KEY,
     category VARCHAR(50) NOT NULL COMMENT 'prestasi, organisasi, kepanitiaan, event, pelanggaran, perilaku',
-    field1 VARCHAR(100) DEFAULT NULL COMMENT 'jenis prestasi (akademik/nonakademik), nama karakter, jenis pelanggaran, nama organisasi',
+    field1 VARCHAR(100) DEFAULT NULL COMMENT 'tingkat lomba, nama karakter, jenis pelanggaran, nama organisasi',
     field2 VARCHAR(100) DEFAULT NULL COMMENT 'tingkat (kecamatan/nasional), juara (juara 1/2/3), tingkat jabatan, event level',
-    field3 VARCHAR(100) DEFAULT NULL COMMENT 'deskripsi pelanggaran, detail info',
+    field3 VARCHAR(100) DEFAULT NULL COMMENT 'legacy compatibility column',
     point_value INT NOT NULL COMMENT 'nilai point',
     description TEXT COMMENT 'deskripsi tambahan',
     is_active BOOLEAN DEFAULT TRUE,
@@ -24,37 +32,24 @@ CREATE TABLE ipc_config (
 -- ==================== DEFAULT CONFIGURATION DATA ====================
 
 -- PRESTASI Configuration
--- Format: field1=jenis (akademik/nonakademik), field2=tingkat, field3=juara
+-- Format: field1=tingkat lomba, field2=juara lomba, field3=NULL
 INSERT INTO ipc_config (category, field1, field2, field3, point_value, description) VALUES
--- Akademik - Kecamatan
-('prestasi', 'akademik', 'kecamatan', 'juara 1', 50, 'Juara 1 akademik tingkat kecamatan'),
-('prestasi', 'akademik', 'kecamatan', 'juara 2', 40, 'Juara 2 akademik tingkat kecamatan'),
-('prestasi', 'akademik', 'kecamatan', 'juara 3', 30, 'Juara 3 akademik tingkat kecamatan'),
-('prestasi', 'akademik', 'kecamatan', 'harapan 1', 25, 'Harapan 1 akademik tingkat kecamatan'),
-('prestasi', 'akademik', 'kecamatan', 'harapan 2', 20, 'Harapan 2 akademik tingkat kecamatan'),
-('prestasi', 'akademik', 'kecamatan', 'harapan 3', 15, 'Harapan 3 akademik tingkat kecamatan'),
-('prestasi', 'akademik', 'kecamatan', 'finalis', 10, 'Finalis akademik tingkat kecamatan'),
-('prestasi', 'akademik', 'kecamatan', 'peserta', 5, 'Peserta akademik tingkat kecamatan'),
-
--- Akademik - Kabupaten
-('prestasi', 'akademik', 'kabupaten', 'juara 1', 60, 'Juara 1 akademik tingkat kabupaten'),
-('prestasi', 'akademik', 'kabupaten', 'juara 2', 50, 'Juara 2 akademik tingkat kabupaten'),
-('prestasi', 'akademik', 'kabupaten', 'juara 3', 40, 'Juara 3 akademik tingkat kabupaten'),
-('prestasi', 'akademik', 'kabupaten', 'harapan 1', 35, 'Harapan 1 akademik tingkat kabupaten'),
-('prestasi', 'akademik', 'kabupaten', 'harapan 2', 30, 'Harapan 2 akademik tingkat kabupaten'),
-('prestasi', 'akademik', 'kabupaten', 'harapan 3', 25, 'Harapan 3 akademik tingkat kabupaten'),
-('prestasi', 'akademik', 'kabupaten', 'finalis', 15, 'Finalis akademik tingkat kabupaten'),
-('prestasi', 'akademik', 'kabupaten', 'peserta', 8, 'Peserta akademik tingkat kabupaten'),
-
--- Non-Akademik - Kecamatan
-('prestasi', 'nonakademik', 'kecamatan', 'juara 1', 40, 'Juara 1 non-akademik tingkat kecamatan'),
-('prestasi', 'nonakademik', 'kecamatan', 'juara 2', 30, 'Juara 2 non-akademik tingkat kecamatan'),
-('prestasi', 'nonakademik', 'kecamatan', 'juara 3', 25, 'Juara 3 non-akademik tingkat kecamatan'),
-('prestasi', 'nonakademik', 'kecamatan', 'harapan 1', 20, 'Harapan 1 non-akademik tingkat kecamatan'),
-('prestasi', 'nonakademik', 'kecamatan', 'harapan 2', 15, 'Harapan 2 non-akademik tingkat kecamatan'),
-('prestasi', 'nonakademik', 'kecamatan', 'harapan 3', 10, 'Harapan 3 non-akademik tingkat kecamatan'),
-('prestasi', 'nonakademik', 'kecamatan', 'finalis', 8, 'Finalis non-akademik tingkat kecamatan'),
-('prestasi', 'nonakademik', 'kecamatan', 'peserta', 4, 'Peserta non-akademik tingkat kecamatan');
+('prestasi', 'kecamatan', 'juara 1', NULL, 50, 'Juara 1 tingkat kecamatan'),
+('prestasi', 'kecamatan', 'juara 2', NULL, 40, 'Juara 2 tingkat kecamatan'),
+('prestasi', 'kecamatan', 'juara 3', NULL, 30, 'Juara 3 tingkat kecamatan'),
+('prestasi', 'kecamatan', 'juara harapan 1', NULL, 25, 'Juara Harapan 1 tingkat kecamatan'),
+('prestasi', 'kecamatan', 'juara harapan 2', NULL, 20, 'Juara Harapan 2 tingkat kecamatan'),
+('prestasi', 'kecamatan', 'juara harapan 3', NULL, 15, 'Juara Harapan 3 tingkat kecamatan'),
+('prestasi', 'kecamatan', 'finalis', NULL, 10, 'Finalis tingkat kecamatan'),
+('prestasi', 'kecamatan', 'peserta', NULL, 5, 'Peserta tingkat kecamatan'),
+('prestasi', 'kabupaten', 'juara 1', NULL, 60, 'Juara 1 tingkat kabupaten'),
+('prestasi', 'kabupaten', 'juara 2', NULL, 50, 'Juara 2 tingkat kabupaten'),
+('prestasi', 'kabupaten', 'juara 3', NULL, 40, 'Juara 3 tingkat kabupaten'),
+('prestasi', 'kabupaten', 'juara harapan 1', NULL, 35, 'Juara Harapan 1 tingkat kabupaten'),
+('prestasi', 'kabupaten', 'juara harapan 2', NULL, 30, 'Juara Harapan 2 tingkat kabupaten'),
+('prestasi', 'kabupaten', 'juara harapan 3', NULL, 25, 'Juara Harapan 3 tingkat kabupaten'),
+('prestasi', 'kabupaten', 'finalis', NULL, 15, 'Finalis tingkat kabupaten'),
+('prestasi', 'kabupaten', 'peserta', NULL, 8, 'Peserta tingkat kabupaten');
 
 -- PERILAKU Configuration
 -- Format: field1=nama karakter, field2=tingkat penilaian
@@ -102,12 +97,30 @@ INSERT INTO ipc_config (category, field1, field2, field3, point_value, descripti
 ('perilaku', 'kepercayaan_diri', 'kurang baik', NULL, 1, 'Karakter kepercayaan diri kurang baik');
 
 -- PELANGGARAN Configuration
--- Format: field1=jenis pelanggaran, field2=NULL, field3=deskripsi detail
-INSERT INTO ipc_config (category, field1, field2, field3, point_value, description) VALUES
--- Jenis Pelanggaran - Point Settings
-('pelanggaran', 'ringan', NULL, NULL, -1, 'Point untuk pelanggaran ringan'),
-('pelanggaran', 'sedang', NULL, NULL, -5, 'Point untuk pelanggaran sedang'),
-('pelanggaran', 'berat', NULL, NULL, -25, 'Point untuk pelanggaran berat');
+CREATE TABLE IF NOT EXISTS ipc_pelanggaran_level (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(100) NOT NULL UNIQUE,
+    point_value INT NOT NULL,
+    description TEXT,
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS ipc_pelanggaran_detail (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(150) NOT NULL UNIQUE,
+    level_id INT NOT NULL,
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (level_id) REFERENCES ipc_pelanggaran_level(id) ON DELETE RESTRICT
+);
+
+INSERT IGNORE INTO ipc_pelanggaran_level (name, point_value, description) VALUES
+('ringan', -1, 'Point untuk pelanggaran ringan'),
+('sedang', -5, 'Point untuk pelanggaran sedang'),
+('berat', -25, 'Point untuk pelanggaran berat');
 
 -- KEPANITIAAN Configuration
 -- Format: field1=jabatan, field2=NULL, field3=NULL

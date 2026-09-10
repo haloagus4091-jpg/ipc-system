@@ -1,6 +1,33 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import API_BASE_URL from '../config';
+
+function getCurrentAcademicYear() {
+  const now = new Date();
+  const startYear = now.getMonth() >= 6 ? now.getFullYear() : now.getFullYear() - 1;
+  return `${startYear}-${startYear + 1}`;
+}
+
+function getAcademicYearOptions() {
+  const currentStartYear = Number(getCurrentAcademicYear().split('-')[0]);
+  return Array.from({ length: 11 }, (_, index) => {
+    const startYear = currentStartYear - 5 + index;
+    return `${startYear}-${startYear + 1}`;
+  });
+}
+
+function getIpcDetailRows(points = {}) {
+  return [
+    ['Prestasi', (Number(points.prestasi_akademik) || 0) + (Number(points.prestasi_nonakademik) || 0)],
+    ['Perilaku', ['tanggung_jawab', 'disiplin', 'kepedulian', 'kemandirian', 'spiritual', 'kejujuran', 'kepercayaan_diri']
+      .reduce((sum, key) => sum + (Number(points[key]) || 0), 0)],
+    ['Organisasi', Number(points.organisasi) || 0],
+    ['Kepanitiaan', Number(points.kepanitiaan) || 0],
+    ['Event', Number(points.event) || 0],
+    ['Pelanggaran', -(['pelanggaran_ringan', 'pelanggaran_sedang', 'pelanggaran_berat']
+      .reduce((sum, key) => sum + (Number(points[key]) || 0), 0))]
+  ];
+}
 
 function WaliKelas() {
   const [assignments, setAssignments] = useState([]);
@@ -15,10 +42,13 @@ function WaliKelas() {
   const [showMismatches, setShowMismatches] = useState(false);
   const [mismatches, setMismatches] = useState(null);
   const [loadingMismatches, setLoadingMismatches] = useState(false);
+  const currentAcademicYear = getCurrentAcademicYear();
+  const academicYearOptions = getAcademicYearOptions();
+  const [selectedAcademicYear, setSelectedAcademicYear] = useState(currentAcademicYear);
   const [formData, setFormData] = useState({
     guru_id: '',
     kelas: '',
-    tahun_ajaran: new Date().getFullYear().toString()
+    tahun_ajaran: currentAcademicYear
   });
 
   const kelasOptions = [
@@ -30,13 +60,7 @@ function WaliKelas() {
     'XII DPIB 1', 'XII DPIB 2'
   ];
 
-  useEffect(() => {
-    fetchAssignments();
-    fetchTeachers();
-    fetchClassStatistics();
-  }, []);
-
-  const fetchAssignments = async () => {
+  const fetchAssignments = useCallback(async () => {
     try {
       const token = localStorage.getItem('token');
       const response = await axios.get('/wali-kelas', {
@@ -46,12 +70,13 @@ function WaliKelas() {
     } catch (error) {
       console.error('Error fetching assignments:', error);
     }
-  };
+  }, []);
 
-  const fetchClassStatistics = async () => {
+  const fetchClassStatistics = useCallback(async () => {
     try {
       const token = localStorage.getItem('token');
       const response = await axios.get('/wali-kelas/class-statistics', {
+        params: { tahun_ajaran: selectedAcademicYear },
         headers: { Authorization: `Bearer ${token}` }
       });
       setClassStats(response.data);
@@ -60,19 +85,29 @@ function WaliKelas() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [selectedAcademicYear]);
 
-  const fetchTeachers = async () => {
+  const fetchTeachers = useCallback(async () => {
     try {
       const token = localStorage.getItem('token');
       const response = await axios.get('/wali-kelas/available-teachers', {
+        params: { tahun_ajaran: selectedAcademicYear },
         headers: { Authorization: `Bearer ${token}` }
       });
       setTeachers(response.data);
     } catch (error) {
       console.error('Error fetching teachers:', error);
     }
-  };
+  }, [selectedAcademicYear]);
+
+  useEffect(() => {
+    fetchAssignments();
+  }, [fetchAssignments]);
+
+  useEffect(() => {
+    fetchTeachers();
+    fetchClassStatistics();
+  }, [fetchTeachers, fetchClassStatistics]);
 
   const handleCreate = async (e) => {
     e.preventDefault();
@@ -83,7 +118,7 @@ function WaliKelas() {
       });
       alert(response.data.message);
       setShowForm(false);
-      setFormData({ guru_id: '', kelas: '', tahun_ajaran: new Date().getFullYear().toString() });
+      setFormData({ guru_id: '', kelas: '', tahun_ajaran: selectedAcademicYear });
       fetchAssignments();
       fetchClassStatistics();
       fetchTeachers();
@@ -239,7 +274,7 @@ function WaliKelas() {
           gap: '20px'
         }}>
           {classStats.map((cls) => (
-            <div key={cls.kelas} className="card" style={{
+            <div key={`${selectedAcademicYear}-${cls.kelas}`} className="card" style={{
               borderLeft: '4px solid var(--primary-color)',
               transition: 'all var(--transition-medium)'
             }}
@@ -403,7 +438,29 @@ function WaliKelas() {
           <h3 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
             ⚙️ Manajemen Wali Kelas
           </h3>
-          <button className="btn btn-primary" onClick={() => setShowForm(true)}>
+          <div className="form-group" style={{ margin: 0 }}>
+            <label htmlFor="wali-kelas-year">Tahun Ajaran</label>
+            <select
+              id="wali-kelas-year"
+              value={selectedAcademicYear}
+              onChange={(e) => {
+                const year = e.target.value;
+                setSelectedAcademicYear(year);
+                setFormData((current) => ({ ...current, tahun_ajaran: year }));
+              }}
+            >
+              {academicYearOptions.map((year) => (
+                <option key={year} value={year}>{year}</option>
+              ))}
+            </select>
+          </div>
+          <button
+            className="btn btn-primary"
+            onClick={() => {
+              setFormData((current) => ({ ...current, tahun_ajaran: selectedAcademicYear }));
+              setShowForm(true);
+            }}
+          >
             + Assign Wali Kelas Baru
           </button>
           <button 
@@ -466,12 +523,15 @@ function WaliKelas() {
               </div>
               <div className="form-group">
                 <label>Tahun Ajaran</label>
-                <input
-                  type="text"
+                <select
                   value={formData.tahun_ajaran}
                   onChange={(e) => setFormData({...formData, tahun_ajaran: e.target.value})}
                   required
-                />
+                >
+                  {academicYearOptions.map((year) => (
+                    <option key={year} value={year}>{year}</option>
+                  ))}
+                </select>
               </div>
               <button 
                 type="submit" 
@@ -614,7 +674,9 @@ function WaliKelas() {
               </tr>
             </thead>
             <tbody>
-              {assignments.map(assignment => (
+              {assignments
+                .filter(assignment => assignment.tahun_ajaran === selectedAcademicYear)
+                .map(assignment => (
                 <tr key={assignment.id}>
                   <td style={{ fontWeight: '600' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
@@ -801,6 +863,7 @@ function WaliKelas() {
                     <th style={{ width: '50px' }}>No</th>
                     <th>Nama</th>
                     <th>NIS</th>
+                    <th>Detail IPC</th>
                     <th style={{ textAlign: 'center' }}>IPC</th>
                     <th style={{ textAlign: 'center' }}>Aksi</th>
                   </tr>
@@ -837,6 +900,18 @@ function WaliKelas() {
                         </div>
                       </td>
                       <td>{student.nis}</td>
+                      <td>
+                        <div style={{ display: 'grid', gap: '2px', minWidth: '180px', fontSize: '0.8rem' }}>
+                          {getIpcDetailRows(student.ipc_points).map(([label, value]) => (
+                            <div key={label} style={{ display: 'flex', justifyContent: 'space-between', gap: '8px' }}>
+                              <span>{label}</span>
+                              <strong style={{ color: value < 0 ? 'var(--danger-color)' : 'var(--text-primary)' }}>
+                                {value > 0 ? '+' : ''}{value}
+                              </strong>
+                            </div>
+                          ))}
+                        </div>
+                      </td>
                       <td style={{ textAlign: 'center' }}>
                         <span style={{ 
                           background: getIpcColor(student.ipc_total || 80),
@@ -940,6 +1015,19 @@ function WaliKelas() {
               <div style={{ padding: '12px', background: 'var(--bg-tertiary)', borderRadius: 'var(--border-radius-sm)' }}>
                 <strong style={{ color: 'var(--text-secondary)', display: 'block', marginBottom: '4px', fontSize: '0.85rem' }}>Grha</strong>
                 <div style={{ fontSize: '1rem', fontWeight: '600', color: 'var(--text-primary)' }}>{selectedStudent.grha || '-'}</div>
+              </div>
+              <div style={{ padding: '12px', background: 'var(--bg-tertiary)', borderRadius: 'var(--border-radius-sm)' }}>
+                <strong style={{ color: 'var(--text-secondary)', display: 'block', marginBottom: '8px', fontSize: '0.85rem' }}>Detail IPC</strong>
+                <div style={{ display: 'grid', gap: '4px', fontSize: '0.9rem' }}>
+                  {getIpcDetailRows(selectedStudent.ipc_points).map(([label, value]) => (
+                    <div key={label} style={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <span>{label}</span>
+                      <strong style={{ color: value < 0 ? 'var(--danger-color)' : 'var(--text-primary)' }}>
+                        {value > 0 ? '+' : ''}{value}
+                      </strong>
+                    </div>
+                  ))}
+                </div>
               </div>
               <div style={{ padding: '12px', background: 'var(--bg-tertiary)', borderRadius: 'var(--border-radius-sm)' }}>
                 <strong style={{ color: 'var(--text-secondary)', display: 'block', marginBottom: '4px', fontSize: '0.85rem' }}>Total IPC</strong>

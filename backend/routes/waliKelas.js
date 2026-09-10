@@ -2,6 +2,18 @@ const express = require('express');
 const router = express.Router();
 const { auth, superAdminOnly, teacherOnly } = require('../middleware/auth');
 const db = require('../config/database');
+const { validateTahunPelajaran, getCurrentAcademicYear } = require('../utils/academicYear');
+const { buildIpcCardBreakdown } = require('../utils/ipcCardBreakdown');
+
+function getRequestedAcademicYear(req) {
+    const tahunAjaran = req.query.tahun_ajaran || getCurrentAcademicYear();
+    if (!validateTahunPelajaran(tahunAjaran)) {
+        const error = new Error('Tahun ajaran tidak valid. Format harus YYYY-YYYY (contoh: 2026-2027)');
+        error.statusCode = 400;
+        throw error;
+    }
+    return tahunAjaran;
+}
 
 // Get all wali kelas assignments (Superadmin)
 router.get('/', auth, superAdminOnly, async (req, res) => {
@@ -15,32 +27,34 @@ router.get('/', auth, superAdminOnly, async (req, res) => {
         res.json(assignments);
     } catch (error) {
         console.error(error);
-        res.status(500).json({ message: 'Server error' });
+        res.status(error.statusCode || 500).json({ message: error.message || 'Server error' });
     }
 });
 
 // Get available teachers (not assigned as wali kelas)
 router.get('/available-teachers', auth, superAdminOnly, async (req, res) => {
     try {
+        const tahunAjaran = getRequestedAcademicYear(req);
         const [teachers] = await db.query(`
             SELECT u.id, u.nama, u.nip, u.detail 
             FROM users u
             WHERE u.role = 'guru'
             AND u.id NOT IN (
                 SELECT guru_id FROM wali_kelas_assignment 
-                WHERE tahun_ajaran = YEAR(CURDATE())
+                WHERE tahun_ajaran = ?
             )
-        `);
+        `, [tahunAjaran]);
         res.json(teachers);
     } catch (error) {
         console.error(error);
-        res.status(500).json({ message: 'Server error' });
+        res.status(error.statusCode || 500).json({ message: error.message || 'Server error' });
     }
 });
 
 // Get class statistics (Superadmin - shows all classes)
 router.get('/class-statistics', auth, superAdminOnly, async (req, res) => {
     try {
+        const tahunAjaran = getRequestedAcademicYear(req);
         // Get all classes with wali kelas
         const [classes] = await db.query(`
             SELECT 
@@ -51,9 +65,9 @@ router.get('/class-statistics', auth, superAdminOnly, async (req, res) => {
                 u.foto as wali_foto
             FROM wali_kelas_assignment wka
             LEFT JOIN users u ON wka.guru_id = u.id
-            WHERE wka.tahun_ajaran = YEAR(CURDATE())
+            WHERE wka.tahun_ajaran = ?
             ORDER BY wka.kelas ASC
-        `);
+        `, [tahunAjaran]);
 
         // Get statistics for each class
         const classStats = await Promise.all(
@@ -145,7 +159,13 @@ router.get('/class-statistics', auth, superAdminOnly, async (req, res) => {
                     totalKepanitiaan,
                     totalPelanggaran,
                     rataRataIPC: avgIpc,
-                    students
+                    students: await Promise.all(students.map(async (student) => {
+                        const cardData = await buildIpcCardBreakdown(student.id);
+                        return {
+                            ...student,
+                            ipc_points: cardData?.points || {}
+                        };
+                    }))
                 };
             })
         );
@@ -153,7 +173,7 @@ router.get('/class-statistics', auth, superAdminOnly, async (req, res) => {
         res.json(classStats);
     } catch (error) {
         console.error('Error fetching class statistics:', error);
-        res.status(500).json({ message: 'Server error' });
+        res.status(error.statusCode || 500).json({ message: error.message || 'Server error' });
     }
 });
 
@@ -161,15 +181,16 @@ router.get('/class-statistics', auth, superAdminOnly, async (req, res) => {
 router.get('/class/:kelas', auth, async (req, res) => {
     try {
         const { kelas } = req.params;
+        const tahunAjaran = getRequestedAcademicYear(req);
 
         const [waliData] = await db.query(`
             SELECT u.nama, u.nip
             FROM wali_kelas_assignment wka
             JOIN users u ON wka.guru_id = u.id
-            WHERE wka.kelas = ? AND wka.tahun_ajaran = YEAR(CURDATE())
+            WHERE wka.kelas = ? AND wka.tahun_ajaran = ?
             ORDER BY wka.id DESC
             LIMIT 1
-        `, [kelas]);
+        `, [kelas, tahunAjaran]);
 
         if (waliData.length === 0) {
             return res.json({ nama: null, nip: null });
@@ -181,7 +202,7 @@ router.get('/class/:kelas', auth, async (req, res) => {
         });
     } catch (error) {
         console.error('Error fetching wali kelas by class:', error);
-        res.status(500).json({ message: 'Server error' });
+        res.status(error.statusCode || 500).json({ message: error.message || 'Server error' });
     }
 });
 
@@ -193,9 +214,9 @@ router.get('/my-class', auth, teacherOnly, async (req, res) => {
         // Check if this teacher is assigned as wali kelas
         const [assignment] = await db.query(`
             SELECT * FROM wali_kelas_assignment 
-            WHERE guru_id = ? AND tahun_ajaran = YEAR(CURDATE())
+            WHERE guru_id = ? AND tahun_ajaran = ?
             LIMIT 1
-        `, [guruId]);
+        `, [guruId, getCurrentAcademicYear()]);
 
         if (assignment.length === 0) {
             return res.status(404).json({ message: 'Anda belum ditunjuk sebagai wali kelas' });
@@ -290,7 +311,7 @@ router.get('/my-class', auth, teacherOnly, async (req, res) => {
         });
     } catch (error) {
         console.error('Error fetching my class:', error);
-        res.status(500).json({ message: 'Server error' });
+        res.status(error.statusCode || 500).json({ message: error.message || 'Server error' });
     }
 });
 
@@ -298,6 +319,25 @@ router.get('/my-class', auth, teacherOnly, async (req, res) => {
 router.post('/', auth, superAdminOnly, async (req, res) => {
     try {
         const { guru_id, kelas, tahun_ajaran } = req.body;
+        if (!validateTahunPelajaran(tahun_ajaran)) {
+            return res.status(400).json({ message: 'Tahun ajaran tidak valid. Format harus YYYY-YYYY (contoh: 2026-2027)' });
+        }
+
+        const [existingClass] = await db.query(
+            'SELECT id FROM wali_kelas_assignment WHERE kelas = ? AND tahun_ajaran = ?',
+            [kelas, tahun_ajaran]
+        );
+        if (existingClass.length > 0) {
+            return res.status(400).json({ message: `Kelas ${kelas} sudah memiliki Wali Kelas untuk tahun ajaran ${tahun_ajaran}` });
+        }
+
+        const [existingTeacher] = await db.query(
+            'SELECT id FROM wali_kelas_assignment WHERE guru_id = ? AND tahun_ajaran = ?',
+            [guru_id, tahun_ajaran]
+        );
+        if (existingTeacher.length > 0) {
+            return res.status(400).json({ message: `Guru tersebut sudah menjadi Wali Kelas untuk tahun ajaran ${tahun_ajaran}` });
+        }
 
         // Get guru info for notification
         const [guru] = await db.query('SELECT nama, nip FROM users WHERE id = ?', [guru_id]);
@@ -308,8 +348,10 @@ router.post('/', auth, superAdminOnly, async (req, res) => {
             [guru_id, kelas, tahun_ajaran]
         );
 
-        // Update user's wali_kelas field
-        await db.query('UPDATE users SET wali_kelas = ? WHERE id = ?', [kelas, guru_id]);
+        // Keep the denormalized active assignment in sync only for the current year.
+        if (tahun_ajaran === getCurrentAcademicYear()) {
+            await db.query('UPDATE users SET wali_kelas = ? WHERE id = ?', [kelas, guru_id]);
+        }
 
         // Log activity
         await db.query(
@@ -393,7 +435,7 @@ router.delete('/:id', auth, superAdminOnly, async (req, res) => {
         const assignmentId = req.params.id;
 
         const [assignment] = await db.query(
-            'SELECT guru_id, kelas FROM wali_kelas_assignment WHERE id = ?', 
+            'SELECT guru_id, kelas, tahun_ajaran FROM wali_kelas_assignment WHERE id = ?',
             [assignmentId]
         );
 
@@ -409,7 +451,9 @@ router.delete('/:id', auth, superAdminOnly, async (req, res) => {
         const guruNama = guru[0]?.nama || 'Guru';
 
         // Remove wali_kelas from user
-        await db.query('UPDATE users SET wali_kelas = NULL WHERE id = ?', [guruId]);
+        if (assignment[0].tahun_ajaran === getCurrentAcademicYear()) {
+            await db.query('UPDATE users SET wali_kelas = NULL WHERE id = ?', [guruId]);
+        }
 
         // Delete assignment
         await db.query('DELETE FROM wali_kelas_assignment WHERE id = ?', [assignmentId]);

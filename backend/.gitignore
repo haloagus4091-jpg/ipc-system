@@ -4,12 +4,8 @@ node_modules/
 # Environment variables
 .env
 
-# Google Drive Service Account (IMPORTANT - DO NOT COMMIT)
-service-account.json
-
-# Google Drive OAuth (Personal) - DO NOT COMMIT
-oauth-credentials.json
-oauth-token.json
+*.sql
+!skema.sql
 
 # Uploads
 uploads/

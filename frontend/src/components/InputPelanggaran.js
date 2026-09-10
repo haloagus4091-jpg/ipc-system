@@ -12,12 +12,13 @@ function InputPelanggaran() {
     kelas: '',
     grha: '',
     keterangan: '',
-    jenis_pelanggaran: 'ringan'
+    jenis_pelanggaran: ''
   });
   const [foto, setFoto] = useState(null);
   const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(false);
   const [isAutoFilled, setIsAutoFilled] = useState(false);
+  const [nisLoading, setNisLoading] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [allPelanggaran, setAllPelanggaran] = useState([]);
   const [loadingIndex, setLoadingIndex] = useState(false);
@@ -26,6 +27,14 @@ function InputPelanggaran() {
   const [ipcConfig, setIpcConfig] = useState([]);
   const [calculatedPoint, setCalculatedPoint] = useState(0);
   const [students, setStudents] = useState([]);
+  const jenisOptions = (ipcConfig['pelanggaran'] || [])
+    .filter(config => config.field2)
+    .map(config => {
+      const level = (ipcConfig['pelanggaran'] || []).find(
+        candidate => !candidate.field2 && candidate.field1 === config.field2
+      );
+      return { value: config.field1, label: config.field1, point: level?.point_value || 0 };
+    });
 
   const grhaOptions = [
     'Airsanya', 'Daksina', 'Genya', 'Madhya', 'Nairiti', 'Pascima', 'Purwa', 'Uttara', 'Wayabhya'
@@ -69,6 +78,11 @@ function InputPelanggaran() {
         headers: { Authorization: `Bearer ${token}` }
       });
       setIpcConfig(response.data);
+      const firstDetail = (response.data.pelanggaran || []).find(config => config.field2);
+      if (firstDetail) {
+        setFormData(prev => ({ ...prev, jenis_pelanggaran: firstDetail.field1 }));
+        setCalculatedPoint(calculatePoint(firstDetail.field1, response.data));
+      }
     } catch (error) {
       console.error('Error fetching IPC config:', error);
     }
@@ -89,10 +103,19 @@ function InputPelanggaran() {
 
   const calculatePoint = (jenis) => {
     const pelanggaranConfigs = ipcConfig['pelanggaran'] || [];
+  const calculatePoint = (jenis, configData = ipcConfig) => {
+    const pelanggaranConfigs = configData.pelanggaran || [];
     const config = pelanggaranConfigs.find(
       c => c.field1 === jenis
     );
-    return config ? config.point_value : 0;
+    if (!config) return 0;
+    if (config.field2) {
+      const level = pelanggaranConfigs.find(
+        candidate => !candidate.field2 && candidate.field1 === config.field2
+      );
+      return level?.point_value || 0;
+    }
+    return config.point_value;
   };
 
   const handleChange = (e) => {
@@ -227,7 +250,7 @@ function InputPelanggaran() {
         kelas: '',
         grha: '',
         keterangan: '',
-        jenis_pelanggaran: 'ringan'
+        jenis_pelanggaran: ''
       });
       setFoto(null);
       setIsAutoFilled(false);
@@ -451,8 +474,9 @@ function InputPelanggaran() {
         </div>
 
         <div className="form-group">
-          <label>Jenis Pelanggaran</label>
+          <label>Detail Pelanggaran</label>
           <select name="jenis_pelanggaran" value={formData.jenis_pelanggaran} onChange={handleChange}>
+            <option value="">Pilih Detail Pelanggaran</option>
             {jenisOptions.map(jenis => (
               <option key={jenis.value} value={jenis.value}>{jenis.label} {formData.jenis_pelanggaran === jenis.value && calculatedPoint ? `(${calculatedPoint} point)` : ''}</option>
             ))}
@@ -554,7 +578,7 @@ function InputPelanggaran() {
             </select>
           </div>
           <div className="form-group">
-            <label>Jenis Pelanggaran</label>
+            <label>Detail Pelanggaran</label>
             <select 
               value={editModal.editFormData.jenis_pelanggaran || ''} 
               onChange={(e) => editModal.setEditFormData({ ...editModal.editFormData, jenis_pelanggaran: e.target.value })}

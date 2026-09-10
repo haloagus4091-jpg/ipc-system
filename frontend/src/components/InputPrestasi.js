@@ -34,6 +34,9 @@ function InputPrestasi() {
   const editModal = useEditModal();
   const [ipcConfig, setIpcConfig] = useState([]);
   const [calculatedPoint, setCalculatedPoint] = useState(0);
+  const prestasiConfigs = ipcConfig.prestasi || [];
+  const tingkatLombaOptions = [...new Set(prestasiConfigs.map(config => config.field1))];
+  const juaraLombaOptions = [...new Set(prestasiConfigs.map(config => config.field2))];
   const [students, setStudents] = useState([]);
 
   const grhaOptions = [
@@ -201,6 +204,10 @@ function InputPrestasi() {
         headers: { Authorization: `Bearer ${token}` }
       });
       setIpcConfig(response.data);
+      const firstTingkat = response.data.prestasi?.[0]?.field1 || 'kecamatan';
+      const firstJuara = response.data.prestasi?.[0]?.field2 || 'juara 1';
+      setFormData(prev => ({ ...prev, kategori: firstTingkat, juara: firstJuara }));
+      setCalculatedPoint(calculatePoint(firstTingkat, firstJuara, response.data));
     } catch (error) {
       console.error('Error fetching IPC config:', error);
     }
@@ -220,10 +227,9 @@ function InputPrestasi() {
     }
   };
 
-  const calculatePoint = (jenis, tingkat, juara) => {
-    const prestasiConfigs = ipcConfig['prestasi'] || [];
-    const config = prestasiConfigs.find(
-      c => c.field1 === jenis && c.field2 === tingkat && c.field3 === juara
+  const calculatePoint = (tingkat, juara, configData = ipcConfig) => {
+    const config = (configData.prestasi || []).find(
+      c => c.field1 === tingkat && c.field2 === juara
     );
     return config ? config.point_value : 0;
   };
@@ -251,12 +257,10 @@ function InputPrestasi() {
       fetchStudentDataByName(value);
     }
 
-    // Calculate point when jenis, kategori (tingkat), or juara changes
-    if (name === 'jenis' || name === 'kategori' || name === 'juara') {
-      const newFormData = name === 'jenis' || name === 'kategori' || name === 'juara' 
-        ? { ...formData, [name]: value } 
-        : formData;
-      const point = calculatePoint(newFormData.jenis, newFormData.kategori, newFormData.juara);
+    // Calculate point when tingkat lomba or juara changes
+    if (name === 'kategori' || name === 'juara') {
+      const newFormData = { ...formData, [name]: value };
+      const point = calculatePoint(newFormData.kategori, newFormData.juara);
       setCalculatedPoint(point);
     }
   };
@@ -446,9 +450,8 @@ function InputPrestasi() {
                     <th>Nama</th>
                     <th>NIS</th>
                     <th>Lomba</th>
-                    <th>Jenis</th>
                     <th>Juara</th>
-                    <th>Kategori</th>
+                    <th>Tingkat Lomba</th>
                     <th>Pembina</th>
                     <th>Point</th>
                     <th>Status</th>
@@ -462,7 +465,6 @@ function InputPrestasi() {
                       <td>{item.nama}</td>
                       <td>{item.nis}</td>
                       <td>{item.nama_lomba}</td>
-                      <td>{item.jenis}</td>
                       <td>{item.juara}</td>
                       <td>{item.kategori}</td>
                       <td>{item.pembina || '-'}</td>
@@ -551,16 +553,6 @@ function InputPrestasi() {
           </div>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-          <div className="form-group">
-            <label>Jenis</label>
-            <select name="jenis" value={formData.jenis} onChange={handleChange}>
-              <option value="akademik">Akademik</option>
-              <option value="nonakademik">Non-Akademik</option>
-            </select>
-          </div>
-        </div>
-
         <div className="form-group">
           <label>Nama Lomba</label>
           <input
@@ -596,24 +588,17 @@ function InputPrestasi() {
           <div className="form-group">
             <label>Juara</label>
             <select name="juara" value={formData.juara} onChange={handleChange}>
-              <option value="juara 1">Juara 1</option>
-              <option value="juara 2">Juara 2</option>
-              <option value="juara 3">Juara 3</option>
-              <option value="juara harapan 1">Juara Harapan 1</option>
-              <option value="juara harapan 2">Juara Harapan 2</option>
-              <option value="juara harapan 3">Juara Harapan 3</option>
-              <option value="finalis">Finalis</option>
-              <option value="peserta">Peserta</option>
+              {juaraLombaOptions.map(juara => (
+                <option key={juara} value={juara}>{juara}</option>
+              ))}
             </select>
           </div>
           <div className="form-group">
-            <label>Kategori (Tingkat)</label>
+            <label>Tingkat Lomba</label>
             <select name="kategori" value={formData.kategori} onChange={handleChange}>
-              <option value="kecamatan">Kecamatan</option>
-              <option value="kabupaten">Kabupaten</option>
-              <option value="provinsi">Provinsi</option>
-              <option value="nasional">Nasional</option>
-              <option value="internasional">Internasional</option>
+              {tingkatLombaOptions.map(tingkat => (
+                <option key={tingkat} value={tingkat}>{tingkat}</option>
+              ))}
             </select>
           </div>
         </div>
@@ -718,14 +703,6 @@ function InputPrestasi() {
         </div>
 
         <div className="form-group">
-          <label>Jenis</label>
-          <select name="jenis" value={editModal.editFormData.jenis || ''} onChange={(e) => editModal.setEditFormData({ ...editModal.editFormData, jenis: e.target.value })}>
-            <option value="akademik">Akademik</option>
-            <option value="nonakademik">Non-Akademik</option>
-          </select>
-        </div>
-
-        <div className="form-group">
           <label>Pembina</label>
           <select name="pembina" value={editModal.editFormData.pembina} onChange={(e) => editModal.setEditFormData({ ...editModal.editFormData, pembina: e.target.value })}>
             <option value="">Pilih Pembina</option>
@@ -738,25 +715,18 @@ function InputPrestasi() {
         <div className="form-group">
           <label>Juara</label>
           <select name="juara" value={editModal.editFormData.juara} onChange={(e) => editModal.setEditFormData({ ...editModal.editFormData, juara: e.target.value })}>
-            <option value="juara 1">Juara 1</option>
-            <option value="juara 2">Juara 2</option>
-            <option value="juara 3">Juara 3</option>
-            <option value="juara harapan 1">Juara Harapan 1</option>
-            <option value="juara harapan 2">Juara Harapan 2</option>
-            <option value="juara harapan 3">Juara Harapan 3</option>
-            <option value="finalis">Finalis</option>
-            <option value="peserta">Peserta</option>
+            {juaraLombaOptions.map(juara => (
+              <option key={juara} value={juara}>{juara}</option>
+            ))}
           </select>
         </div>
 
         <div className="form-group">
-          <label>Kategori</label>
+          <label>Tingkat Lomba</label>
           <select name="kategori" value={editModal.editFormData.kategori} onChange={(e) => editModal.setEditFormData({ ...editModal.editFormData, kategori: e.target.value })}>
-            <option value="kecamatan">Kecamatan</option>
-            <option value="kabupaten">Kabupaten</option>
-            <option value="provinsi">Provinsi</option>
-            <option value="nasional">Nasional</option>
-            <option value="internasional">Internasional</option>
+            {tingkatLombaOptions.map(tingkat => (
+              <option key={tingkat} value={tingkat}>{tingkat}</option>
+            ))}
           </select>
         </div>
       </EditModal>

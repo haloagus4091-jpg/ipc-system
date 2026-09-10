@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import Select from 'react-select';
 import EditModal from './EditModal';
@@ -44,27 +44,36 @@ function InputOrganisasi() {
     { value: 'anggota', label: 'Anggota' }
   ];
 
-  const organisasiOptions = [
-    { value: 'OSIS', label: 'OSIS' },
-    { value: 'KY', label: 'KY' },
-    { value: 'MPK', label: 'MPK' },
-    { value: 'PRAMUKA', label: 'PRAMUKA' },
-    { value: 'PKS', label: 'PKS' },
-    { value: 'PMR', label: 'PMR' },
-    { value: 'PASKIBRAKA', label: 'PASKIBRAKA' }
-  ];
+  const [organisasiOptions, setOrganisasiOptions] = useState([]);
+
+  // useEffect(() => {
+  //   checkPermission();
+  // }, []);
 
   useEffect(() => {
     fetchUserSubmissions();
     checkAccess();
     fetchIpcConfig();
-    fetchStudents();
+    fetchOrganisasiOptions();
+    // Get user role from localStorage
     const user = JSON.parse(localStorage.getItem('user') || '{}');
     setUserRole(user.role || '');
     if (user.role === 'superadmin') {
       fetchAllOrganisasi();
     }
   }, []);
+
+  const fetchOrganisasiOptions = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.get('/ipc-config/organisasi-options', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setOrganisasiOptions(response.data.filter(option => option.is_active));
+    } catch (error) {
+      console.error('Error fetching organisasi options:', error);
+    }
+  };
 
   const fetchAllOrganisasi = async () => {
     try {
@@ -135,26 +144,14 @@ function InputOrganisasi() {
     }
   };
 
-  const fetchStudents = async () => {
-    try {
-      const token = localStorage.getItem('token');
-      const response = await axios.get('/users', {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      const studentList = response.data.filter(user => user.role === 'siswa');
-      setStudents(studentList);
-    } catch (error) {
-      console.error('Error fetching students:', error);
-    }
-  };
-
-  const calculatePoint = (kategori, jabatan) => {
+  const calculatePoint = useCallback((kategori, jabatan) => {
     const organisasiConfigs = ipcConfig['organisasi'] || [];
     const config = organisasiConfigs.find(
-      c => c.field1 === kategori && c.field2 === jabatan
+      c => c.field1?.trim().toLowerCase() === kategori?.trim().toLowerCase() &&
+        c.field2?.trim().toLowerCase() === jabatan?.trim().toLowerCase()
     );
     return config ? config.point_value : 0;
-  };
+  });
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -549,7 +546,7 @@ function InputOrganisasi() {
           <select name="kategori_organisasi" value={formData.kategori_organisasi} onChange={handleChange} required>
             <option value="">Pilih Organisasi</option>
             {organisasiOptions.map(org => (
-              <option key={org.value} value={org.value}>{org.label}</option>
+              <option key={org.id} value={org.name}>{org.name}</option>
             ))}
           </select>
         </div>
@@ -664,12 +661,21 @@ function InputOrganisasi() {
           </div>
           <div className="form-group">
             <label>Kategori Organisasi</label>
-            <input
-              type="text"
+            <select
               value={editModal.editFormData.kategori_organisasi || ''}
               onChange={(e) => editModal.setEditFormData({ ...editModal.editFormData, kategori_organisasi: e.target.value })}
-              placeholder="Nama organisasi"
-            />
+            >
+              <option value="">Pilih Organisasi</option>
+              {editModal.editFormData.kategori_organisasi &&
+                !organisasiOptions.some(org => org.name === editModal.editFormData.kategori_organisasi) && (
+                  <option value={editModal.editFormData.kategori_organisasi}>
+                    {editModal.editFormData.kategori_organisasi}
+                  </option>
+                )}
+              {organisasiOptions.map(org => (
+                <option key={org.id} value={org.name}>{org.name}</option>
+              ))}
+            </select>
           </div>
         </div>
 

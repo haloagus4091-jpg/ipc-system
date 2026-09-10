@@ -70,7 +70,7 @@ router.post('/', auth, checkInputAccess('pelanggaran'), upload.single('foto'), a
             foto = newFileName;
         }
 
-        const point_dikurangi = calculatePelanggaranPoints(jenis_pelanggaran);
+        const point_dikurangi = await calculatePelanggaranPoints(jenis_pelanggaran);
         const userId = await resolveStudentIdByNis(nis, req.user.id);
 
         const [result] = await db.query(
@@ -193,7 +193,7 @@ router.put('/:id', auth, upload.single('foto'), async (req, res) => {
         }
 
         // Recalculate points if jenis_pelanggaran changed
-        const point_dikurangi = calculatePelanggaranPoints(jenis_pelanggaran);
+        const point_dikurangi = await calculatePelanggaranPoints(jenis_pelanggaran);
 
         await db.query(
             'UPDATE pelanggaran SET nama = ?, nis = ?, kelas = ?, grha = ?, keterangan = ?, foto = ?, jenis_pelanggaran = ?, point_dikurangi = ? WHERE id = ?',

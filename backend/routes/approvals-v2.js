@@ -93,7 +93,7 @@ router.post('/prestasi/submit', auth, checkInputAccess('prestasi'), upload.singl
         // SUPERADMIN: Direct submit to main table
         if (userRole === 'superadmin') {
             console.log('Prestasi - Superadmin direct submission');
-            const point = calculatePrestasiPoints(juara, kategori);
+            const point = await calculatePrestasiPoints(juara, kategori);
             
             // Move photo to organized folder if exists
             let finalFotoPath = fotoPath;
@@ -160,7 +160,10 @@ router.post('/pelanggaran/submit', auth, checkInputAccess('pelanggaran'), upload
         let foto_path = req.file ? saveFileLocally(req.file.path) : null;
         console.log('Pelanggaran - Using local path:', foto_path);
         console.log('Pelanggaran - Superadmin direct submission');
-        const point = calculatePelanggaranPoints(jenis_pelanggaran);
+        const point = await calculatePelanggaranPoints(jenis_pelanggaran);
+        if (!point) {
+            return res.status(400).json({ message: 'Detail pelanggaran belum memiliki konfigurasi tingkat atau point aktif' });
+        }
         
         // Get student's calculated class from database
         const [studentData] = await db.query('SELECT kelas FROM users WHERE id = ?', [userId]);
@@ -286,7 +289,7 @@ router.post('/organisasi/submit', auth, checkInputAccess('organisasi'), upload.s
         // SUPERADMIN: Direct submit to main table
         if (userRole === 'superadmin') {
             console.log('Organisasi - Superadmin direct submission');
-            const point = calculateOrganisasiPoints(jabatan_organisasi);
+            const point = await calculateOrganisasiPoints(kategori_organisasi, jabatan_organisasi);
             
             // Move photo to organized folder if exists
             let finalFotoPath = foto_path;
@@ -488,13 +491,13 @@ router.put('/superadmin/:type/:id', auth, superAdminOnly, async (req, res) => {
             // Calculate points
             let pointChange = 0;
             if (type === 'prestasi') {
-                pointChange = calculatePrestasiPoints(data.juara, data.kategori);
+                pointChange = await calculatePrestasiPoints(data.juara, data.kategori);
             } else if (type === 'event') {
                 pointChange = calculateEventPoints(data.tingkat);
             } else if (type === 'kepanitiaan') {
                 pointChange = calculateKepanitiaanPoints(data[pointField]);
             } else {
-                pointChange = calculateOrganisasiPoints(data[pointField]);
+                pointChange = await calculateOrganisasiPoints(data.kategori_organisasi, data[pointField]);
             }
 
             // Move photo to organized folder if exists

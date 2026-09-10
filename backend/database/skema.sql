@@ -1,7 +1,8 @@
 -- Database Schema for IPC School System
 -- Complete Schema - Import this file AFTER selecting database 'ipc_school' in phpMyAdmin
 -- This file contains all tables: users, permissions, prestasi, organisasi, event, pelanggaran, perilaku, 
--- activity_logs, ipc_history, wali_kelas_assignment, approvals, notifications, drive_links, input_access_control
+-- ipc configuration, activity_logs, ipc_history, wali_kelas_assignment, approvals,
+-- notifications, drive_links, input_access_control
 
 -- Disable foreign key checks to allow dropping tables in any order
 SET FOREIGN_KEY_CHECKS=0;
@@ -45,6 +46,60 @@ CREATE TABLE permissions (
     can_input_perilaku BOOLEAN DEFAULT FALSE,
     can_view_all_data BOOLEAN DEFAULT FALSE,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+-- ==================== IPC CONFIGURATION TABLES ====================
+
+-- Organization options managed by IPC configuration
+DROP TABLE IF EXISTS ipc_organisasi;
+CREATE TABLE ipc_organisasi (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(100) NOT NULL UNIQUE,
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+
+-- Main IPC point configuration
+DROP TABLE IF EXISTS ipc_config;
+CREATE TABLE ipc_config (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    category VARCHAR(50) NOT NULL,
+    field1 VARCHAR(100) DEFAULT NULL,
+    field2 VARCHAR(100) DEFAULT NULL,
+    field3 VARCHAR(100) DEFAULT NULL COMMENT 'Legacy compatibility column',
+    point_value INT NOT NULL,
+    description TEXT,
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    updated_by INT DEFAULT NULL,
+    UNIQUE KEY unique_config (category, field1, field2, field3),
+    FOREIGN KEY (updated_by) REFERENCES users(id) ON DELETE SET NULL
+);
+
+-- Pelanggaran configuration is split into levels and coarse details
+DROP TABLE IF EXISTS ipc_pelanggaran_detail;
+DROP TABLE IF EXISTS ipc_pelanggaran_level;
+CREATE TABLE ipc_pelanggaran_level (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(100) NOT NULL UNIQUE,
+    point_value INT NOT NULL,
+    description TEXT,
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+
+CREATE TABLE ipc_pelanggaran_detail (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(150) NOT NULL UNIQUE,
+    level_id INT NOT NULL,
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (level_id) REFERENCES ipc_pelanggaran_level(id)
+        ON UPDATE CASCADE ON DELETE RESTRICT
 );
 
 -- ==================== DATA TABLES ====================
@@ -139,7 +194,7 @@ CREATE TABLE pelanggaran (
     grha VARCHAR(50),
     keterangan TEXT NOT NULL,
     foto VARCHAR(255),
-    jenis_pelanggaran ENUM('ringan', 'sedang', 'berat') NOT NULL,
+    jenis_pelanggaran VARCHAR(100) NOT NULL,
     point_dikurangi INT NOT NULL,
     status ENUM('pending', 'approved', 'rejected') DEFAULT 'pending',
     rejection_reason TEXT,
@@ -203,7 +258,8 @@ CREATE TABLE wali_kelas_assignment (
     tahun_ajaran VARCHAR(20) NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (guru_id) REFERENCES users(id) ON DELETE CASCADE,
-    UNIQUE KEY unique_guru_kelas (guru_id, kelas, tahun_ajaran)
+    UNIQUE KEY unique_guru_kelas (guru_id, kelas, tahun_ajaran),
+    UNIQUE KEY unique_kelas_tahun_ajaran (kelas, tahun_ajaran)
 );
 
 -- ==================== APPROVAL TABLES ====================

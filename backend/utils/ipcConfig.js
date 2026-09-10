@@ -70,15 +70,8 @@ function getDefaultConfig() {
         'juara harapan 1': 4,
         'juara harapan 2': 3,
         'juara harapan 3': 2,
-        'finalis': 2,
-        'peserta': 1
-      },
-      kategori: {
-        'kecamatan': 1,
-        'kabupaten': 2,
-        'provinsi': 3,
-        'nasional': 4,
-        'internasional': 5
+        finalis: 2,
+        peserta: 1
       }
     },
     organisasi: {

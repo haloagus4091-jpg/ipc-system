@@ -68,7 +68,7 @@ router.post('/', auth, upload.single('foto'), async (req, res) => {
             foto = newFileName;
         }
 
-        const point = calculateOrganisasiPoints(jabatan_organisasi);
+        const point = await calculateOrganisasiPoints(kategori_organisasi, jabatan_organisasi);
 
         const [result] = await db.query(
             'INSERT INTO organisasi (user_id, nama, nis, kelas, grha, jabatan_organisasi, foto, kategori_organisasi, point) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
@@ -190,7 +190,7 @@ router.put('/:id', auth, upload.single('foto'), async (req, res) => {
         }
 
         // Recalculate points if jabatan_organisasi changed
-        const point = calculateOrganisasiPoints(jabatan_organisasi);
+        const point = await calculateOrganisasiPoints(kategori_organisasi, jabatan_organisasi);
 
         await db.query(
             'UPDATE organisasi SET nama = ?, nis = ?, kelas = ?, grha = ?, jabatan_organisasi = ?, kategori_organisasi = ?, foto = ?, point = ? WHERE id = ?',

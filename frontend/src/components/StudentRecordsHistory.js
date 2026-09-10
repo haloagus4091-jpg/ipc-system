@@ -117,7 +117,7 @@ function renderRecordDetails(item, type) {
                         Jenis: {item.jenis_pelanggaran}
                     </div>
                     <div style={{ fontSize: 13, marginTop: 4 }}>
-                        <span className="badge badge-danger">-{item.point_dikurangi} poin</span>
+                        <span className="badge badge-danger">{item.point_dikurangi} poin</span>
                     </div>
                 </>
             );

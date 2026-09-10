@@ -28,7 +28,8 @@ function createEmptyPoints(ipcAwal = 80) {
         event: 0,
         pelanggaran_ringan: 0,
         pelanggaran_sedang: 0,
-        pelanggaran_berat: 0
+        pelanggaran_berat: 0,
+        pelanggaran_lainnya: 0
     };
 }
 
@@ -74,6 +75,7 @@ function calculateBreakdownTotal(points) {
     total -= points.pelanggaran_ringan || 0;
     total -= points.pelanggaran_sedang || 0;
     total -= points.pelanggaran_berat || 0;
+    total -= points.pelanggaran_lainnya || 0;
     return total;
 }
 
@@ -134,6 +136,8 @@ async function buildIpcCardBreakdown(userId) {
             points.pelanggaran_sedang += row.point_dikurangi || 0;
         } else if (jenis === 'berat') {
             points.pelanggaran_berat += row.point_dikurangi || 0;
+        } else {
+            points.pelanggaran_lainnya += row.point_dikurangi || 0;
         }
     });
 

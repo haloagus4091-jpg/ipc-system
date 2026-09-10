@@ -3,6 +3,40 @@ const router = express.Router();
 const { auth, superAdminOnly } = require('../middleware/auth');
 const db = require('../config/database');
 
+async function getOrganisasiOptions(activeOnly = false) {
+    const [rows] = await db.query(
+        `SELECT id, name, is_active, created_at, updated_at
+         FROM ipc_organisasi
+         ${activeOnly ? 'WHERE is_active = TRUE' : ''}
+         ORDER BY name`
+    );
+    return rows;
+}
+
+async function getPelanggaranConfigs(activeOnly = false) {
+    const activeClause = activeOnly ? 'WHERE l.is_active = TRUE' : '';
+    const [rows] = await db.query(`
+        SELECT CONCAT('level-', l.id) id, 'pelanggaran' category,
+               l.name field1, NULL field2, l.point_value,
+               l.description, l.is_active, l.created_at, l.updated_at
+        FROM ipc_pelanggaran_level l ${activeClause}
+        UNION ALL
+        SELECT CONCAT('detail-', d.id), 'pelanggaran',
+               d.name, l.name, l.point_value,
+               NULL, d.is_active, d.created_at, d.updated_at
+        FROM ipc_pelanggaran_detail d
+        JOIN ipc_pelanggaran_level l ON l.id = d.level_id
+        ${activeOnly ? 'WHERE d.is_active = TRUE AND l.is_active = TRUE' : ''}
+        ORDER BY category, field1
+    `);
+    return rows;
+}
+
+function parsePelanggaranId(id) {
+    const match = /^(level|detail)-(\d+)$/.exec(String(id));
+    return match ? { type: match[1], value: Number(match[2]) } : null;
+}
+
 // Get all IPC configurations
 router.get('/all', auth, superAdminOnly, async (req, res) => {
     try {
@@ -12,7 +46,6 @@ router.get('/all', auth, superAdminOnly, async (req, res) => {
                 category,
                 field1,
                 field2,
-                field3,
                 point_value,
                 description,
                 is_active,
@@ -21,9 +54,9 @@ router.get('/all', auth, superAdminOnly, async (req, res) => {
                 updated_by,
                 (SELECT nama FROM users WHERE id = ipc_config.updated_by) as updated_by_name
             FROM ipc_config
-            ORDER BY category, field1, field2, field3
+            ORDER BY category, field1, field2
         `);
-        res.json(configs);
+        res.json(configs.concat(await getPelanggaranConfigs()));
     } catch (error) {
         console.error('Error fetching IPC configurations:', error);
         res.status(500).json({ message: 'Server error' });
@@ -40,7 +73,6 @@ router.get('/category/:category', auth, superAdminOnly, async (req, res) => {
                 category,
                 field1,
                 field2,
-                field3,
                 point_value,
                 description,
                 is_active,
@@ -50,9 +82,9 @@ router.get('/category/:category', auth, superAdminOnly, async (req, res) => {
                 (SELECT nama FROM users WHERE id = ipc_config.updated_by) as updated_by_name
             FROM ipc_config
             WHERE category = ?
-            ORDER BY field1, field2, field3
+            ORDER BY field1, field2
         `, [category]);
-        res.json(configs);
+        res.json(category === 'pelanggaran' ? await getPelanggaranConfigs() : configs);
     } catch (error) {
         console.error('Error fetching IPC configurations by category:', error);
         res.status(500).json({ message: 'Server error' });
@@ -63,24 +95,25 @@ router.get('/category/:category', auth, superAdminOnly, async (req, res) => {
 router.get('/active', auth, async (req, res) => {
     try {
         const [configs] = await db.query(`
-            SELECT category, field1, field2, field3, point_value
+            SELECT category, field1, field2, point_value
             FROM ipc_config
             WHERE is_active = TRUE
-            ORDER BY category, field1, field2, field3
+            ORDER BY category, field1, field2
         `);
         
         // Group by category for easier access
         const grouped = {};
-        configs.forEach(config => {
+        const allConfigs = configs.concat(await getPelanggaranConfigs(true));
+        allConfigs.forEach(config => {
             if (!grouped[config.category]) {
                 grouped[config.category] = [];
             }
             grouped[config.category].push({
                 field1: config.field1,
                 field2: config.field2,
-                field3: config.field3,
                 point_value: config.point_value
             });
+
         });
         
         res.json(grouped);
@@ -90,17 +123,68 @@ router.get('/active', auth, async (req, res) => {
     }
 });
 
+router.get('/organisasi-options', auth, async (req, res) => {
+    try {
+        res.json((await getOrganisasiOptions()).filter(option => option.is_active));
+    } catch (error) {
+        console.error('Error fetching organisasi options:', error);
+        res.status(500).json({ message: 'Server error' });
+    }
+});
+
+router.post('/organisasi-options', auth, superAdminOnly, async (req, res) => {
+    try {
+        const { name } = req.body;
+        if (!name?.trim()) return res.status(400).json({ message: 'Nama organisasi wajib diisi' });
+        const [result] = await db.query(
+            'INSERT INTO ipc_organisasi (name, is_active) VALUES (?, TRUE)', [name.trim()]
+        );
+        const options = await getOrganisasiOptions();
+        res.status(201).json(options.find(option => option.id === result.insertId));
+    } catch (error) {
+        if (error.code === 'ER_DUP_ENTRY') return res.status(400).json({ message: 'Organisasi sudah terdaftar' });
+        console.error('Error creating organisasi option:', error);
+        res.status(500).json({ message: 'Server error' });
+    }
+});
+
+router.delete('/organisasi-options/:id', auth, superAdminOnly, async (req, res) => {
+    try {
+        const [option] = await db.query('SELECT name FROM ipc_organisasi WHERE id = ?', [req.params.id]);
+        if (!option.length) return res.status(404).json({ message: 'Organisasi tidak ditemukan' });
+        const [configs] = await db.query(
+            `SELECT COUNT(*) count FROM ipc_config WHERE category = 'organisasi' AND field1 = ?`,
+            [option[0].name]
+        );
+        if (configs[0].count > 0) {
+            return res.status(409).json({
+                message: `Organisasi ${option[0].name} tidak dapat dihapus karena masih memiliki konfigurasi point IPC`
+            });
+        }
+        await db.query('DELETE FROM ipc_organisasi WHERE id = ?', [req.params.id]);
+        res.json({ message: 'Organisasi berhasil dihapus' });
+    } catch (error) {
+        console.error('Error deleting organisasi option:', error);
+        res.status(500).json({ message: 'Server error' });
+    }
+});
+
 // Get single configuration
 router.get('/:id', auth, superAdminOnly, async (req, res) => {
     try {
         const { id } = req.params;
+        const pelanggaranId = parsePelanggaranId(id);
+        if (pelanggaranId) {
+            const configs = await getPelanggaranConfigs();
+            const config = configs.find(item => item.id === id);
+            return config ? res.json(config) : res.status(404).json({ message: 'Configuration not found' });
+        }
         const [configs] = await db.query(`
             SELECT 
                 id,
                 category,
                 field1,
                 field2,
-                field3,
                 point_value,
                 description,
                 is_active,
@@ -126,24 +210,40 @@ router.get('/:id', auth, superAdminOnly, async (req, res) => {
 // Create new configuration
 router.post('/', auth, superAdminOnly, async (req, res) => {
     try {
-        const { category, field1, field2, field3, point_value, description, is_active } = req.body;
+        const { category, field1, field2, point_value, description, is_active } = req.body;
         const userId = req.user.id;
+        if (category === 'pelanggaran') {
+            if (field2) {
+                const [level] = await db.query('SELECT id FROM ipc_pelanggaran_level WHERE name = ?', [field2]);
+                if (!level.length) return res.status(400).json({ message: 'Violation level not found' });
+                const [result] = await db.query(
+                    'INSERT INTO ipc_pelanggaran_detail (name, level_id, is_active) VALUES (?, ?, ?)',
+                    [field1, level[0].id, is_active !== undefined ? is_active : true]
+                );
+                return res.status(201).json((await getPelanggaranConfigs()).find(item => item.id === `detail-${result.insertId}`));
+            }
+            const [result] = await db.query(
+                'INSERT INTO ipc_pelanggaran_level (name, point_value, description, is_active) VALUES (?, ?, ?, ?)',
+                [field1, point_value, description || null, is_active !== undefined ? is_active : true]
+            );
+            return res.status(201).json((await getPelanggaranConfigs()).find(item => item.id === `level-${result.insertId}`));
+        }
         
         if (!category || !field1 || point_value === undefined) {
             return res.status(400).json({ message: 'Category, field1, and point_value are required' });
         }
         
         const [result] = await db.query(`
-            INSERT INTO ipc_config (category, field1, field2, field3, point_value, description, is_active, updated_by)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-        `, [category, field1, field2 || null, field3 || null, point_value, description || null, is_active !== undefined ? is_active : true, userId]);
+            INSERT INTO ipc_config (category, field1, field2, point_value, description, is_active, updated_by)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+        `, [category, field1, field2 || null, point_value, description || null, is_active !== undefined ? is_active : true, userId]);
         
         const [newConfig] = await db.query('SELECT * FROM ipc_config WHERE id = ?', [result.insertId]);
         res.status(201).json(newConfig[0]);
     } catch (error) {
         console.error('Error creating IPC configuration:', error);
         if (error.code === 'ER_DUP_ENTRY') {
-            return res.status(400).json({ message: 'Configuration with this category, field1, field2, and field3 already exists' });
+            return res.status(400).json({ message: 'Configuration with this category, field1, and field2 already exists' });
         }
         res.status(500).json({ message: 'Server error' });
     }
@@ -153,8 +253,20 @@ router.post('/', auth, superAdminOnly, async (req, res) => {
 router.put('/:id', auth, superAdminOnly, async (req, res) => {
     try {
         const { id } = req.params;
-        const { category, field1, field2, field3, point_value, description, is_active } = req.body;
+        const { category, field1, field2, point_value, description, is_active } = req.body;
         const userId = req.user.id;
+        const pelanggaranId = parsePelanggaranId(id);
+        if (pelanggaranId) {
+            const table = pelanggaranId.type === 'level' ? 'ipc_pelanggaran_level' : 'ipc_pelanggaran_detail';
+            const fieldUpdates = pelanggaranId.type === 'level'
+                ? ['point_value = ?', 'description = ?', 'is_active = ?']
+                : ['is_active = ?'];
+            const values = pelanggaranId.type === 'level'
+                ? [point_value, description ?? null, is_active, pelanggaranId.value]
+                : [is_active, pelanggaranId.value];
+            await db.query(`UPDATE ${table} SET ${fieldUpdates.join(', ')} WHERE id = ?`, values);
+            return res.json((await getPelanggaranConfigs()).find(item => item.id === id));
+        }
         
         // Check if configuration exists
         const [existing] = await db.query('SELECT * FROM ipc_config WHERE id = ?', [id]);
@@ -164,13 +276,12 @@ router.put('/:id', auth, superAdminOnly, async (req, res) => {
         
         const [result] = await db.query(`
             UPDATE ipc_config
-            SET category = ?, field1 = ?, field2 = ?, field3 = ?, point_value = ?, description = ?, is_active = ?, updated_by = ?
+            SET category = ?, field1 = ?, field2 = ?, point_value = ?, description = ?, is_active = ?, updated_by = ?
             WHERE id = ?
         `, [
             category || existing[0].category,
             field1 || existing[0].field1,
             field2 !== undefined ? field2 : existing[0].field2,
-            field3 !== undefined ? field3 : existing[0].field3,
             point_value !== undefined ? point_value : existing[0].point_value,
             description !== undefined ? description : existing[0].description,
             is_active !== undefined ? is_active : existing[0].is_active,
@@ -183,7 +294,7 @@ router.put('/:id', auth, superAdminOnly, async (req, res) => {
     } catch (error) {
         console.error('Error updating IPC configuration:', error);
         if (error.code === 'ER_DUP_ENTRY') {
-            return res.status(400).json({ message: 'Configuration with this category, field1, field2, and field3 already exists' });
+            return res.status(400).json({ message: 'Configuration with this category, field1, and field2 already exists' });
         }
         res.status(500).json({ message: 'Server error' });
     }
@@ -193,6 +304,14 @@ router.put('/:id', auth, superAdminOnly, async (req, res) => {
 router.delete('/:id', auth, superAdminOnly, async (req, res) => {
     try {
         const { id } = req.params;
+        const pelanggaranId = parsePelanggaranId(id);
+        if (pelanggaranId) {
+            const table = pelanggaranId.type === 'level' ? 'ipc_pelanggaran_level' : 'ipc_pelanggaran_detail';
+            const [result] = await db.query(`DELETE FROM ${table} WHERE id = ?`, [pelanggaranId.value]);
+            return result.affectedRows
+                ? res.json({ message: 'Configuration deleted successfully' })
+                : res.status(404).json({ message: 'Configuration not found' });
+        }
         
         const [result] = await db.query('DELETE FROM ipc_config WHERE id = ?', [id]);
         
@@ -214,10 +333,18 @@ router.post('/reset-defaults', auth, superAdminOnly, async (req, res) => {
         
         // Delete all existing configurations
         await db.query('DELETE FROM ipc_config');
+        await db.query('DELETE FROM ipc_pelanggaran_detail');
+        await db.query('DELETE FROM ipc_pelanggaran_level');
+        await db.query(`
+            INSERT INTO ipc_pelanggaran_level (name, point_value, description, is_active)
+            VALUES ('ringan', -1, 'Point untuk pelanggaran ringan', TRUE),
+                   ('sedang', -5, 'Point untuk pelanggaran sedang', TRUE),
+                   ('berat', -25, 'Point untuk pelanggaran berat', TRUE)
+        `);
         
         // Insert default configurations from schema file
         // This should match the data in ipc_config_schema.sql
-        const defaults = [
+        let defaults = [
             // PRESTASI - Akademik Kecamatan
             { category: 'prestasi', field1: 'akademik', field2: 'kecamatan', field3: 'juara 1', point_value: 50, description: 'Juara 1 akademik tingkat kecamatan' },
             { category: 'prestasi', field1: 'akademik', field2: 'kecamatan', field3: 'juara 2', point_value: 40, description: 'Juara 2 akademik tingkat kecamatan' },
@@ -342,11 +469,31 @@ router.post('/reset-defaults', auth, superAdminOnly, async (req, res) => {
             { category: 'event', field1: 'internasional', field2: null, field3: null, point_value: 30, description: 'Event tingkat internasional' }
         ];
         
+        const prestasiDefaults = defaults
+            .filter(config => config.category === 'prestasi')
+            .reduce((grouped, config) => {
+                const key = `${config.field2}:${config.field3}`;
+                if (!grouped[key] || config.point_value > grouped[key].point_value) {
+                    grouped[key] = {
+                        ...config,
+                        field1: config.field2,
+                        field2: config.field3,
+                        field3: null,
+                        description: `${config.field3} tingkat ${config.field2}`
+                    };
+                }
+                return grouped;
+            }, {});
+        defaults = [
+            ...defaults.filter(config => config.category !== 'prestasi'),
+            ...Object.values(prestasiDefaults)
+        ];
+
         for (const config of defaults) {
             await db.query(`
-                INSERT INTO ipc_config (category, field1, field2, field3, point_value, description, is_active, updated_by)
-                VALUES (?, ?, ?, ?, ?, ?, TRUE, ?)
-            `, [config.category, config.field1, config.field2, config.field3, config.point_value, config.description, userId]);
+                INSERT INTO ipc_config (category, field1, field2, point_value, description, is_active, updated_by)
+                VALUES (?, ?, ?, ?, ?, TRUE, ?)
+            `, [config.category, config.field1, config.field2, config.point_value, config.description, userId]);
         }
         
         res.json({ message: 'Configurations reset to defaults successfully' });

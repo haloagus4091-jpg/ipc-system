@@ -9,8 +9,12 @@ function KonfigurasiIPC() {
   const [editingConfig, setEditingConfig] = useState(null);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
+  const [pelanggaranSection, setPelanggaranSection] = useState('severity');
+  const [pelanggaranAddType, setPelanggaranAddType] = useState('severity');
   const [message, setMessage] = useState('');
   const [userRole, setUserRole] = useState('');
+  const [organisasiOptions, setOrganisasiOptions] = useState([]);
+  const [organisasiName, setOrganisasiName] = useState('');
 
   const categories = [
     { key: 'prestasi', label: 'Prestasi', icon: '🏆' },
@@ -25,7 +29,53 @@ function KonfigurasiIPC() {
     const user = JSON.parse(localStorage.getItem('user') || '{}');
     setUserRole(user.role || '');
     fetchConfigs();
+    fetchOrganisasiOptions();
   }, []);
+
+  const fetchOrganisasiOptions = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.get('/ipc-config/organisasi-options', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setOrganisasiOptions(response.data);
+    } catch (error) {
+      console.error('Error fetching organisasi options:', error);
+      setMessage('Gagal memuat daftar organisasi');
+    }
+  };
+
+  const addOrganisasiOption = async (event) => {
+    event.preventDefault();
+    try {
+      setSaving(true);
+      const token = localStorage.getItem('token');
+      await axios.post('/ipc-config/organisasi-options', { name: organisasiName }, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setOrganisasiName('');
+      setMessage('Organisasi berhasil ditambahkan!');
+      fetchOrganisasiOptions();
+    } catch (error) {
+      setMessage(error.response?.data?.message || 'Gagal menambahkan organisasi');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const deleteOrganisasiOption = async (option) => {
+    if (!window.confirm(`Hapus organisasi ${option.name}?`)) return;
+    try {
+      const token = localStorage.getItem('token');
+      await axios.delete(`/ipc-config/organisasi-options/${option.id}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setMessage('Organisasi berhasil dihapus!');
+      fetchOrganisasiOptions();
+    } catch (error) {
+      setMessage(error.response?.data?.message || 'Gagal menghapus organisasi');
+    }
+  };
 
   const fetchConfigs = async () => {
     try {
@@ -130,10 +180,22 @@ function KonfigurasiIPC() {
   };
 
   const categoryConfigs = configs.filter(c => c.category === activeCategory);
+  const configuredPelanggaranLevels = configs.filter(c => c.category === 'pelanggaran' && !c.field2 && c.is_active);
+  const pelanggaranSeverityConfigs = categoryConfigs.filter(c => !c.field2);
+  const pelanggaranDetailConfigs = categoryConfigs.filter(c => Boolean(c.field2));
+  const displayedConfigs = activeCategory === 'pelanggaran'
+    ? (pelanggaranSection === 'severity' ? pelanggaranSeverityConfigs : pelanggaranDetailConfigs)
+    : categoryConfigs;
+  const getDisplayPoint = (config) => {
+    if (activeCategory === 'pelanggaran' && config.field2) {
+      return categoryConfigs.find(level => !level.field2 && level.field1 === config.field2)?.point_value ?? 0;
+    }
+    return config.point_value ?? 0;
+  };
 
   const getHeaderLabel1 = (category) => {
     const labels = {
-      prestasi: 'Jenis',
+      prestasi: 'Tingkat Lomba',
       organisasi: 'Nama Organisasi',
       kepanitiaan: 'Jabatan',
       event: 'Tingkat Event',
@@ -145,27 +207,21 @@ function KonfigurasiIPC() {
 
   const getHeaderLabel2 = (category) => {
     const labels = {
-      prestasi: 'Tingkat',
+      prestasi: 'Juara Lomba',
       organisasi: 'Jabatan',
-      kepanitiaan: '-',
-      event: '-',
-      pelanggaran: '-',
+      kepanitiaan: '',
+      event: '',
+      pelanggaran: '',
       perilaku: 'Tingkat Penilaian'
     };
     return labels[category] || 'Field 2';
   };
 
-  const getHeaderLabel3 = (category) => {
-    const labels = {
-      prestasi: 'Juara',
-      organisasi: '-',
-      kepanitiaan: '-',
-      event: '-',
-      pelanggaran: 'Deskripsi Detail',
-      perilaku: '-'
-    };
-    return labels[category] || 'Field 3';
-  };
+  const tableFields = [
+    { key: 'field1', label: activeCategory === 'pelanggaran' ? (pelanggaranSection === 'severity' ? 'Tingkat Pelanggaran' : 'Detail Pelanggaran') : getHeaderLabel1(activeCategory) },
+    { key: 'field2', label: activeCategory === 'pelanggaran' && pelanggaranSection === 'detail' ? 'Tingkat Pelanggaran' : getHeaderLabel2(activeCategory) }
+  ].filter(field => field.label);
+  const showDescription = !(activeCategory === 'pelanggaran' && pelanggaranSection === 'detail');
 
   if (userRole !== 'superadmin') {
     return (
@@ -256,7 +312,10 @@ function KonfigurasiIPC() {
             {categories.find(c => c.key === activeCategory)?.label} Configuration
           </h3>
           <button
-            onClick={() => setShowAddModal(true)}
+            onClick={() => {
+              setPelanggaranAddType(activeCategory === 'pelanggaran' ? pelanggaranSection : 'severity');
+              setShowAddModal(true);
+            }}
             className="btn btn-primary"
             style={{ display: 'flex', alignItems: 'center', gap: 6 }}
           >
@@ -264,47 +323,94 @@ function KonfigurasiIPC() {
           </button>
         </div>
 
+        {activeCategory === 'pelanggaran' && (
+          <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
+            {[
+              ['severity', 'Tingkat Pelanggaran & Point'],
+              ['detail', 'Detail Pelanggaran']
+            ].map(([key, label]) => (
+              <button
+                key={key}
+                onClick={() => setPelanggaranSection(key)}
+                className={`btn ${pelanggaranSection === key ? 'btn-primary' : 'btn-secondary'}`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {activeCategory === 'organisasi' && (
+          <div className="card" style={{ marginBottom: 20, background: '#F8FAFF' }}>
+            <h4>Daftar Organisasi</h4>
+            <form onSubmit={addOrganisasiOption} style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
+              <input
+                value={organisasiName}
+                onChange={event => setOrganisasiName(event.target.value)}
+                placeholder="Contoh: OSIS, KY, MPK"
+                required
+                className="form-control"
+              />
+              <button className="btn btn-primary" disabled={saving}>Tambah</button>
+            </form>
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+              {organisasiOptions.map(option => (
+                <span key={option.id} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '6px 10px', background: '#FFFFFF', border: '1px solid #E7E8EE', borderRadius: 6 }}>
+                  {option.name}
+                  <button type="button" className="btn btn-danger" onClick={() => deleteOrganisasiOption(option)} style={{ padding: '2px 6px', fontSize: 11 }}>Hapus</button>
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+
         {loading ? (
           <div className="loading"><div className="spinner"></div></div>
-        ) : categoryConfigs.length === 0 ? (
+        ) : displayedConfigs.length === 0 ? (
           <div style={{ textAlign: 'center', padding: 40, color: '#6B7080' }}>
             <div style={{ fontSize: 48, marginBottom: 16, color: '#94A3B8' }}>⚠️</div>
             <p>Belum ada konfigurasi untuk kategori ini</p>
           </div>
         ) : (
-          <table className="table">
+          <div style={{ overflowX: 'auto' }}>
+          <table className="table" style={{ minWidth: 760 }}>
             <thead>
               <tr>
-                <th>{getHeaderLabel1(activeCategory)}</th>
-                <th>{getHeaderLabel2(activeCategory)}</th>
-                <th>{getHeaderLabel3(activeCategory)}</th>
+                {tableFields.map(field => <th key={field.key}>{field.label}</th>)}
                 <th>Point</th>
-                <th>Deskripsi</th>
+                {showDescription && <th>Deskripsi</th>}
                 <th>Status</th>
                 <th>Aksi</th>
               </tr>
             </thead>
             <tbody>
-              {categoryConfigs.map(config => (
+              {displayedConfigs.map(config => (
                 <tr key={config.id}>
-                  <td style={{ fontWeight: 600 }}>{config.field1 || '-'}</td>
-                  <td>{config.field2 || '-'}</td>
-                  <td>{config.field3 || '-'}</td>
+                  {tableFields.map((field, index) => (
+                    <td key={field.key} style={index === 0 ? { fontWeight: 600 } : undefined}>
+                      {config[field.key] || 'Tidak ada'}
+                    </td>
+                  ))}
                   <td>
+                    {(() => {
+                      const pointValue = getDisplayPoint(config);
+                      return (
                     <span
                       style={{
                         padding: '4px 12px',
                         borderRadius: 20,
-                        background: config.point_value >= 0 ? '#EAFBF3' : '#FEE2E2',
-                        color: config.point_value >= 0 ? '#0F7A55' : '#DC2626',
+                        background: pointValue >= 0 ? '#EAFBF3' : '#FEE2E2',
+                        color: pointValue >= 0 ? '#0F7A55' : '#DC2626',
                         fontWeight: 700,
                         fontSize: 14
                       }}
                     >
-                      {config.point_value >= 0 ? '+' : ''}{config.point_value}
+                      {pointValue >= 0 ? '+' : ''}{pointValue}
                     </span>
+                      );
+                    })()}
                   </td>
-                  <td style={{ fontSize: 13, color: '#6B7080' }}>{config.description || '-'}</td>
+                  {showDescription && <td style={{ fontSize: 13, color: '#6B7080' }}>{config.description || 'Tidak ada deskripsi'}</td>}
                   <td>
                     <button
                       onClick={() => handleToggleActive(config.id, config.is_active)}
@@ -341,6 +447,7 @@ function KonfigurasiIPC() {
               ))}
             </tbody>
           </table>
+          </div>
         )}
       </div>
 
@@ -371,13 +478,18 @@ function KonfigurasiIPC() {
             <form onSubmit={(e) => {
               e.preventDefault();
               handleUpdateConfig(editingConfig.id, {
-                point_value: parseInt(e.target.point_value.value),
-                description: e.target.description.value,
+                field2: e.target.field2?.value || editingConfig.field2,
+                point_value: activeCategory === 'pelanggaran' && pelanggaranAddType === 'detail'
+                  ? 0
+                  : parseInt(e.target.point_value.value),
+                description: activeCategory === 'pelanggaran' && editingConfig.field2
+                  ? null
+                  : e.target.description.value,
                 is_active: e.target.is_active.checked
               });
             }}>
               <div className="form-group">
-                <label>{getHeaderLabel1(activeCategory)}</label>
+                <label>{activeCategory === 'pelanggaran' && editingConfig.field2 ? 'Detail Pelanggaran' : getHeaderLabel1(activeCategory)}</label>
                 <input
                   type="text"
                   name="field1"
@@ -387,27 +499,14 @@ function KonfigurasiIPC() {
                   style={{ background: '#F7F8FB', color: '#6B7080' }}
                 />
               </div>
-              {getHeaderLabel2(activeCategory) !== '-' && (
+              {(getHeaderLabel2(activeCategory) || (activeCategory === 'pelanggaran' && editingConfig.field2)) && (
                 <div className="form-group">
-                  <label>{getHeaderLabel2(activeCategory)}</label>
+                  <label>{activeCategory === 'pelanggaran' ? 'Detail Pelanggaran' : getHeaderLabel2(activeCategory)}</label>
                   <input
                     type="text"
                     name="field2"
                     defaultValue={editingConfig.field2 || '-'}
-                    disabled
-                    className="form-control"
-                    style={{ background: '#F7F8FB', color: '#6B7080' }}
-                  />
-                </div>
-              )}
-              {getHeaderLabel3(activeCategory) !== '-' && (
-                <div className="form-group">
-                  <label>{getHeaderLabel3(activeCategory)}</label>
-                  <input
-                    type="text"
-                    name="field3"
-                    defaultValue={editingConfig.field3 || '-'}
-                    disabled
+                    disabled={activeCategory !== 'pelanggaran'}
                     className="form-control"
                     style={{ background: '#F7F8FB', color: '#6B7080' }}
                   />
@@ -424,7 +523,7 @@ function KonfigurasiIPC() {
                   placeholder="Masukkan nilai point"
                 />
               </div>
-              <div className="form-group">
+              {!(activeCategory === 'pelanggaran' && editingConfig.field2) && <div className="form-group">
                 <label>Deskripsi</label>
                 <textarea
                   name="description"
@@ -433,7 +532,7 @@ function KonfigurasiIPC() {
                   rows={3}
                   placeholder="Masukkan deskripsi konfigurasi"
                 />
-              </div>
+              </div>}
               <div className="form-group">
                 <label>
                   <input
@@ -498,19 +597,29 @@ function KonfigurasiIPC() {
                 category: activeCategory,
                 field1: e.target.field1.value,
                 field2: e.target.field2?.value || null,
-                field3: e.target.field3?.value || null,
-                point_value: parseInt(e.target.point_value.value),
-                description: e.target.description.value,
+                point_value: activeCategory === 'pelanggaran' && pelanggaranAddType === 'detail'
+                  ? 0
+                  : parseInt(e.target.point_value.value),
+                description: activeCategory === 'pelanggaran' && pelanggaranAddType === 'detail'
+                  ? null
+                  : e.target.description.value,
                 is_active: true
               });
             }}>
               <div className="form-group" style={{ marginBottom: 16 }}>
-                <label style={{ display: 'block', marginBottom: 6, fontSize: 13, fontWeight: 500 }}>{getHeaderLabel1(activeCategory)} *</label>
+                <label style={{ display: 'block', marginBottom: 6, fontSize: 13, fontWeight: 500 }}>
+                  {activeCategory === 'pelanggaran'
+                    ? (pelanggaranAddType === 'detail' ? 'Detail Pelanggaran' : 'Tingkat Pelanggaran')
+                    : getHeaderLabel1(activeCategory)} *
+                </label>
                 {activeCategory === 'prestasi' && (
                   <select name="field1" required className="form-control" style={{ fontSize: 14 }}>
-                    <option value="">Pilih Jenis</option>
-                    <option value="akademik">Akademik</option>
-                    <option value="nonakademik">Non-Akademik</option>
+                    <option value="">Pilih Tingkat Lomba</option>
+                    <option value="kecamatan">Kecamatan</option>
+                    <option value="kabupaten">Kabupaten</option>
+                    <option value="provinsi">Provinsi</option>
+                    <option value="nasional">Nasional</option>
+                    <option value="internasional">Internasional</option>
                   </select>
                 )}
                 {activeCategory === 'perilaku' && (
@@ -525,13 +634,25 @@ function KonfigurasiIPC() {
                     <option value="kepercayaan_diri">Kepercayaan Diri</option>
                   </select>
                 )}
-                {activeCategory === 'pelanggaran' && (
-                  <select name="field1" required className="form-control" style={{ fontSize: 14 }}>
-                    <option value="">Pilih Jenis Pelanggaran</option>
-                    <option value="ringan">Ringan</option>
-                    <option value="sedang">Sedang</option>
-                    <option value="berat">Berat</option>
-                  </select>
+                {activeCategory === 'pelanggaran' && pelanggaranAddType === 'severity' && (
+                <input
+                  type="text"
+                  name="field1"
+                  required
+                  className="form-control"
+                  placeholder="Contoh: Ringan, Sedang, Berat, Sangat Berat"
+                  style={{ fontSize: 14 }}
+                />
+                )}
+                {activeCategory === 'pelanggaran' && pelanggaranAddType === 'detail' && (
+                  <input
+                    type="text"
+                    name="field1"
+                    required
+                    className="form-control"
+                    placeholder="Contoh: Mencuri, Mencontek, Bolos"
+                    style={{ fontSize: 14 }}
+                  />
                 )}
                 {activeCategory === 'kepanitiaan' && (
                   <select name="field1" required className="form-control" style={{ fontSize: 14 }}>
@@ -547,13 +668,9 @@ function KonfigurasiIPC() {
                 {activeCategory === 'organisasi' && (
                   <select name="field1" required className="form-control" style={{ fontSize: 14 }}>
                     <option value="">Pilih Organisasi</option>
-                    <option value="OSIS">OSIS</option>
-                    <option value="KY">KY</option>
-                    <option value="MPK">MPK</option>
-                    <option value="PRAMUKA">PRAMUKA</option>
-                    <option value="PKS">PKS</option>
-                    <option value="PMR">PMR</option>
-                    <option value="PASKIBRAKA">PASKIBRAKA</option>
+                    {organisasiOptions.filter(option => option.is_active).map(option => (
+                      <option key={option.id} value={option.name}>{option.name}</option>
+                    ))}
                   </select>
                 )}
                 {activeCategory === 'event' && (
@@ -568,17 +685,30 @@ function KonfigurasiIPC() {
                   </select>
                 )}
               </div>
-              {getHeaderLabel2(activeCategory) !== '-' && (
+              {(getHeaderLabel2(activeCategory) || (activeCategory === 'pelanggaran' && pelanggaranAddType === 'detail')) && (
                 <div className="form-group" style={{ marginBottom: 16 }}>
-                  <label style={{ display: 'block', marginBottom: 6, fontSize: 13, fontWeight: 500 }}>{getHeaderLabel2(activeCategory)} *</label>
+                  <label style={{ display: 'block', marginBottom: 6, fontSize: 13, fontWeight: 500 }}>
+                    {activeCategory === 'pelanggaran' ? 'Tingkat Pelanggaran' : getHeaderLabel2(activeCategory)} *
+                  </label>
                   {activeCategory === 'prestasi' && (
                     <select name="field2" required className="form-control" style={{ fontSize: 14 }}>
-                      <option value="">Pilih Tingkat</option>
-                      <option value="kecamatan">Kecamatan</option>
-                      <option value="kabupaten">Kabupaten</option>
-                      <option value="provinsi">Provinsi</option>
-                      <option value="nasional">Nasional</option>
-                      <option value="internasional">Internasional</option>
+                      <option value="">Pilih Juara Lomba</option>
+                      <option value="juara 1">Juara 1</option>
+                      <option value="juara 2">Juara 2</option>
+                      <option value="juara 3">Juara 3</option>
+                      <option value="juara harapan 1">Juara Harapan 1</option>
+                      <option value="juara harapan 2">Juara Harapan 2</option>
+                      <option value="juara harapan 3">Juara Harapan 3</option>
+                      <option value="finalis">Finalis</option>
+                      <option value="peserta">Peserta</option>
+                    </select>
+                  )}
+                  {activeCategory === 'pelanggaran' && pelanggaranAddType === 'detail' && (
+                    <select name="field2" required className="form-control" style={{ fontSize: 14 }}>
+                      <option value="">Pilih Tingkat Pelanggaran</option>
+                    {configuredPelanggaranLevels.map(level => (
+                      <option key={level.id} value={level.field1}>{level.field1}</option>
+                    ))}
                     </select>
                   )}
                   {activeCategory === 'organisasi' && (
@@ -603,34 +733,7 @@ function KonfigurasiIPC() {
                   )}
                 </div>
               )}
-              {getHeaderLabel3(activeCategory) !== '-' && (
-                <div className="form-group" style={{ marginBottom: 16 }}>
-                  <label style={{ display: 'block', marginBottom: 6, fontSize: 13, fontWeight: 500 }}>{getHeaderLabel3(activeCategory)} *</label>
-                  {activeCategory === 'prestasi' && (
-                    <select name="field3" required className="form-control" style={{ fontSize: 14 }}>
-                      <option value="">Pilih Juara</option>
-                      <option value="juara 1">Juara 1</option>
-                      <option value="juara 2">Juara 2</option>
-                      <option value="juara 3">Juara 3</option>
-                      <option value="harapan 1">Harapan 1</option>
-                      <option value="harapan 2">Harapan 2</option>
-                      <option value="harapan 3">Harapan 3</option>
-                      <option value="finalis">Finalis</option>
-                      <option value="peserta">Peserta</option>
-                    </select>
-                  )}
-                  {activeCategory === 'pelanggaran' && (
-                    <input
-                      type="text"
-                      name="field3"
-                      className="form-control"
-                      placeholder="Deskripsi detail pelanggaran..."
-                      style={{ fontSize: 14 }}
-                    />
-                  )}
-                </div>
-              )}
-              <div className="form-group" style={{ marginBottom: 16 }}>
+              {!(activeCategory === 'pelanggaran' && pelanggaranAddType === 'detail') && <div className="form-group" style={{ marginBottom: 16 }}>
                 <label style={{ display: 'block', marginBottom: 6, fontSize: 13, fontWeight: 500 }}>Nilai Point *</label>
                 <input
                   type="number"
@@ -640,8 +743,8 @@ function KonfigurasiIPC() {
                   placeholder="Masukkan nilai point"
                   style={{ fontSize: 14 }}
                 />
-              </div>
-              <div className="form-group" style={{ marginBottom: 20 }}>
+              </div>}
+              {!(activeCategory === 'pelanggaran' && pelanggaranAddType === 'detail') && <div className="form-group" style={{ marginBottom: 20 }}>
                 <label style={{ display: 'block', marginBottom: 6, fontSize: 13, fontWeight: 500 }}>Deskripsi</label>
                 <textarea
                   name="description"
@@ -650,7 +753,7 @@ function KonfigurasiIPC() {
                   placeholder="Deskripsi singkat..."
                   style={{ fontSize: 14 }}
                 />
-              </div>
+              </div>}
               <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
                 <button
                   type="button"
