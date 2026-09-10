@@ -45,13 +45,14 @@ router.get('/status/my-access', auth, async (req, res) => {
         
         // Get individual permission from permissions table
         const [individualPerms] = await db.query(
-            'SELECT can_input_prestasi, can_input_organisasi, can_input_event, can_input_pelanggaran, can_input_perilaku FROM permissions WHERE user_id = ?',
+            'SELECT can_input_prestasi, can_input_organisasi, can_input_kepanitiaan, can_input_event, can_input_pelanggaran, can_input_perilaku FROM permissions WHERE user_id = ?',
             [userId]
         );
         
         const access = {
             prestasi: false,
             organisasi: false,
+            kepanitiaan: false,
             event: false,
             pelanggaran: false,
             perilaku: false
@@ -60,6 +61,7 @@ router.get('/status/my-access', auth, async (req, res) => {
         const permMap = {
             'prestasi': 'can_input_prestasi',
             'organisasi': 'can_input_organisasi',
+            'kepanitiaan': 'can_input_kepanitiaan',
             'event': 'can_input_event',
             'pelanggaran': 'can_input_pelanggaran',
             'perilaku': 'can_input_perilaku'
@@ -111,7 +113,7 @@ router.post('/admin/global', auth, superAdminOnly, async (req, res) => {
         }
         
         const jenisList = jenis_input === 'all' 
-            ? ['prestasi', 'organisasi', 'event', 'pelanggaran', 'perilaku']
+            ? ['prestasi', 'organisasi', 'kepanitiaan', 'event', 'pelanggaran', 'perilaku']
             : [jenis_input];
         
         for (const jenis of jenisList) {
@@ -184,7 +186,7 @@ router.post('/admin/role', auth, superAdminOnly, async (req, res) => {
         }
         
         const jenisList = jenis_input === 'all' 
-            ? ['prestasi', 'organisasi', 'event', 'pelanggaran', 'perilaku']
+            ? ['prestasi', 'organisasi', 'kepanitiaan', 'event', 'pelanggaran', 'perilaku']
             : [jenis_input];
         
         for (const jenis of jenisList) {
@@ -276,6 +278,7 @@ router.post('/admin/individual', auth, superAdminOnly, async (req, res) => {
                 `UPDATE permissions SET 
                     can_input_prestasi = ?,
                     can_input_organisasi = ?,
+                    can_input_kepanitiaan = ?,
                     can_input_event = ?,
                     can_input_pelanggaran = ?,
                     can_input_perilaku = ?
@@ -283,6 +286,7 @@ router.post('/admin/individual', auth, superAdminOnly, async (req, res) => {
                 [
                     permissions.can_input_prestasi,
                     permissions.can_input_organisasi,
+                    permissions.can_input_kepanitiaan,
                     permissions.can_input_event,
                     permissions.can_input_pelanggaran,
                     permissions.can_input_perilaku,
@@ -292,12 +296,13 @@ router.post('/admin/individual', auth, superAdminOnly, async (req, res) => {
         } else {
             // Insert new
             await db.query(
-                `INSERT INTO permissions (user_id, can_input_prestasi, can_input_organisasi, can_input_event, can_input_pelanggaran, can_input_perilaku)
-                 VALUES (?, ?, ?, ?, ?, ?)`,
+                `INSERT INTO permissions (user_id, can_input_prestasi, can_input_organisasi, can_input_kepanitiaan, can_input_event, can_input_pelanggaran, can_input_perilaku)
+                 VALUES (?, ?, ?, ?, ?, ?, ?)`,
                 [
                     user_id,
                     permissions.can_input_prestasi,
                     permissions.can_input_organisasi,
+                    permissions.can_input_kepanitiaan,
                     permissions.can_input_event,
                     permissions.can_input_pelanggaran,
                     permissions.can_input_perilaku
@@ -311,6 +316,7 @@ router.post('/admin/individual', auth, superAdminOnly, async (req, res) => {
         const permMap = {
             'can_input_prestasi': 'prestasi',
             'can_input_organisasi': 'organisasi',
+            'can_input_kepanitiaan': 'kepanitiaan',
             'can_input_event': 'event',
             'can_input_pelanggaran': 'pelanggaran',
             'can_input_perilaku': 'perilaku'
@@ -365,7 +371,7 @@ router.get('/admin/users', auth, superAdminOnly, async (req, res) => {
     try {
         const [users] = await db.query(
             `SELECT u.id, u.nama, u.nis, u.nip, u.role, u.kelas,
-                    p.can_input_prestasi, p.can_input_organisasi, p.can_input_event, 
+                    p.can_input_prestasi, p.can_input_organisasi, p.can_input_kepanitiaan, p.can_input_event, 
                     p.can_input_pelanggaran, p.can_input_perilaku
              FROM users u
              LEFT JOIN permissions p ON u.id = p.user_id
@@ -427,7 +433,7 @@ router.get('/admin/debug-access/:userId', auth, superAdminOnly, async (req, res)
         
         // Get individual permission
         const [individualPerms] = await db.query(
-            'SELECT can_input_prestasi, can_input_organisasi, can_input_event, can_input_pelanggaran, can_input_perilaku FROM permissions WHERE user_id = ?',
+            'SELECT can_input_prestasi, can_input_organisasi, can_input_kepanitiaan, can_input_event, can_input_pelanggaran, can_input_perilaku FROM permissions WHERE user_id = ?',
             [userId]
         );
         
@@ -439,6 +445,7 @@ router.get('/admin/debug-access/:userId', auth, superAdminOnly, async (req, res)
             finalAccess: {
                 prestasi: individualPerms[0]?.can_input_prestasi ?? roleControls.find(c => c.jenis_input === 'prestasi')?.is_enabled ?? globalControls.find(c => c.jenis_input === 'prestasi')?.is_enabled ?? true,
                 organisasi: individualPerms[0]?.can_input_organisasi ?? roleControls.find(c => c.jenis_input === 'organisasi')?.is_enabled ?? globalControls.find(c => c.jenis_input === 'organisasi')?.is_enabled ?? true,
+                kepanitiaan: individualPerms[0]?.can_input_kepanitiaan ?? roleControls.find(c => c.jenis_input === 'kepanitiaan')?.is_enabled ?? globalControls.find(c => c.jenis_input === 'kepanitiaan')?.is_enabled ?? true,
                 event: individualPerms[0]?.can_input_event ?? roleControls.find(c => c.jenis_input === 'event')?.is_enabled ?? globalControls.find(c => c.jenis_input === 'event')?.is_enabled ?? true,
                 pelanggaran: individualPerms[0]?.can_input_pelanggaran ?? roleControls.find(c => c.jenis_input === 'pelanggaran')?.is_enabled ?? globalControls.find(c => c.jenis_input === 'pelanggaran')?.is_enabled ?? true,
                 perilaku: individualPerms[0]?.can_input_perilaku ?? roleControls.find(c => c.jenis_input === 'perilaku')?.is_enabled ?? globalControls.find(c => c.jenis_input === 'perilaku')?.is_enabled ?? true
@@ -497,7 +504,7 @@ router.post('/admin/reset-all', auth, superAdminOnly, async (req, res) => {
         await db.query("DELETE FROM input_access_control WHERE control_type = 'role'");
         
         // Ensure all global settings are enabled
-        const jenisList = ['prestasi', 'organisasi', 'event', 'pelanggaran', 'perilaku'];
+        const jenisList = ['prestasi', 'organisasi', 'kepanitiaan', 'event', 'pelanggaran', 'perilaku'];
         for (const jenis of jenisList) {
             await db.query(
                 `INSERT INTO input_access_control (control_type, role_target, jenis_input, is_enabled, updated_by)

@@ -104,7 +104,11 @@ function EditIPCAwal() {
   };
 
   if (loading) {
-    return <div className="loading"><div className="spinner"></div></div>;
+    return (
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh', background: '#f4f6f9' }}>
+        <div style={{ fontSize: '1.2rem', color: '#5b6472' }}>Loading...</div>
+      </div>
+    );
   }
 
   const grade10Students = getStudentsByGrade('X');
@@ -112,30 +116,201 @@ function EditIPCAwal() {
   const grade12Students = getStudentsByGrade('XII');
 
   return (
-    <div>
-      <h2>Edit IPC Awal</h2>
-      {message && <div className="alert alert-success">{message}</div>}
+    <div style={{ padding: '32px 20px 60px', maxWidth: '1080px', margin: '0 auto', fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif', background: '#f4f6f9', color: '#1c2430', minHeight: '100vh' }}>
+      <style>{`
+        :root{
+          --ink: #1c2430;
+          --ink-soft: #5b6472;
+          --line: #e4e7ec;
+          --surface: #ffffff;
+          --page: #f4f6f9;
+          --accent: #2a5cdb;
+          --accent-soft: #eaf0ff;
+          --radius: 14px;
+          --shadow: 0 1px 2px rgba(20,30,50,.04), 0 8px 24px rgba(20,30,50,.06);
+        }
+        .tabs{
+          display: flex;
+          gap: 10px;
+          margin-bottom: 18px;
+          overflow-x: auto;
+          -ms-overflow-style: none;
+          scrollbar-width: none;
+          padding-bottom: 2px;
+        }
+        .tabs::-webkit-scrollbar{ display:none; }
+        .tab{
+          flex: 0 0 auto;
+          appearance: none;
+          border: 1px solid var(--line);
+          background: var(--surface);
+          color: var(--ink-soft);
+          font-size: 14px;
+          font-weight: 600;
+          padding: 11px 18px;
+          border-radius: 10px;
+          cursor: pointer;
+          transition: background .15s ease, color .15s ease, border-color .15s ease, transform .1s ease;
+          white-space: nowrap;
+        }
+        .tab:hover{ border-color: #c9d2e0; }
+        .tab:active{ transform: translateY(1px); }
+        .tab.active{
+          background: var(--accent);
+          border-color: var(--accent);
+          color: #fff;
+        }
+        .tab .count{
+          opacity: .8;
+          font-weight: 500;
+        }
+        .panel{
+          background: var(--surface);
+          border-radius: var(--radius);
+          box-shadow: var(--shadow);
+          overflow: hidden;
+        }
+        .panel-head{
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          padding: 20px 22px 16px;
+        }
+        .panel-head h2{
+          font-size: 17px;
+          font-weight: 700;
+          margin: 0;
+        }
+        .btn-select-all{
+          appearance: none;
+          border: 1px solid var(--line);
+          background: var(--page);
+          color: var(--ink);
+          font-size: 13px;
+          font-weight: 600;
+          padding: 8px 14px;
+          border-radius: 8px;
+          cursor: pointer;
+          transition: background .15s ease;
+        }
+        .btn-select-all:hover{ background: #eceef2; }
+        .table-scroll{
+          overflow-x: auto;
+          -webkit-overflow-scrolling: touch;
+          position: relative;
+        }
+        .table-scroll::after{
+          content: "";
+          position: absolute;
+          top: 0; right: 0; bottom: 0;
+          width: 24px;
+          pointer-events: none;
+          background: linear-gradient(to right, transparent, rgba(20,30,50,.06));
+          opacity: 0;
+          transition: opacity .2s ease;
+        }
+        .table-scroll.has-overflow::after{ opacity: 1; }
+        table{
+          width: 100%;
+          border-collapse: collapse;
+          min-width: 640px;
+        }
+        thead th{
+          text-align: left;
+          font-size: 12px;
+          font-weight: 700;
+          color: var(--ink-soft);
+          letter-spacing: .02em;
+          padding: 10px 22px;
+          border-top: 1px solid var(--line);
+          border-bottom: 1px solid var(--line);
+          background: #fafbfc;
+        }
+        thead th.checkbox-col{ width: 40px; }
+        thead th.num{ text-align: right; }
+        tbody td{
+          padding: 14px 22px;
+          font-size: 14px;
+          border-bottom: 1px solid var(--line);
+          color: var(--ink);
+        }
+        tbody tr:last-child td{ border-bottom: none; }
+        tbody tr:hover{ background: #fafbfd; }
+        td.num{ text-align: right; font-variant-numeric: tabular-nums; }
+        input[type="checkbox"]{
+          width: 17px;
+          height: 17px;
+          accent-color: var(--accent);
+          cursor: pointer;
+        }
+        .editable{
+          display: inline-block;
+          min-width: 34px;
+          padding: 4px 8px;
+          border-radius: 6px;
+          font-variant-numeric: tabular-nums;
+          text-align: right;
+          border: 1px solid transparent;
+          background: transparent;
+        }
+        .editable:hover{ border-color: var(--line); background: var(--page); }
+        .editable:focus{
+          outline: none;
+          border-color: var(--accent);
+          background: var(--accent-soft);
+        }
+        .empty{
+          padding: 48px 22px;
+          text-align: center;
+          color: var(--ink-soft);
+          font-size: 14px;
+        }
+        @media (max-width: 780px){
+          thead th:nth-child(2),
+          tbody td:nth-child(2){
+            position: sticky;
+            left: 0;
+            background: #fff;
+            box-shadow: 1px 0 0 var(--line);
+          }
+          thead th:nth-child(2){ background: #fafbfc; }
+          tbody tr:hover td:nth-child(2){ background: #fafbfd; }
+        }
+        @media (max-width: 780px){
+          .wrap{ padding: 20px 14px 48px; }
+          h1{ font-size: 22px; margin-bottom: 16px; }
+          .panel-head{ padding: 14px 16px 12px; }
+          .panel-head h2{ font-size: 16px; }
+          .btn-select-all{ padding: 7px 12px; font-size: 12.5px; }
+          thead th, tbody td{ padding: 12px 14px; font-size: 13.5px; }
+        }
+        @media (max-width: 420px){
+          .tab{ padding: 10px 14px; font-size: 13px; }
+          table{ min-width: 580px; }
+        }
+      `}</style>
+
+      <h1 style={{ fontSize: '26px', fontWeight: 700, letterSpacing: '-0.01em', margin: '0 0 20px' }}>Edit IPC Awal</h1>
+      {message && <div style={{ padding: '12px 16px', background: '#dcfce7', color: '#16a34a', borderRadius: '10px', marginBottom: '18px', fontSize: '14px', fontWeight: 600 }}>{message}</div>}
       
-      <div style={{ marginBottom: '20px' }}>
+      <div className="tabs">
         <button 
-          className={`btn ${activeTab === '10' ? 'btn-primary' : 'btn-secondary'}`}
+          className={`tab ${activeTab === '10' ? 'active' : ''}`}
           onClick={() => setActiveTab('10')}
-          style={{ marginRight: '10px' }}
         >
-          Kelas 10 ({grade10Students.length} siswa)
+          Kelas 10 <span className="count">({grade10Students.length} siswa)</span>
         </button>
         <button 
-          className={`btn ${activeTab === '11' ? 'btn-primary' : 'btn-secondary'}`}
+          className={`tab ${activeTab === '11' ? 'active' : ''}`}
           onClick={() => setActiveTab('11')}
-          style={{ marginRight: '10px' }}
         >
-          Kelas 11 ({grade11Students.length} siswa)
+          Kelas 11 <span className="count">({grade11Students.length} siswa)</span>
         </button>
         <button 
-          className={`btn ${activeTab === '12' ? 'btn-primary' : 'btn-secondary'}`}
+          className={`tab ${activeTab === '12' ? 'active' : ''}`}
           onClick={() => setActiveTab('12')}
         >
-          Kelas 12 ({grade12Students.length} siswa)
+          Kelas 12 <span className="count">({grade12Students.length} siswa)</span>
         </button>
       </div>
 
@@ -176,28 +351,30 @@ function EditIPCAwal() {
       )}
 
       {selectedStudents.length > 0 && (
-        <div className="card" style={{ marginTop: '20px', padding: '20px' }}>
-          <h3>Bulk Update IPC Awal</h3>
-          <p style={{ marginBottom: '15px', color: '#666' }}>
+        <div className="panel" style={{ marginTop: '18px', padding: '20px 22px' }}>
+          <h3 style={{ fontSize: '17px', fontWeight: 700, margin: '0 0 8px' }}>Bulk Update IPC Awal</h3>
+          <p style={{ marginBottom: '16px', color: '#5b6472', fontSize: '14px' }}>
             {selectedStudents.length} siswa dipilih. Mengubah IPC awal juga menyesuaikan IPC total dengan selisih yang sama.
           </p>
-          <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+          <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
             <div style={{ flex: 1 }}>
-              <label style={{ display: 'block', marginBottom: '5px' }}>IPC Awal Baru:</label>
+              <label style={{ display: 'block', marginBottom: '6px', fontSize: '13px', fontWeight: 600, color: '#1c2430' }}>IPC Awal Baru:</label>
               <input
                 type="number"
                 min="0"
                 value={bulkValue}
                 onChange={(e) => setBulkValue(e.target.value)}
-                className="form-control"
-                style={{ width: '100%' }}
+                style={{ width: '100%', padding: '10px 14px', border: '1px solid #e4e7ec', borderRadius: '8px', fontSize: '14px', outline: 'none', transition: 'border-color .15s ease' }}
+                onFocus={(e) => e.target.style.borderColor = '#2a5cdb'}
+                onBlur={(e) => e.target.style.borderColor = '#e4e7ec'}
               />
             </div>
             <button 
-              className="btn btn-primary" 
               onClick={handleBulkUpdate}
               disabled={saving}
-              style={{ marginTop: '18px' }}
+              style={{ marginTop: '24px', padding: '10px 18px', background: '#2a5cdb', color: '#fff', border: 'none', borderRadius: '8px', fontSize: '14px', fontWeight: 600, cursor: saving ? 'not-allowed' : 'pointer', opacity: saving ? 0.6 : 1, transition: 'background .15s ease' }}
+              onMouseEnter={(e) => !saving && (e.target.style.background = '#1e4bb8')}
+              onMouseLeave={(e) => !saving && (e.target.style.background = '#2a5cdb')}
             >
               {saving ? 'Menyimpan...' : 'Update IPC Awal'}
             </button>
@@ -210,64 +387,65 @@ function EditIPCAwal() {
 
 function GradeSection({ grade, students, selectedStudents, onSelectAll, onSelectStudent, isAllSelected, isSomeSelected }) {
   return (
-    <div className="card">
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
-        <h3>Kelas {grade}</h3>
+    <div className="panel">
+      <div className="panel-head">
+        <h2>Kelas {grade}</h2>
         <button 
-          className="btn btn-secondary" 
+          className="btn-select-all"
           onClick={onSelectAll}
-          style={{ fontSize: '12px', padding: '5px 10px' }}
         >
           {isAllSelected ? 'Batal' : 'Pilih Semua'}
         </button>
       </div>
       
       {students.length === 0 ? (
-        <p>Tidak ada siswa di kelas {grade}</p>
+        <div className="empty">Belum ada siswa di kelas ini.</div>
       ) : (
-        <table className="table">
-          <thead>
-            <tr>
-              <th style={{ width: '50px' }}>
-                <input
-                  type="checkbox"
-                  checked={isAllSelected}
-                  ref={input => {
-                    if (input) {
-                      input.indeterminate = isSomeSelected;
-                    }
-                  }}
-                  onChange={onSelectAll}
-                />
-              </th>
-              <th>Nama</th>
-              <th>NIS</th>
-              <th>Kelas</th>
-              <th>Grha</th>
-              <th>IPC Awal</th>
-              <th>IPC Total</th>
-            </tr>
-          </thead>
-          <tbody>
-            {students.map(student => (
-              <tr key={student.id}>
-                <td>
+        <div className="table-scroll">
+          <table>
+            <thead>
+              <tr>
+                <th className="checkbox-col">
                   <input
                     type="checkbox"
-                    checked={selectedStudents.includes(student.id)}
-                    onChange={() => onSelectStudent(student.id)}
+                    checked={isAllSelected}
+                    ref={input => {
+                      if (input) {
+                        input.indeterminate = isSomeSelected;
+                      }
+                    }}
+                    onChange={onSelectAll}
                   />
-                </td>
-                <td>{student.nama}</td>
-                <td>{student.nis || '-'}</td>
-                <td>{student.kelas || '-'}</td>
-                <td>{student.grha || '-'}</td>
-                <td>{student.ipc_awal ?? '-'}</td>
-                <td>{student.ipc_total ?? 0}</td>
+                </th>
+                <th>Nama</th>
+                <th>NIS</th>
+                <th>Kelas</th>
+                <th>Grha</th>
+                <th className="num">IPC Awal</th>
+                <th className="num">IPC Total</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {students.map(student => (
+                <tr key={student.id}>
+                  <td>
+                    <input
+                      type="checkbox"
+                      checked={selectedStudents.includes(student.id)}
+                      onChange={() => onSelectStudent(student.id)}
+                    />
+                  </td>
+                  <td>{student.nama}</td>
+                  <td>{student.nis || '-'}</td>
+                  <td>{student.kelas || '-'}</td>
+                  <td>{student.grha || '-'}</td>
+                  <td className="num">{student.ipc_awal ?? '-'}</td>
+                  <td className="num">{student.ipc_total ?? 0}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
     </div>
   );

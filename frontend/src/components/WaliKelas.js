@@ -29,11 +29,26 @@ function getIpcDetailRows(points = {}) {
   ];
 }
 
+// Create axios instance dengan base URL
+const apiClient = axios.create({
+  baseURL: API_BASE_URL,
+});
+
+// Add token interceptor
+apiClient.interceptors.request.use((config) => {
+  const token = localStorage.getItem('token');
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+}, (error) => Promise.reject(error));
+
 function WaliKelas() {
   const [assignments, setAssignments] = useState([]);
   const [classStats, setClassStats] = useState([]);
   const [teachers, setTeachers] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [showForm, setShowForm] = useState(false);
   const [selectedClass, setSelectedClass] = useState(null);
   const [showClassDetail, setShowClassDetail] = useState(false);
@@ -42,6 +57,7 @@ function WaliKelas() {
   const [showMismatches, setShowMismatches] = useState(false);
   const [mismatches, setMismatches] = useState(null);
   const [loadingMismatches, setLoadingMismatches] = useState(false);
+  
   const currentAcademicYear = getCurrentAcademicYear();
   const academicYearOptions = getAcademicYearOptions();
   const [selectedAcademicYear, setSelectedAcademicYear] = useState(currentAcademicYear);
@@ -62,26 +78,25 @@ function WaliKelas() {
 
   const fetchAssignments = useCallback(async () => {
     try {
-      const token = localStorage.getItem('token');
-      const response = await axios.get('/wali-kelas', {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      const response = await apiClient.get('/wali-kelas');
       setAssignments(response.data);
-    } catch (error) {
-      console.error('Error fetching assignments:', error);
+      setError(null);
+    } catch (err) {
+      console.error('Error fetching assignments:', err);
+      setError('Gagal mengambil data assignment');
     }
   }, []);
 
   const fetchClassStatistics = useCallback(async () => {
     try {
-      const token = localStorage.getItem('token');
-      const response = await axios.get('/wali-kelas/class-statistics', {
-        params: { tahun_ajaran: selectedAcademicYear },
-        headers: { Authorization: `Bearer ${token}` }
+      const response = await apiClient.get('/wali-kelas/class-statistics', {
+        params: { tahun_ajaran: selectedAcademicYear }
       });
       setClassStats(response.data);
-    } catch (error) {
-      console.error('Error fetching class statistics:', error);
+      setError(null);
+    } catch (err) {
+      console.error('Error fetching class statistics:', err);
+      setError('Gagal mengambil statistik kelas');
     } finally {
       setLoading(false);
     }
@@ -89,14 +104,14 @@ function WaliKelas() {
 
   const fetchTeachers = useCallback(async () => {
     try {
-      const token = localStorage.getItem('token');
-      const response = await axios.get('/wali-kelas/available-teachers', {
-        params: { tahun_ajaran: selectedAcademicYear },
-        headers: { Authorization: `Bearer ${token}` }
+      const response = await apiClient.get('/wali-kelas/available-teachers', {
+        params: { tahun_ajaran: selectedAcademicYear }
       });
       setTeachers(response.data);
-    } catch (error) {
-      console.error('Error fetching teachers:', error);
+      setError(null);
+    } catch (err) {
+      console.error('Error fetching teachers:', err);
+      setError('Gagal mengambil data guru');
     }
   }, [selectedAcademicYear]);
 
@@ -105,25 +120,25 @@ function WaliKelas() {
   }, [fetchAssignments]);
 
   useEffect(() => {
+    setLoading(true);
     fetchTeachers();
     fetchClassStatistics();
-  }, [fetchTeachers, fetchClassStatistics]);
+  }, [selectedAcademicYear]);
 
   const handleCreate = async (e) => {
     e.preventDefault();
     try {
-      const token = localStorage.getItem('token');
-      const response = await axios.post('/wali-kelas', formData, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      const response = await apiClient.post('/wali-kelas', formData);
       alert(response.data.message);
       setShowForm(false);
       setFormData({ guru_id: '', kelas: '', tahun_ajaran: selectedAcademicYear });
       fetchAssignments();
       fetchClassStatistics();
       fetchTeachers();
-    } catch (error) {
-      alert(error.response?.data?.message || 'Gagal membuat assignment');
+      setError(null);
+    } catch (err) {
+      alert(err.response?.data?.message || 'Gagal membuat assignment');
+      console.error('Error creating assignment:', err);
     }
   };
 
@@ -131,16 +146,15 @@ function WaliKelas() {
     if (!window.confirm('Apakah Anda yakin ingin menghapus assignment ini?')) return;
     
     try {
-      const token = localStorage.getItem('token');
-      const response = await axios.delete(`/wali-kelas/${id}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      const response = await apiClient.delete(`/wali-kelas/${id}`);
       alert(response.data.message);
       fetchAssignments();
       fetchClassStatistics();
       fetchTeachers();
-    } catch (error) {
-      alert(error.response?.data?.message || 'Gagal menghapus assignment');
+      setError(null);
+    } catch (err) {
+      alert(err.response?.data?.message || 'Gagal menghapus assignment');
+      console.error('Error deleting assignment:', err);
     }
   };
 
@@ -157,26 +171,24 @@ function WaliKelas() {
   const handleCheckMismatches = async () => {
     setLoadingMismatches(true);
     try {
-      const token = localStorage.getItem('token');
-      const response = await axios.get('/wali-kelas/class-mismatches', {
-        headers: { Authorization: `Bearer ${token}` }
+      const response = await apiClient.get('/wali-kelas/class-mismatches', {
+        params: { tahun_ajaran: selectedAcademicYear }
       });
       setMismatches(response.data);
       setShowMismatches(true);
-    } catch (error) {
-      console.error('Error checking mismatches:', error);
+      setError(null);
+    } catch (err) {
+      console.error('Error checking mismatches:', err);
       alert('Gagal mengecek ketidaksesuaian kelas');
     } finally {
       setLoadingMismatches(false);
     }
   };
 
-  const getIpcColor = (ipc) => {
-    if (ipc < 0) return '#dc2626'; // Red for negative values
-    if (ipc >= 90) return 'var(--success-color)';
-    if (ipc >= 80) return '#17a2b8';
-    if (ipc >= 70) return 'var(--warning-color)';
-    return 'var(--danger-color)';
+  const getImageUrl = (imagePath) => {
+    if (!imagePath) return null;
+    const baseUrl = API_BASE_URL.replace('/api', '');
+    return `${baseUrl}${imagePath}`;
   };
 
   if (loading) {
@@ -191,6 +203,21 @@ function WaliKelas() {
     );
   }
 
+  if (error) {
+    return (
+      <div data-aos="fade-up">
+        <h2>👨‍🏫 Manajemen Wali Kelas</h2>
+        <div className="card" style={{ textAlign: 'center', padding: '60px', color: '#ef4444' }}>
+          <p style={{ fontSize: '1.1rem', fontWeight: 600 }}>⚠️ {error}</p>
+          <button onClick={() => { setError(null); setLoading(true); fetchClassStatistics(); }} 
+            style={{ marginTop: '20px', padding: '8px 16px', background: '#2563eb', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer' }}>
+            Coba Lagi
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   // Calculate totals
   const totalSiswa = classStats.reduce((sum, cls) => sum + cls.totalSiswa, 0);
   const totalPrestasi = classStats.reduce((sum, cls) => sum + cls.totalPrestasi, 0);
@@ -200,442 +227,309 @@ function WaliKelas() {
   const totalPelanggaran = classStats.reduce((sum, cls) => sum + cls.totalPelanggaran, 0);
 
   return (
-    <div data-aos="fade-up">
-      {/* Header */}
-      <div style={{ 
-        background: 'var(--primary-color)',
-        color: 'white',
-        padding: '32px',
-        borderRadius: 'var(--border-radius-lg)',
-        marginBottom: '24px',
-        boxShadow: 'var(--shadow-md)'
+    <div style={{ padding: '24px', maxWidth: '1200px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '20px', animation: 'fadeIn 0.3s ease-out' }}>
+      <style>{`
+        @keyframes fadeIn {
+          from { opacity: 0; transform: translateY(10px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes slideIn {
+          from { opacity: 0; transform: scale(0.95); }
+          to { opacity: 1; transform: scale(1); }
+        }
+        .stat-card:hover {
+          transform: translateY(-4px);
+          box-shadow: 0 8px 25px rgba(15,23,42,.12);
+          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .kelas-card:hover {
+          transform: translateY(-4px);
+          box-shadow: 0 8px 25px rgba(15,23,42,.12);
+          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .btn:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 4px 12px rgba(0,0,0,.15);
+          transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .btn:active {
+          transform: translateY(0);
+        }
+        @media (max-width: 900px) {
+          .stats-grid { grid-template-columns: repeat(3, 1fr) !important; }
+          .kelas-grid { grid-template-columns: 1fr !important; }
+          .detail-stats-grid { grid-template-columns: repeat(3, 1fr) !important; }
+        }
+        @media (max-width: 600px) {
+          body { padding: 14px; }
+          .stats-grid { grid-template-columns: repeat(2, 1fr) !important; gap: 10px; }
+          .stat-card { padding: 14px 8px; }
+          .stat-card .num { font-size: 1.3rem; }
+          .panel { padding: 16px; }
+          .kelas-card-footer .btn { width: 100%; }
+          table { min-width: 520px; }
+          .detail-stats-grid { grid-template-columns: repeat(2, 1fr) !important; gap: 10px; }
+          .detail-stats-grid > div { padding: 12px 8px; }
+          .detail-stats-grid > div > div:first-child { font-size: 1.2rem; }
+        }
+        /* Modal responsive */
+        @media (max-width: 900px) {
+          .modal-content { max-width: 95% !important; }
+          .modal-header { flex-direction: column !important; align-items: flex-start !important; gap: 10px !important; }
+          .modal-header .btn { width: 100% !important; }
+        }
+        @media (max-width: 600px) {
+          .modal-content { max-width: 100% !important; margin: 0 !important; border-radius: 0 !important; }
+          .modal-overlay { padding: 0 !important; }
+          .modal-header { padding: 16px !important; }
+          .modal-header > div:first-child { font-size: 1rem !important; }
+          .modal-body { padding: 16px !important; }
+          .modal-body > div:nth-child(2), .modal-body > div:nth-child(3) { font-size: .85rem !important; }
+        }
+      `}</style>
+
+      {/* HEADER */}
+      <div style={{
+        background: 'linear-gradient(135deg, #2563eb, #1d4ed8)',
+        borderRadius: '14px',
+        padding: '24px 28px',
+        display: 'flex',
+        alignItems: 'center',
+        gap: '16px',
+        color: '#fff',
+        boxShadow: '0 1px 2px rgba(15,23,42,.04), 0 1px 8px rgba(15,23,42,.05)'
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-          <div style={{ fontSize: '3rem' }}>
-            👨‍🏫
-          </div>
-          <div>
-            <h2 style={{ margin: 0, fontSize: '1.8rem', fontWeight: '700' }}>
-              Manajemen Wali Kelas
-            </h2>
-            <h3 style={{ margin: '4px 0 0 0', fontSize: '1rem', opacity: 0.9 }}>
-              Kelola wali kelas dan lihat statistik seluruh kelas
-            </h3>
-          </div>
-        </div>
-      </div>
-
-      {/* Summary Cards */}
-      <div className="stats-grid" data-aos="fade-up" data-aos-delay="100" style={{ marginBottom: '24px' }}>
-        <div className="stat-card">
-          <h3 style={{ color: 'var(--primary-color)', fontSize: '2rem', margin: '0 0 8px 0' }}>{classStats.length}</h3>
-          <p>Total Kelas</p>
-        </div>
-        <div className="stat-card">
-          <h3 style={{ color: 'var(--primary-color)', fontSize: '2rem', margin: '0 0 8px 0' }}>{totalSiswa}</h3>
-          <p>Total Siswa</p>
-        </div>
-        <div className="stat-card">
-          <h3 style={{ color: 'var(--success-color)', fontSize: '2rem', margin: '0 0 8px 0' }}>{totalPrestasi}</h3>
-          <p>Total Prestasi</p>
-        </div>
-        <div className="stat-card">
-          <h3 style={{ color: '#9b59b6', fontSize: '2rem', margin: '0 0 8px 0' }}>{totalEvent}</h3>
-          <p>Total Event</p>
-        </div>
-        <div className="stat-card">
-          <h3 style={{ color: 'var(--warning-color)', fontSize: '2rem', margin: '0 0 8px 0' }}>{totalOrganisasi}</h3>
-          <p>Total Organisasi</p>
-        </div>
-        <div className="stat-card">
-          <h3 style={{ color: '#e67e22', fontSize: '2rem', margin: '0 0 8px 0' }}>{totalKepanitiaan}</h3>
-          <p>Total Kepanitiaan</p>
-        </div>
-        <div className="stat-card">
-          <h3 style={{ 
-            color: totalPelanggaran > 0 ? 'var(--danger-color)' : 'var(--success-color)', 
-            fontSize: '2rem', 
-            margin: '0 0 8px 0' 
-          }}>
-            {totalPelanggaran}
-          </h3>
-          <p>Total Pelanggaran</p>
-        </div>
-      </div>
-
-      {/* Class Overview Cards */}
-      <div style={{ marginBottom: '24px' }} data-aos="fade-up" data-aos-delay="200">
-        <h3 style={{ marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-          📊 Overview per Kelas
-        </h3>
-        <div style={{ 
-          display: 'grid', 
-          gridTemplateColumns: 'repeat(auto-fit, minmax(350px, 1fr))',
-          gap: '20px'
+        <div style={{
+          width: '52px',
+          height: '52px',
+          borderRadius: '12px',
+          background: 'rgba(255,255,255,.15)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          fontSize: '26px',
+          flexShrink: 0
         }}>
-          {classStats.map((cls) => (
-            <div key={`${selectedAcademicYear}-${cls.kelas}`} className="card" style={{
-              borderLeft: '4px solid var(--primary-color)',
-              transition: 'all var(--transition-medium)'
-            }}
-            onMouseOver={(e) => {
-              e.currentTarget.style.transform = 'translateY(-2px)';
-              e.currentTarget.style.boxShadow = 'var(--shadow-lg)';
-            }}
-            onMouseOut={(e) => {
-              e.currentTarget.style.transform = 'translateY(0)';
-              e.currentTarget.style.boxShadow = 'var(--shadow-md)';
-            }}
-            >
-              <div style={{ 
-                display: 'flex', 
-                justifyContent: 'space-between', 
-                alignItems: 'center',
-                marginBottom: '16px'
-              }}>
-                <h4 style={{ margin: 0, color: 'var(--text-primary)', fontSize: '1.1rem', fontWeight: '700' }}>
-                  {cls.kelas}
-                </h4>
-                <span style={{ 
-                  background: 'var(--primary-color)',
-                  color: 'white',
-                  padding: '4px 12px',
-                  borderRadius: '20px',
-                  fontSize: '0.8rem',
-                  fontWeight: '600'
-                }}>
-                  {cls.totalSiswa} Siswa
-                </span>
-              </div>
-
-              <div style={{ marginBottom: '16px', padding: '12px', background: 'var(--bg-tertiary)', borderRadius: 'var(--border-radius-sm)' }}>
-                <strong style={{ color: 'var(--text-primary)', display: 'block', marginBottom: '4px' }}>Wali Kelas:</strong>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                  {cls.wali.foto ? (
-                    <img 
-                      src={`${API_BASE_URL.replace('/api', '')}${cls.wali.foto}`} 
-                      alt={cls.wali.nama} 
-                      style={{ width: '40px', height: '40px', borderRadius: '50%', objectFit: 'cover', border: '2px solid var(--primary-color)' }}
-                    />
-                  ) : (
-                    <div style={{ 
-                      width: '40px', 
-                      height: '40px', 
-                      borderRadius: '50%', 
-                      background: 'var(--bg-secondary)', 
-                      display: 'flex', 
-                      alignItems: 'center', 
-                      justifyContent: 'center',
-                      border: '2px solid var(--primary-color)'
-                    }}>
-                      👤
-                    </div>
-                  )}
-                  <div>
-                    <div style={{ fontSize: '0.95rem', color: 'var(--primary-color)', fontWeight: '600' }}>{cls.wali.nama}</div>
-                    <small style={{ color: 'var(--text-secondary)' }}>NIP: {cls.wali.nip}</small>
-                  </div>
-                </div>
-              </div>
-
-              <div style={{ 
-                display: 'grid', 
-                gridTemplateColumns: 'repeat(4, 1fr)',
-                gap: '10px',
-                marginBottom: '16px'
-              }}>
-                <div style={{ 
-                  textAlign: 'center', 
-                  padding: '10px', 
-                  background: '#e8f5e9', 
-                  borderRadius: 'var(--border-radius-sm)'
-                }}>
-                  <div style={{ fontSize: '1.3rem', fontWeight: '700', color: 'var(--success-color)' }}>
-                    {cls.totalPrestasi}
-                  </div>
-                  <small style={{ color: 'var(--text-secondary)' }}>Prestasi</small>
-                </div>
-                <div style={{ 
-                  textAlign: 'center', 
-                  padding: '10px', 
-                  background: '#f3e5f5', 
-                  borderRadius: 'var(--border-radius-sm)'
-                }}>
-                  <div style={{ fontSize: '1.3rem', fontWeight: '700', color: '#9b59b6' }}>
-                    {cls.totalEvent}
-                  </div>
-                  <small style={{ color: 'var(--text-secondary)' }}>Event</small>
-                </div>
-                <div style={{ 
-                  textAlign: 'center', 
-                  padding: '10px', 
-                  background: '#fff3e0', 
-                  borderRadius: 'var(--border-radius-sm)'
-                }}>
-                  <div style={{ fontSize: '1.3rem', fontWeight: '700', color: 'var(--warning-color)' }}>
-                    {cls.totalOrganisasi}
-                  </div>
-                  <small style={{ color: 'var(--text-secondary)' }}>Organisasi</small>
-                </div>
-                <div style={{ 
-                  textAlign: 'center', 
-                  padding: '10px', 
-                  background: '#ffe0b2', 
-                  borderRadius: 'var(--border-radius-sm)'
-                }}>
-                  <div style={{ fontSize: '1.3rem', fontWeight: '700', color: '#e67e22' }}>
-                    {cls.totalKepanitiaan}
-                  </div>
-                  <small style={{ color: 'var(--text-secondary)' }}>Kepanitiaan</small>
-                </div>
-              </div>
-
-              <div style={{ 
-                display: 'flex', 
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                flexWrap: 'wrap',
-                gap: '10px'
-              }}>
-                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                  <span style={{ 
-                    background: cls.totalPelanggaran > 0 ? '#ffebee' : '#e8f5e9',
-                    color: cls.totalPelanggaran > 0 ? '#c62828' : '#2e7d32',
-                    padding: '4px 10px',
-                    borderRadius: '20px',
-                    fontSize: '0.8rem',
-                    fontWeight: '600'
-                  }}>
-                    {cls.totalPelanggaran} Pelanggaran
-                  </span>
-                  <span style={{ 
-                    background: getIpcColor(cls.rataRataIPC) + '20',
-                    color: getIpcColor(cls.rataRataIPC),
-                    padding: '4px 10px',
-                    borderRadius: '20px',
-                    fontSize: '0.8rem',
-                    fontWeight: '600'
-                  }}>
-                    Rata-rata IPC: {cls.rataRataIPC}
-                  </span>
-                </div>
-                <button
-                  onClick={() => handleViewClassDetail(cls)}
-                  className="btn btn-primary"
-                  style={{ padding: '6px 16px', fontSize: '0.85rem' }}
-                >
-                  Lihat Detail
-                </button>
-              </div>
-            </div>
-          ))}
+          🎓
+        </div>
+        <div>
+          <h1 style={{ margin: 0, fontSize: '1.35rem', fontWeight: 700, letterSpacing: '-0.01em' }}>Manajemen Wali Kelas</h1>
+          <p style={{ margin: '2px 0 0', fontSize: '.85rem', opacity: .85, fontWeight: 400 }}>Kelola wali kelas dan lihat statistik seluruh kelas</p>
         </div>
       </div>
 
-      {/* Wali Kelas Management */}
-      <div className="card" data-aos="fade-up" data-aos-delay="300">
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-          <h3 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
-            ⚙️ Manajemen Wali Kelas
-          </h3>
-          <div className="form-group" style={{ margin: 0 }}>
-            <label htmlFor="wali-kelas-year">Tahun Ajaran</label>
-            <select
-              id="wali-kelas-year"
-              value={selectedAcademicYear}
-              onChange={(e) => {
-                const year = e.target.value;
-                setSelectedAcademicYear(year);
-                setFormData((current) => ({ ...current, tahun_ajaran: year }));
-              }}
-            >
-              {academicYearOptions.map((year) => (
-                <option key={year} value={year}>{year}</option>
-              ))}
-            </select>
+      {/* STAT CARDS */}
+      <div className="stats-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '14px' }}>
+        <div className="stat-card" style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '18px 12px', textAlign: 'center', boxShadow: '0 1px 2px rgba(15,23,42,.04)', transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)' }}>
+          <div style={{ fontSize: '1.6rem', fontWeight: 700, color: '#2563eb', marginBottom: '6px' }}>{classStats.length}</div>
+          <div style={{ fontSize: '.7rem', color: '#64748b', fontWeight: 600 }}>TOTAL KELAS</div>
+        </div>
+        <div className="stat-card" style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '18px 12px', textAlign: 'center', boxShadow: '0 1px 2px rgba(15,23,42,.04)', transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)' }}>
+          <div style={{ fontSize: '1.6rem', fontWeight: 700, color: '#3b82f6', marginBottom: '6px' }}>{totalSiswa}</div>
+          <div style={{ fontSize: '.7rem', color: '#64748b', fontWeight: 600 }}>TOTAL SISWA</div>
+        </div>
+        <div className="stat-card" style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '18px 12px', textAlign: 'center', boxShadow: '0 1px 2px rgba(15,23,42,.04)', transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)' }}>
+          <div style={{ fontSize: '1.6rem', fontWeight: 700, color: '#16a34a', marginBottom: '6px' }}>{totalPrestasi}</div>
+          <div style={{ fontSize: '.7rem', color: '#64748b', fontWeight: 600 }}>TOTAL PRESTASI</div>
+        </div>
+        <div className="stat-card" style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '18px 12px', textAlign: 'center', boxShadow: '0 1px 2px rgba(15,23,42,.04)', transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)' }}>
+          <div style={{ fontSize: '1.6rem', fontWeight: 700, color: '#7c3aed', marginBottom: '6px' }}>{totalEvent}</div>
+          <div style={{ fontSize: '.7rem', color: '#64748b', fontWeight: 600 }}>TOTAL EVENT</div>
+        </div>
+        <div className="stat-card" style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '18px 12px', textAlign: 'center', boxShadow: '0 1px 2px rgba(15,23,42,.04)', transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)' }}>
+          <div style={{ fontSize: '1.6rem', fontWeight: 700, color: '#f59e0b', marginBottom: '6px' }}>{totalOrganisasi}</div>
+          <div style={{ fontSize: '.7rem', color: '#64748b', fontWeight: 600 }}>TOTAL ORGANISASI</div>
+        </div>
+        <div className="stat-card" style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '18px 12px', textAlign: 'center', boxShadow: '0 1px 2px rgba(15,23,42,.04)', transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)' }}>
+          <div style={{ fontSize: '1.6rem', fontWeight: 700, color: '#f59e0b', marginBottom: '6px' }}>{totalKepanitiaan}</div>
+          <div style={{ fontSize: '.7rem', color: '#64748b', fontWeight: 600 }}>TOTAL KEPANITIAAN</div>
+        </div>
+        <div className="stat-card" style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '18px 12px', textAlign: 'center', boxShadow: '0 1px 2px rgba(15,23,42,.04)', transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)' }}>
+          <div style={{ fontSize: '1.6rem', fontWeight: 700, color: totalPelanggaran > 0 ? '#ef4444' : '#16a34a', marginBottom: '6px' }}>{totalPelanggaran}</div>
+          <div style={{ fontSize: '.7rem', color: '#64748b', fontWeight: 600 }}>TOTAL PELANGGARAN</div>
+        </div>
+      </div>
+
+      {/* OVERVIEW PER KELAS */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '1rem', fontWeight: 700, color: '#0f172a', margin: '4px 0 -6px' }}>
+        📊 Overview per Kelas
+      </div>
+      <div className="kelas-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '16px' }}>
+        {classStats.map((cls) => (
+          <div key={`${selectedAcademicYear}-${cls.kelas}`} className="kelas-card" style={{
+            background: '#fff',
+            border: '1px solid #e2e8f0',
+            borderLeft: '4px solid #2563eb',
+            borderRadius: '14px',
+            padding: '18px 20px',
+            boxShadow: '0 1px 2px rgba(15,23,42,.04)',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '14px',
+            transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 700 }}>{cls.kelas}</h3>
+              <span style={{ background: '#2563eb', color: '#fff', fontSize: '.72rem', fontWeight: 600, padding: '4px 10px', borderRadius: '999px' }}>{cls.totalSiswa} Siswa</span>
+            </div>
+            <div>
+              <span style={{ fontSize: '.72rem', color: '#64748b', fontWeight: 600, marginBottom: '6px', display: 'block' }}>Wali Kelas:</span>
+              <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '10px 14px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <div style={{ width: '34px', height: '34px', borderRadius: '50%', background: '#eff6ff', color: '#2563eb', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px', flexShrink: 0, overflow: 'hidden' }}>
+                  {cls.wali?.foto ? (
+                    <img src={getImageUrl(cls.wali.foto)} alt={cls.wali.nama} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  ) : (
+                    '👤'
+                  )}
+                </div>
+                <div>
+                  <div style={{ fontWeight: 600, color: '#2563eb', fontSize: '.9rem' }}>{cls.wali?.nama}</div>
+                  <div style={{ fontSize: '.75rem', color: '#64748b' }}>NIP: {cls.wali?.nip}</div>
+                </div>
+              </div>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '10px' }}>
+              <div style={{ borderRadius: '10px', padding: '10px 6px', textAlign: 'center', background: '#dcfce7' }}>
+                <div style={{ fontSize: '1.15rem', fontWeight: 700, color: '#16a34a' }}>{cls.totalPrestasi}</div>
+                <div style={{ fontSize: '.68rem', color: '#64748b', fontWeight: 500 }}>Prestasi</div>
+              </div>
+              <div style={{ borderRadius: '10px', padding: '10px 6px', textAlign: 'center', background: '#f3e8ff' }}>
+                <div style={{ fontSize: '1.15rem', fontWeight: 700, color: '#7c3aed' }}>{cls.totalEvent}</div>
+                <div style={{ fontSize: '.68rem', color: '#64748b', fontWeight: 500 }}>Event</div>
+              </div>
+              <div style={{ borderRadius: '10px', padding: '10px 6px', textAlign: 'center', background: '#fef3c7' }}>
+                <div style={{ fontSize: '1.15rem', fontWeight: 700, color: '#f59e0b' }}>{cls.totalOrganisasi}</div>
+                <div style={{ fontSize: '.68rem', color: '#64748b', fontWeight: 500 }}>Organisasi</div>
+              </div>
+              <div style={{ borderRadius: '10px', padding: '10px 6px', textAlign: 'center', background: '#fef3c7' }}>
+                <div style={{ fontSize: '1.15rem', fontWeight: 700, color: '#f59e0b' }}>{cls.totalKepanitiaan}</div>
+                <div style={{ fontSize: '.68rem', color: '#64748b', fontWeight: 500 }}>Kepanitiaan</div>
+              </div>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px' }}>
+              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                <span style={{ fontSize: '.72rem', fontWeight: 600, padding: '4px 10px', borderRadius: '999px', background: cls.totalPelanggaran > 0 ? '#ffebee' : '#dcfce7', color: cls.totalPelanggaran > 0 ? '#ef4444' : '#16a34a' }}>{cls.totalPelanggaran} Pelanggaran</span>
+                <span style={{ fontSize: '.72rem', fontWeight: 600, padding: '4px 10px', borderRadius: '999px', background: '#cffafe', color: '#0891b2' }}>Rata-rata IPC: {cls.rataRataIPC}</span>
+              </div>
+              <button onClick={() => handleViewClassDetail(cls)} className="btn" style={{ border: 'none', borderRadius: '10px', padding: '9px 16px', fontSize: '.82rem', fontWeight: 600, cursor: 'pointer', background: '#2563eb', color: '#fff', whiteSpace: 'nowrap', transition: 'all 0.2s' }}>Lihat Detail</button>
+            </div>
           </div>
-          <button
-            className="btn btn-primary"
-            onClick={() => {
-              setFormData((current) => ({ ...current, tahun_ajaran: selectedAcademicYear }));
-              setShowForm(true);
-            }}
-          >
-            + Assign Wali Kelas Baru
-          </button>
-          <button 
-            className="btn btn-warning" 
-            onClick={handleCheckMismatches}
-            disabled={loadingMismatches}
-            style={{ marginLeft: '10px' }}
-          >
-            {loadingMismatches ? 'Mengecek...' : '🔍 Cek Ketidaksesuaian Kelas'}
-          </button>
+        ))}
+      </div>
+
+      {/* MANAGEMENT PANEL */}
+      <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: '14px', padding: '20px 22px', display: 'flex', flexDirection: 'column', gap: '18px' }}>
+        <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: '14px', flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '1rem', fontWeight: 700 }}>⚙️ Manajemen Wali Kelas</div>
+          <div style={{ display: 'flex', alignItems: 'flex-end', gap: '12px', flexWrap: 'wrap' }}>
+            <div>
+              <label style={{ display: 'block', fontSize: '.72rem', fontWeight: 600, color: '#64748b', marginBottom: '5px' }}>Tahun Ajaran</label>
+              <select
+                value={selectedAcademicYear}
+                onChange={(e) => {
+                  const year = e.target.value;
+                  setSelectedAcademicYear(year);
+                  setFormData((current) => ({ ...current, tahun_ajaran: year }));
+                }}
+                style={{ fontFamily: 'inherit', fontSize: '.85rem', padding: '9px 12px', borderRadius: '10px', border: '1px solid #e2e8f0', background: '#fff', color: '#0f172a', outline: 'none' }}
+              >
+                {academicYearOptions.map((year) => (
+                  <option key={year} value={year}>{year}</option>
+                ))}
+              </select>
+            </div>
+            <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+              <button onClick={() => { setFormData((current) => ({ ...current, tahun_ajaran: selectedAcademicYear })); setShowForm(true); }} className="btn" style={{ border: 'none', borderRadius: '10px', padding: '9px 16px', fontSize: '.82rem', fontWeight: 600, cursor: 'pointer', background: '#2563eb', color: '#fff', whiteSpace: 'nowrap', transition: 'all 0.2s' }}>+ Assign Wali Kelas Baru</button>
+              <button onClick={handleCheckMismatches} disabled={loadingMismatches} className="btn" style={{ border: 'none', borderRadius: '10px', padding: '9px 16px', fontSize: '.82rem', fontWeight: 600, cursor: 'pointer', background: '#f59e0b', color: '#fff', whiteSpace: 'nowrap', transition: 'all 0.2s', opacity: loadingMismatches ? 0.6 : 1 }}>{loadingMismatches ? 'Mengecek...' : '🔍 Cek Ketidaksesuaian Kelas'}</button>
+            </div>
+          </div>
         </div>
 
+        {/* Assign form */}
         {showForm && (
-          <div style={{ 
-            background: 'var(--bg-tertiary)', 
-            padding: '20px', 
-            borderRadius: 'var(--border-radius-md)',
-            marginBottom: '20px',
-            border: '2px solid var(--primary-color)'
-          }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-              <h4 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
-                ✏️ Assign Wali Kelas Baru
-              </h4>
-              <button 
-                onClick={() => setShowForm(false)}
-                className="btn btn-danger"
-                style={{ padding: '6px 16px' }}
-              >
-                Tutup
-              </button>
+          <div style={{ border: '1px solid #eff6ff', background: '#eff6ff', borderRadius: '10px', padding: '18px 20px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div style={{ fontWeight: 700, fontSize: '.92rem', display: 'flex', alignItems: 'center', gap: '6px' }}>✏️ Assign Wali Kelas Baru</div>
+              <button onClick={() => setShowForm(false)} className="btn" style={{ border: 'none', borderRadius: '10px', padding: '6px 12px', fontSize: '.75rem', fontWeight: 600, cursor: 'pointer', background: '#ef4444', color: '#fff', transition: 'all 0.2s' }}>Tutup</button>
             </div>
-            
-            <form onSubmit={handleCreate}>
-              <div className="form-group">
-                <label>Guru</label>
-                <select
-                  value={formData.guru_id}
-                  onChange={(e) => setFormData({...formData, guru_id: e.target.value})}
-                  required
-                >
+            <form onSubmit={handleCreate} style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '14px' }}>
+              <div>
+                <label style={{ display: 'block', fontSize: '.72rem', fontWeight: 600, color: '#64748b', marginBottom: '5px' }}>Guru</label>
+                <select value={formData.guru_id} onChange={(e) => setFormData({...formData, guru_id: e.target.value})} required style={{ fontFamily: 'inherit', fontSize: '.85rem', padding: '9px 12px', borderRadius: '10px', border: '1px solid #e2e8f0', background: '#fff', color: '#0f172a', outline: 'none', width: '100%' }}>
                   <option value="">Pilih Guru</option>
                   {teachers.map(teacher => (
-                    <option key={teacher.id} value={teacher.id}>
-                      {teacher.nama} ({teacher.nip}) - {teacher.detail}
-                    </option>
+                    <option key={teacher.id} value={teacher.id}>{teacher.nama} ({teacher.nip})</option>
                   ))}
                 </select>
               </div>
-              <div className="form-group">
-                <label>Kelas</label>
-                <select
-                  value={formData.kelas}
-                  onChange={(e) => setFormData({...formData, kelas: e.target.value})}
-                  required
-                >
+              <div>
+                <label style={{ display: 'block', fontSize: '.72rem', fontWeight: 600, color: '#64748b', marginBottom: '5px' }}>Kelas</label>
+                <select value={formData.kelas} onChange={(e) => setFormData({...formData, kelas: e.target.value})} required style={{ fontFamily: 'inherit', fontSize: '.85rem', padding: '9px 12px', borderRadius: '10px', border: '1px solid #e2e8f0', background: '#fff', color: '#0f172a', outline: 'none', width: '100%' }}>
                   <option value="">Pilih Kelas</option>
                   {kelasOptions.map(k => <option key={k} value={k}>{k}</option>)}
                 </select>
               </div>
-              <div className="form-group">
-                <label>Tahun Ajaran</label>
-                <select
-                  value={formData.tahun_ajaran}
-                  onChange={(e) => setFormData({...formData, tahun_ajaran: e.target.value})}
-                  required
-                >
+              <div>
+                <label style={{ display: 'block', fontSize: '.72rem', fontWeight: 600, color: '#64748b', marginBottom: '5px' }}>Tahun Ajaran</label>
+                <select value={formData.tahun_ajaran} onChange={(e) => setFormData({...formData, tahun_ajaran: e.target.value})} required style={{ fontFamily: 'inherit', fontSize: '.85rem', padding: '9px 12px', borderRadius: '10px', border: '1px solid #e2e8f0', background: '#fff', color: '#0f172a', outline: 'none', width: '100%' }}>
                   {academicYearOptions.map((year) => (
                     <option key={year} value={year}>{year}</option>
                   ))}
                 </select>
               </div>
-              <button 
-                type="submit" 
-                className="btn btn-success"
-                style={{ width: '100%' }}
-              >
-                Simpan Assignment
-              </button>
+              <div style={{ gridColumn: '1 / -1' }}>
+                <button type="submit" className="btn" style={{ border: 'none', borderRadius: '10px', padding: '9px 16px', fontSize: '.82rem', fontWeight: 600, cursor: 'pointer', background: '#16a34a', color: '#fff', width: '100%', transition: 'all 0.2s' }}>Simpan Assignment</button>
+              </div>
             </form>
           </div>
         )}
 
         {/* Class Mismatches Modal */}
         {showMismatches && mismatches && (
-          <div style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            backgroundColor: 'rgba(0,0,0,0.5)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 1000,
-            padding: '20px'
-          }}>
-            <div style={{
-              backgroundColor: 'white',
-              borderRadius: '15px',
-              padding: '30px',
-              maxWidth: '900px',
-              width: '100%',
-              maxHeight: '90vh',
-              overflowY: 'auto'
-            }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+          <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px', zIndex: 50 }}>
+            <div style={{ background: '#fff', borderRadius: '14px', padding: '30px', maxWidth: '900px', width: '100%', maxHeight: '90vh', overflowY: 'auto' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '12px' }}>
                 <h3 style={{ margin: 0 }}>🔍 Ketidaksesuaian Kelas</h3>
-                <button
-                  onClick={() => setShowMismatches(false)}
-                  className="btn btn-danger"
-                  style={{ padding: '8px 16px' }}
-                >
-                  Tutup
-                </button>
+                <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
+                  <span style={{ background: '#e3f2fd', color: '#1976d2', padding: '6px 12px', borderRadius: '20px', fontSize: '0.85rem', fontWeight: 600 }}>Tahun Ajaran: {mismatches.tahun_ajaran}</span>
+                  <button onClick={() => setShowMismatches(false)} className="btn" style={{ border: 'none', borderRadius: '10px', padding: '8px 16px', fontSize: '.82rem', fontWeight: 600, cursor: 'pointer', background: '#ef4444', color: '#fff', transition: 'all 0.2s' }}>Tutup</button>
+                </div>
               </div>
-
               <div style={{ marginBottom: '20px' }}>
-                <div style={{ 
-                  display: 'grid', 
-                  gridTemplateColumns: 'repeat(2, 1fr)',
-                  gap: '15px',
-                  marginBottom: '15px'
-                }}>
-                  <div style={{ 
-                    padding: '15px', 
-                    backgroundColor: '#e3f2fd', 
-                    borderRadius: '8px',
-                    textAlign: 'center'
-                  }}>
-                    <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#1976d2' }}>
-                      {mismatches.totalStudents}
-                    </div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '15px', marginBottom: '15px' }}>
+                  <div style={{ padding: '15px', backgroundColor: '#e3f2fd', borderRadius: '8px', textAlign: 'center' }}>
+                    <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#1976d2' }}>{mismatches.totalStudents}</div>
                     <div style={{ fontSize: '12px', color: '#666' }}>Total Siswa Aktif</div>
                   </div>
-                  <div style={{ 
-                    padding: '15px', 
-                    backgroundColor: mismatches.mismatchCount > 0 ? '#ffebee' : '#e8f5e9', 
-                    borderRadius: '8px',
-                    textAlign: 'center'
-                  }}>
-                    <div style={{ fontSize: '24px', fontWeight: 'bold', color: mismatches.mismatchCount > 0 ? '#c62828' : '#2e7d32' }}>
-                      {mismatches.mismatchCount}
-                    </div>
+                  <div style={{ padding: '15px', backgroundColor: mismatches.mismatchCount > 0 ? '#ffebee' : '#e8f5e9', borderRadius: '8px', textAlign: 'center' }}>
+                    <div style={{ fontSize: '24px', fontWeight: 'bold', color: mismatches.mismatchCount > 0 ? '#c62828' : '#2e7d32' }}>{mismatches.mismatchCount}</div>
                     <div style={{ fontSize: '12px', color: '#666' }}>Siswa Kelas Tidak Sesuai</div>
                   </div>
                 </div>
-
-                {mismatches.mismatchCount > 0 ? (
+                {mismatches.mismatchCount > 0 && mismatches.mismatches ? (
                   <div style={{ marginBottom: '15px' }}>
-                    <p style={{ color: '#666', fontSize: '14px', marginBottom: '10px' }}>
-                      Siswa-siswa berikut memiliki kelas yang tidak sesuai dengan perhitungan otomatis berdasarkan tahun pelajaran:
-                    </p>
+                    <p style={{ color: '#666', fontSize: '14px', marginBottom: '10px' }}>Siswa-siswa berikut memiliki kelas yang tidak sesuai dengan perhitungan otomatis berdasarkan tahun pelajaran:</p>
                     <div style={{ overflowX: 'auto', maxHeight: '400px', overflowY: 'auto' }}>
-                      <table className="table" style={{ fontSize: '12px' }}>
+                      <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '640px' }}>
                         <thead>
-                          <tr style={{ backgroundColor: '#f8f9fa' }}>
-                            <th style={{ padding: '8px', textAlign: 'left' }}>Nama</th>
-                            <th style={{ padding: '8px', textAlign: 'left' }}>NIS</th>
-                            <th style={{ padding: '8px', textAlign: 'left' }}>Kelas Saat Ini</th>
-                            <th style={{ padding: '8px', textAlign: 'left' }}>Kelas Sesuai Tahun</th>
-                            <th style={{ padding: '8px', textAlign: 'left' }}>Tahun Pelajaran</th>
-                            <th style={{ padding: '8px', textAlign: 'left' }}>Jurusan</th>
+                          <tr style={{ background: '#f8fafc' }}>
+                            <th style={{ textAlign: 'left', fontSize: '.7rem', fontWeight: 700, color: '#64748b', padding: '12px 16px', borderBottom: '1px solid #e2e8f0' }}>Nama</th>
+                            <th style={{ textAlign: 'left', fontSize: '.7rem', fontWeight: 700, color: '#64748b', padding: '12px 16px', borderBottom: '1px solid #e2e8f0' }}>NIS</th>
+                            <th style={{ textAlign: 'left', fontSize: '.7rem', fontWeight: 700, color: '#64748b', padding: '12px 16px', borderBottom: '1px solid #e2e8f0' }}>Kelas Saat Ini</th>
+                            <th style={{ textAlign: 'left', fontSize: '.7rem', fontWeight: 700, color: '#64748b', padding: '12px 16px', borderBottom: '1px solid #e2e8f0' }}>Kelas Sesuai Tahun</th>
+                            <th style={{ textAlign: 'left', fontSize: '.7rem', fontWeight: 700, color: '#64748b', padding: '12px 16px', borderBottom: '1px solid #e2e8f0' }}>Tahun Pelajaran</th>
+                            <th style={{ textAlign: 'left', fontSize: '.7rem', fontWeight: 700, color: '#64748b', padding: '12px 16px', borderBottom: '1px solid #e2e8f0' }}>Jurusan</th>
                           </tr>
                         </thead>
                         <tbody>
                           {mismatches.mismatches.map((mismatch, index) => (
                             <tr key={index} style={{ backgroundColor: index % 2 === 0 ? '#fff' : '#f8f9fa' }}>
-                              <td style={{ padding: '8px' }}>{mismatch.nama}</td>
-                              <td style={{ padding: '8px' }}>{mismatch.nis}</td>
-                              <td style={{ padding: '8px', color: '#c62828', fontWeight: 'bold' }}>{mismatch.current_kelas}</td>
-                              <td style={{ padding: '8px', color: '#2e7d32', fontWeight: 'bold' }}>{mismatch.expected_kelas}</td>
-                              <td style={{ padding: '8px' }}>{mismatch.tahun_pelajaran}</td>
-                              <td style={{ padding: '8px' }}>{mismatch.jurusan}</td>
+                              <td style={{ padding: '13px 16px', fontSize: '.85rem', borderBottom: '1px solid #f1f5f9', color: '#334155' }}>{mismatch.nama}</td>
+                              <td style={{ padding: '13px 16px', fontSize: '.85rem', borderBottom: '1px solid #f1f5f9', color: '#334155' }}>{mismatch.nis}</td>
+                              <td style={{ padding: '13px 16px', fontSize: '.85rem', borderBottom: '1px solid #f1f5f9', color: '#c62828', fontWeight: 'bold' }}>{mismatch.current_kelas}</td>
+                              <td style={{ padding: '13px 16px', fontSize: '.85rem', borderBottom: '1px solid #f1f5f9', color: '#2e7d32', fontWeight: 'bold' }}>{mismatch.expected_kelas}</td>
+                              <td style={{ padding: '13px 16px', fontSize: '.85rem', borderBottom: '1px solid #f1f5f9', color: '#334155' }}>{mismatch.tahun_pelajaran}</td>
+                              <td style={{ padding: '13px 16px', fontSize: '.85rem', borderBottom: '1px solid #f1f5f9', color: '#334155' }}>{mismatch.jurusan}</td>
                             </tr>
                           ))}
                         </tbody>
@@ -646,13 +540,7 @@ function WaliKelas() {
                     </div>
                   </div>
                 ) : (
-                  <div style={{ 
-                    padding: '20px', 
-                    backgroundColor: '#e8f5e9', 
-                    borderRadius: '8px',
-                    textAlign: 'center',
-                    color: '#2e7d32'
-                  }}>
+                  <div style={{ padding: '20px', backgroundColor: '#e8f5e9', borderRadius: '8px', textAlign: 'center', color: '#2e7d32' }}>
                     <div style={{ fontSize: '48px', marginBottom: '10px' }}>✅</div>
                     <strong>Semua siswa memiliki kelas yang sesuai dengan perhitungan tahun pelajaran!</strong>
                   </div>
@@ -662,70 +550,40 @@ function WaliKelas() {
           </div>
         )}
 
-        <div style={{ overflowX: 'auto' }}>
-          <table className="table">
+        {/* Table */}
+        <div style={{ overflowX: 'auto', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '640px' }}>
             <thead>
               <tr>
-                <th>Guru</th>
-                <th>NIP</th>
-                <th>Kelas</th>
-                <th>Tahun Ajaran</th>
-                <th style={{ textAlign: 'center' }}>Aksi</th>
+                <th style={{ textAlign: 'left', fontSize: '.7rem', fontWeight: 700, color: '#64748b', padding: '12px 16px', borderBottom: '1px solid #e2e8f0' }}>Guru</th>
+                <th style={{ textAlign: 'left', fontSize: '.7rem', fontWeight: 700, color: '#64748b', padding: '12px 16px', borderBottom: '1px solid #e2e8f0' }}>NIP</th>
+                <th style={{ textAlign: 'left', fontSize: '.7rem', fontWeight: 700, color: '#64748b', padding: '12px 16px', borderBottom: '1px solid #e2e8f0' }}>Kelas</th>
+                <th style={{ textAlign: 'left', fontSize: '.7rem', fontWeight: 700, color: '#64748b', padding: '12px 16px', borderBottom: '1px solid #e2e8f0' }}>Tahun Ajaran</th>
+                <th style={{ textAlign: 'left', fontSize: '.7rem', fontWeight: 700, color: '#64748b', padding: '12px 16px', borderBottom: '1px solid #e2e8f0' }}>Aksi</th>
               </tr>
             </thead>
             <tbody>
-              {assignments
-                .filter(assignment => assignment.tahun_ajaran === selectedAcademicYear)
-                .map(assignment => (
+              {assignments.filter(assignment => assignment.tahun_ajaran === selectedAcademicYear).map(assignment => (
                 <tr key={assignment.id}>
-                  <td style={{ fontWeight: '600' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                      {assignment.guru_foto ? (
-                        <img 
-                          src={`http://localhost:5000${assignment.guru_foto}`} 
-                          alt={assignment.guru_nama} 
-                          style={{ width: '36px', height: '36px', borderRadius: '50%', objectFit: 'cover', border: '2px solid var(--primary-color)' }}
-                        />
-                      ) : (
-                        <div style={{ 
-                          width: '36px', 
-                          height: '36px', 
-                          borderRadius: '50%', 
-                          background: 'var(--bg-secondary)', 
-                          display: 'flex', 
-                          alignItems: 'center', 
-                          justifyContent: 'center',
-                          border: '2px solid var(--primary-color)',
-                          fontSize: '0.9rem'
-                        }}>
-                          👤
-                        </div>
-                      )}
+                  <td style={{ padding: '13px 16px', fontSize: '.85rem', borderBottom: '1px solid #f1f5f9', color: '#334155' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', fontWeight: 600, color: '#0f172a' }}>
+                      <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: '#eff6ff', color: '#2563eb', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px', overflow: 'hidden' }}>
+                        {assignment.guru_foto ? (
+                          <img src={getImageUrl(assignment.guru_foto)} alt={assignment.guru_nama} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                        ) : (
+                          '👤'
+                        )}
+                      </div>
                       {assignment.guru_nama}
                     </div>
                   </td>
-                  <td>{assignment.nip}</td>
-                  <td>
-                    <span style={{ 
-                      background: 'var(--primary-color)',
-                      color: 'white',
-                      padding: '4px 10px',
-                      borderRadius: '20px',
-                      fontSize: '0.8rem',
-                      fontWeight: '600'
-                    }}>
-                      {assignment.kelas}
-                    </span>
+                  <td style={{ padding: '13px 16px', fontSize: '.85rem', borderBottom: '1px solid #f1f5f9', color: '#334155' }}>{assignment.nip}</td>
+                  <td style={{ padding: '13px 16px', fontSize: '.85rem', borderBottom: '1px solid #f1f5f9', color: '#334155' }}>
+                    <span style={{ background: '#2563eb', color: '#fff', fontSize: '.72rem', fontWeight: 600, padding: '4px 10px', borderRadius: '999px' }}>{assignment.kelas}</span>
                   </td>
-                  <td>{assignment.tahun_ajaran}</td>
-                  <td style={{ textAlign: 'center' }}>
-                    <button
-                      onClick={() => handleDelete(assignment.id)}
-                      className="btn btn-danger"
-                      style={{ padding: '6px 14px', fontSize: '0.8rem' }}
-                    >
-                      Copot
-                    </button>
+                  <td style={{ padding: '13px 16px', fontSize: '.85rem', borderBottom: '1px solid #f1f5f9', color: '#334155' }}>{assignment.tahun_ajaran}</td>
+                  <td style={{ padding: '13px 16px', fontSize: '.85rem', borderBottom: '1px solid #f1f5f9', color: '#334155' }}>
+                    <button onClick={() => handleDelete(assignment.id)} className="btn" style={{ border: 'none', borderRadius: '10px', padding: '6px 12px', fontSize: '.75rem', fontWeight: 600, cursor: 'pointer', background: '#ef4444', color: '#fff', transition: 'all 0.2s' }}>Copot</button>
                   </td>
                 </tr>
               ))}
@@ -734,313 +592,146 @@ function WaliKelas() {
         </div>
       </div>
 
-      {/* Class Detail Modal */}
+      {/* DETAIL KELAS MODAL */}
       {showClassDetail && selectedClass && (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          background: 'rgba(0,0,0,0.5)',
-          backdropFilter: 'blur(3px)',
-          display: 'flex',
-          justifyContent: 'center',
-          alignItems: 'center',
-          zIndex: 1000,
-          padding: '20px'
-        }}>
-          <div style={{
-            background: 'var(--bg-primary)',
-            borderRadius: 'var(--border-radius-lg)',
-            padding: '24px',
-            maxWidth: '900px',
-            width: '100%',
-            maxHeight: '90vh',
-            overflowY: 'auto',
-            boxShadow: 'var(--shadow-lg)'
-          }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-              <div>
-                <h3 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  📚 Detail Kelas {selectedClass.kelas}
-                </h3>
-                <p style={{ margin: '6px 0 0 0', color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
-                  Wali Kelas: <strong style={{ color: 'var(--primary-color)' }}>{selectedClass.wali.nama}</strong> (NIP: {selectedClass.wali.nip})
-                </p>
-              </div>
-              <button
-                onClick={() => setShowClassDetail(false)}
-                className="btn btn-danger"
-              >
-                Tutup
-              </button>
+        <div className="modal-overlay" style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px', zIndex: 50 }} onClick={(e) => { if (e.target === e.currentTarget) setShowClassDetail(false) }}>
+          <div className="modal-content" style={{ background: '#fff', borderRadius: '14px', maxWidth: '900px', width: '100%', maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 20px 50px rgba(15,23,42,.25)' }}>
+            <div className="modal-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', padding: '20px 22px', borderBottom: '1px solid #f1f5f9' }}>
+              <div style={{ fontSize: '1.15rem', fontWeight: 700 }}>📊 Detail Kelas {selectedClass.kelas}</div>
+              <button onClick={() => setShowClassDetail(false)} className="btn" style={{ border: 'none', borderRadius: '10px', padding: '9px 16px', fontSize: '.82rem', fontWeight: 600, cursor: 'pointer', background: '#ef4444', color: '#fff', transition: 'all 0.2s', whiteSpace: 'nowrap' }}>Tutup</button>
             </div>
 
-            {/* Class Stats */}
-            <div style={{ 
-              display: 'grid', 
-              gridTemplateColumns: 'repeat(auto-fit, minmax(100px, 1fr))',
-              gap: '12px',
-              marginBottom: '20px'
-            }}>
-              <div style={{ 
-                textAlign: 'center', 
-                padding: '12px', 
-                background: '#e3f2fd', 
-                borderRadius: 'var(--border-radius-md)'
-              }}>
-                <div style={{ fontSize: '1.5rem', fontWeight: '700', color: 'var(--primary-color)' }}>
-                  {selectedClass.totalSiswa}
+            <div className="modal-body" style={{ padding: '20px 22px', display: 'flex', flexDirection: 'column', gap: '18px' }}>
+              <div className="detail-stats-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: '14px' }}>
+                <div style={{ borderRadius: '10px', padding: '16px 10px', textAlign: 'center', background: '#eff6ff' }}>
+                  <div style={{ fontSize: '1.5rem', fontWeight: 700, marginBottom: '4px', color: '#2563eb' }}>{selectedClass.totalSiswa}</div>
+                  <div style={{ fontSize: '.78rem', fontWeight: 600, color: '#334155' }}>Siswa</div>
                 </div>
-                <small style={{ color: 'var(--text-secondary)', fontWeight: '600' }}>Siswa</small>
-              </div>
-              <div style={{ 
-                textAlign: 'center', 
-                padding: '12px', 
-                background: '#e8f5e9', 
-                borderRadius: 'var(--border-radius-md)'
-              }}>
-                <div style={{ fontSize: '1.5rem', fontWeight: '700', color: 'var(--success-color)' }}>
-                  {selectedClass.totalPrestasi}
+                <div style={{ borderRadius: '10px', padding: '16px 10px', textAlign: 'center', background: '#dcfce7' }}>
+                  <div style={{ fontSize: '1.5rem', fontWeight: 700, marginBottom: '4px', color: '#16a34a' }}>{selectedClass.totalPrestasi}</div>
+                  <div style={{ fontSize: '.78rem', fontWeight: 600, color: '#334155' }}>Prestasi</div>
                 </div>
-                <small style={{ color: 'var(--text-secondary)', fontWeight: '600' }}>Prestasi</small>
-              </div>
-              <div style={{ 
-                textAlign: 'center', 
-                padding: '12px', 
-                background: '#f3e5f5', 
-                borderRadius: 'var(--border-radius-md)'
-              }}>
-                <div style={{ fontSize: '1.5rem', fontWeight: '700', color: '#9b59b6' }}>
-                  {selectedClass.totalEvent}
+                <div style={{ borderRadius: '10px', padding: '16px 10px', textAlign: 'center', background: '#f3e8ff' }}>
+                  <div style={{ fontSize: '1.5rem', fontWeight: 700, marginBottom: '4px', color: '#7c3aed' }}>{selectedClass.totalEvent}</div>
+                  <div style={{ fontSize: '.78rem', fontWeight: 600, color: '#334155' }}>Event</div>
                 </div>
-                <small style={{ color: 'var(--text-secondary)', fontWeight: '600' }}>Event</small>
-              </div>
-              <div style={{ 
-                textAlign: 'center', 
-                padding: '12px', 
-                background: '#fff3e0', 
-                borderRadius: 'var(--border-radius-md)'
-              }}>
-                <div style={{ fontSize: '1.5rem', fontWeight: '700', color: 'var(--warning-color)' }}>
-                  {selectedClass.totalOrganisasi}
+                <div style={{ borderRadius: '10px', padding: '16px 10px', textAlign: 'center', background: '#fef3c7' }}>
+                  <div style={{ fontSize: '1.5rem', fontWeight: 700, marginBottom: '4px', color: '#f59e0b' }}>{selectedClass.totalOrganisasi}</div>
+                  <div style={{ fontSize: '.78rem', fontWeight: 600, color: '#334155' }}>Organisasi</div>
                 </div>
-                <small style={{ color: 'var(--text-secondary)', fontWeight: '600' }}>Organisasi</small>
-              </div>
-              <div style={{ 
-                textAlign: 'center', 
-                padding: '12px', 
-                background: '#ffe0b2', 
-                borderRadius: 'var(--border-radius-md)'
-              }}>
-                <div style={{ fontSize: '1.5rem', fontWeight: '700', color: '#e67e22' }}>
-                  {selectedClass.totalKepanitiaan}
+                <div style={{ borderRadius: '10px', padding: '16px 10px', textAlign: 'center', background: '#fef3c7' }}>
+                  <div style={{ fontSize: '1.5rem', fontWeight: 700, marginBottom: '4px', color: '#f59e0b' }}>{selectedClass.totalKepanitiaan}</div>
+                  <div style={{ fontSize: '.78rem', fontWeight: 600, color: '#334155' }}>Kepanitiaan</div>
                 </div>
-                <small style={{ color: 'var(--text-secondary)', fontWeight: '600' }}>Kepanitiaan</small>
-              </div>
-              <div style={{ 
-                textAlign: 'center', 
-                padding: '12px', 
-                background: selectedClass.totalPelanggaran > 0 ? '#ffebee' : '#e8f5e9', 
-                borderRadius: 'var(--border-radius-md)'
-              }}>
-                <div style={{ fontSize: '1.5rem', fontWeight: '700', color: selectedClass.totalPelanggaran > 0 ? 'var(--danger-color)' : 'var(--success-color)' }}>
-                  {selectedClass.totalPelanggaran}
+                <div style={{ borderRadius: '10px', padding: '16px 10px', textAlign: 'center', background: '#dcfce7' }}>
+                  <div style={{ fontSize: '1.5rem', fontWeight: 700, marginBottom: '4px', color: selectedClass.totalPelanggaran > 0 ? '#ef4444' : '#16a34a' }}>{selectedClass.totalPelanggaran}</div>
+                  <div style={{ fontSize: '.78rem', fontWeight: 600, color: '#334155' }}>Pelanggaran</div>
                 </div>
-                <small style={{ color: selectedClass.totalPelanggaran > 0 ? '#c62828' : '#2e7d32', fontWeight: '600' }}>Pelanggaran</small>
               </div>
-            </div>
 
-            {/* Students List */}
-            <h4 style={{ marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-              👥 Daftar Siswa
-            </h4>
-            <div style={{ overflowX: 'auto' }}>
-              <table className="table">
-                <thead>
-                  <tr>
-                    <th style={{ width: '50px' }}>No</th>
-                    <th>Nama</th>
-                    <th>NIS</th>
-                    <th>Detail IPC</th>
-                    <th style={{ textAlign: 'center' }}>IPC</th>
-                    <th style={{ textAlign: 'center' }}>Aksi</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {selectedClass.students.map((student, index) => (
-                    <tr key={student.id}>
-                      <td>{index + 1}</td>
-                      <td style={{ fontWeight: '600' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                          <div style={{
-                            width: '36px',
-                            height: '36px',
-                            borderRadius: '50%',
-                            background: 'var(--bg-tertiary)',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            overflow: 'hidden',
-                            border: '2px solid var(--primary-color)',
-                            flexShrink: 0
-                          }}>
-                            {student.foto ? (
-                              <img 
-                                src={`http://localhost:5000${student.foto}`} 
-                                alt={student.nama} 
-                                style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
-                              />
-                            ) : (
-                              <span style={{ fontSize: '1rem' }}>👤</span>
-                            )}
-                          </div>
-                          {student.nama}
-                        </div>
-                      </td>
-                      <td>{student.nis}</td>
-                      <td>
-                        <div style={{ display: 'grid', gap: '2px', minWidth: '180px', fontSize: '0.8rem' }}>
-                          {getIpcDetailRows(student.ipc_points).map(([label, value]) => (
-                            <div key={label} style={{ display: 'flex', justifyContent: 'space-between', gap: '8px' }}>
-                              <span>{label}</span>
-                              <strong style={{ color: value < 0 ? 'var(--danger-color)' : 'var(--text-primary)' }}>
-                                {value > 0 ? '+' : ''}{value}
-                              </strong>
-                            </div>
-                          ))}
-                        </div>
-                      </td>
-                      <td style={{ textAlign: 'center' }}>
-                        <span style={{ 
-                          background: getIpcColor(student.ipc_total || 80),
-                          color: 'white',
-                          padding: '4px 10px',
-                          borderRadius: '20px',
-                          fontWeight: '600'
-                        }}>
-                          {(student.ipc_total || 80) < 0 ? `${student.ipc_total || 80} (MINUS)` : (student.ipc_total || 80)}
-                        </span>
-                      </td>
-                      <td style={{ textAlign: 'center' }}>
-                        <button
-                          onClick={() => handleViewStudentDetail(student)}
-                          className="btn btn-info"
-                          style={{ padding: '5px 10px', fontSize: '0.8rem' }}
-                        >
-                          Detail
-                        </button>
-                      </td>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '.95rem', fontWeight: 700, color: '#0f172a' }}>👥 Daftar Siswa</div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '.85rem', color: '#64748b' }}>Wali Kelas: <strong style={{ color: '#2563eb' }}>{selectedClass.wali?.nama}</strong> (NIP: {selectedClass.wali?.nip})</div>
+
+              <div style={{ overflowX: 'auto', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '760px' }}>
+                  <thead>
+                    <tr>
+                      <th style={{ background: '#f8fafc', textAlign: 'left', fontSize: '.7rem', fontWeight: 700, color: '#64748b', padding: '12px 16px', borderBottom: '1px solid #e2e8f0' }}>No</th>
+                      <th style={{ background: '#f8fafc', textAlign: 'left', fontSize: '.7rem', fontWeight: 700, color: '#64748b', padding: '12px 16px', borderBottom: '1px solid #e2e8f0' }}>Nama</th>
+                      <th style={{ background: '#f8fafc', textAlign: 'left', fontSize: '.7rem', fontWeight: 700, color: '#64748b', padding: '12px 16px', borderBottom: '1px solid #e2e8f0' }}>NIS</th>
+                      <th style={{ background: '#f8fafc', textAlign: 'left', fontSize: '.7rem', fontWeight: 700, color: '#64748b', padding: '12px 16px', borderBottom: '1px solid #e2e8f0' }}>Detail IPC</th>
+                      <th style={{ background: '#f8fafc', textAlign: 'left', fontSize: '.7rem', fontWeight: 700, color: '#64748b', padding: '12px 16px', borderBottom: '1px solid #e2e8f0' }}>IPC</th>
+                      <th style={{ background: '#f8fafc', textAlign: 'left', fontSize: '.7rem', fontWeight: 700, color: '#64748b', padding: '12px 16px', borderBottom: '1px solid #e2e8f0' }}>Aksi</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {selectedClass.students?.map((student, index) => (
+                      <tr key={student.id}>
+                        <td style={{ padding: '13px 16px', fontSize: '.85rem', borderBottom: '1px solid #f1f5f9', color: '#334155' }}>{index + 1}</td>
+                        <td style={{ padding: '13px 16px', fontSize: '.85rem', borderBottom: '1px solid #f1f5f9', color: '#334155' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', fontWeight: 600, color: '#0f172a' }}>
+                            <div style={{ width: '34px', height: '34px', borderRadius: '50%', background: '#eff6ff', color: '#2563eb', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px', overflow: 'hidden' }}>
+                              {student.foto ? (
+                                <img src={getImageUrl(student.foto)} alt={student.nama} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                              ) : (
+                                '👤'
+                              )}
+                            </div>
+                            {student.nama}
+                          </div>
+                        </td>
+                        <td style={{ padding: '13px 16px', fontSize: '.85rem', borderBottom: '1px solid #f1f5f9', color: '#334155' }}>{student.nis}</td>
+                        <td style={{ padding: '13px 16px', fontSize: '.85rem', borderBottom: '1px solid #f1f5f9', color: '#334155' }}>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '.8rem' }}>
+                            {getIpcDetailRows(student.ipc_points).map(([label, value]) => (
+                              <div key={label} style={{ display: 'flex', justifyContent: 'space-between', gap: '24px', color: '#334155' }}>
+                                <span>{label}</span>
+                                <span style={{ fontWeight: 700, color: '#0f172a' }}>{value > 0 ? '+' : ''}{value}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </td>
+                        <td style={{ padding: '13px 16px', fontSize: '.85rem', borderBottom: '1px solid #f1f5f9', color: '#334155' }}>
+                          <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '38px', height: '38px', borderRadius: '50%', background: '#0891b2', color: '#fff', fontWeight: 700, fontSize: '.85rem' }}>{student.ipc_total || 80}</span>
+                        </td>
+                        <td style={{ padding: '13px 16px', fontSize: '.85rem', borderBottom: '1px solid #f1f5f9', color: '#334155' }}>
+                          <button onClick={() => handleViewStudentDetail(student)} className="btn" style={{ border: 'none', borderRadius: '10px', padding: '6px 12px', fontSize: '.75rem', fontWeight: 600, cursor: 'pointer', background: '#2563eb', color: '#fff', transition: 'all 0.2s' }}>Detail</button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
           </div>
         </div>
       )}
 
-      {/* Student Detail Modal */}
+      {/* DETAIL SISWA MODAL */}
       {showStudentDetail && selectedStudent && (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          background: 'rgba(0,0,0,0.5)',
-          backdropFilter: 'blur(3px)',
-          display: 'flex',
-          justifyContent: 'center',
-          alignItems: 'center',
-          zIndex: 1100,
-          padding: '20px'
-        }}>
-          <div style={{
-            background: 'var(--bg-primary)',
-            borderRadius: 'var(--border-radius-lg)',
-            padding: '24px',
-            maxWidth: '500px',
-            width: '100%',
-            boxShadow: 'var(--shadow-lg)'
-          }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                <div style={{
-                  width: '80px',
-                  height: '80px',
-                  borderRadius: '50%',
-                  background: 'var(--bg-tertiary)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  overflow: 'hidden',
-                  border: '3px solid var(--primary-color)',
-                  flexShrink: 0
-                }}>
+        <div className="modal-overlay" style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px', zIndex: 50 }} onClick={(e) => { if (e.target === e.currentTarget) setShowStudentDetail(false) }}>
+          <div className="modal-content" style={{ background: '#fff', borderRadius: '14px', width: '100%', maxWidth: '420px', maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 20px 50px rgba(15,23,42,.25)' }}>
+            <div className="modal-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', padding: '18px 20px', borderBottom: '1px solid #f1f5f9' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <div style={{ width: '52px', height: '52px', borderRadius: '50%', background: '#fff', border: '2px solid #2563eb', color: '#2563eb', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '26px', overflow: 'hidden' }}>
                   {selectedStudent.foto ? (
-                    <img 
-                      src={`http://localhost:5000${selectedStudent.foto}`} 
-                      alt={selectedStudent.nama} 
-                      style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
-                    />
+                    <img src={getImageUrl(selectedStudent.foto)} alt={selectedStudent.nama} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                   ) : (
-                    <span style={{ fontSize: '2rem' }}>👤</span>
+                    '👤'
                   )}
                 </div>
-                <h3 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  👤 Detail Siswa
-                </h3>
+                <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 700 }}>👤 Detail Siswa</h3>
               </div>
-              <button
-                onClick={() => setShowStudentDetail(false)}
-                className="btn btn-danger"
-              >
-                Tutup
-              </button>
+              <button onClick={() => setShowStudentDetail(false)} className="btn" style={{ border: 'none', borderRadius: '10px', padding: '6px 12px', fontSize: '.75rem', fontWeight: 600, cursor: 'pointer', background: '#ef4444', color: '#fff', transition: 'all 0.2s', whiteSpace: 'nowrap' }}>Tutup</button>
             </div>
 
-            <div style={{ display: 'grid', gap: '12px' }}>
-              <div style={{ padding: '12px', background: 'var(--bg-tertiary)', borderRadius: 'var(--border-radius-sm)' }}>
-                <strong style={{ color: 'var(--text-secondary)', display: 'block', marginBottom: '4px', fontSize: '0.85rem' }}>Nama</strong>
-                <div style={{ fontSize: '1rem', fontWeight: '600', color: 'var(--text-primary)' }}>{selectedStudent.nama}</div>
+            <div style={{ padding: '16px 20px 22px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              <div style={{ background: '#f8fafc', borderRadius: '10px', padding: '12px 16px' }}>
+                <div style={{ fontSize: '.72rem', fontWeight: 700, color: '#64748b', marginBottom: '4px' }}>Nama</div>
+                <div style={{ fontSize: '.95rem', fontWeight: 600, color: '#0f172a' }}>{selectedStudent.nama}</div>
               </div>
-              <div style={{ padding: '12px', background: 'var(--bg-tertiary)', borderRadius: 'var(--border-radius-sm)' }}>
-                <strong style={{ color: 'var(--text-secondary)', display: 'block', marginBottom: '4px', fontSize: '0.85rem' }}>NIS</strong>
-                <div style={{ fontSize: '1rem', fontWeight: '600', color: 'var(--text-primary)' }}>{selectedStudent.nis}</div>
+              <div style={{ background: '#f8fafc', borderRadius: '10px', padding: '12px 16px' }}>
+                <div style={{ fontSize: '.72rem', fontWeight: 700, color: '#64748b', marginBottom: '4px' }}>NIS</div>
+                <div style={{ fontSize: '.95rem', fontWeight: 600, color: '#0f172a' }}>{selectedStudent.nis}</div>
               </div>
-              <div style={{ padding: '12px', background: 'var(--bg-tertiary)', borderRadius: 'var(--border-radius-sm)' }}>
+              <div style={{ background: '#f8fafc', borderRadius: '10px', padding: '12px 16px' }}>
+                <div style={{ fontSize: '.72rem', fontWeight: 700, color: '#64748b', marginBottom: '4px' }}>Grha</div>
+                <div style={{ fontSize: '.95rem', fontWeight: 600, color: '#0f172a' }}>{selectedStudent.grha || '-'}</div>
               </div>
-              <div style={{ padding: '12px', background: 'var(--bg-tertiary)', borderRadius: 'var(--border-radius-sm)' }}>
-                <strong style={{ color: 'var(--text-secondary)', display: 'block', marginBottom: '4px', fontSize: '0.85rem' }}>Grha</strong>
-                <div style={{ fontSize: '1rem', fontWeight: '600', color: 'var(--text-primary)' }}>{selectedStudent.grha || '-'}</div>
-              </div>
-              <div style={{ padding: '12px', background: 'var(--bg-tertiary)', borderRadius: 'var(--border-radius-sm)' }}>
-                <strong style={{ color: 'var(--text-secondary)', display: 'block', marginBottom: '8px', fontSize: '0.85rem' }}>Detail IPC</strong>
-                <div style={{ display: 'grid', gap: '4px', fontSize: '0.9rem' }}>
+              <div style={{ background: '#f8fafc', borderRadius: '10px', padding: '12px 16px' }}>
+                <div style={{ fontSize: '.72rem', fontWeight: 700, color: '#64748b', marginBottom: '4px' }}>Detail IPC</div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                   {getIpcDetailRows(selectedStudent.ipc_points).map(([label, value]) => (
-                    <div key={label} style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <div key={label} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '.88rem', fontWeight: 400, color: '#334155' }}>
                       <span>{label}</span>
-                      <strong style={{ color: value < 0 ? 'var(--danger-color)' : 'var(--text-primary)' }}>
-                        {value > 0 ? '+' : ''}{value}
-                      </strong>
+                      <span style={{ fontWeight: 700, color: '#0f172a' }}>{value > 0 ? '+' : ''}{value}</span>
                     </div>
                   ))}
                 </div>
               </div>
-              <div style={{ padding: '12px', background: 'var(--bg-tertiary)', borderRadius: 'var(--border-radius-sm)' }}>
-                <strong style={{ color: 'var(--text-secondary)', display: 'block', marginBottom: '4px', fontSize: '0.85rem' }}>Total IPC</strong>
-                <span style={{ 
-                  background: getIpcColor(selectedStudent.ipc_total || 80),
-                  color: 'white',
-                  padding: '6px 14px',
-                  borderRadius: '20px',
-                  fontWeight: '700',
-                  fontSize: '1rem'
-                }}>
-                  {selectedStudent.ipc_total || 80}
-                </span>
+              <div style={{ background: '#f8fafc', borderRadius: '10px', padding: '12px 16px' }}>
+                <div style={{ fontSize: '.72rem', fontWeight: 700, color: '#64748b', marginBottom: '4px' }}>Total IPC</div>
+                <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '44px', height: '44px', borderRadius: '50%', background: '#0891b2', color: '#fff', fontWeight: 700, fontSize: '1rem' }}>{selectedStudent.ipc_total || 80}</span>
               </div>
             </div>
           </div>

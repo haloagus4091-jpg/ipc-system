@@ -72,6 +72,49 @@ router.get('/', auth, async (req, res) => {
             }
         }
 
+        // If user is a teacher, check if they are assigned as wali kelas
+        if (userData.role === 'guru') {
+            const { getCurrentAcademicYear } = require('../utils/academicYear');
+            const currentYear = getCurrentAcademicYear();
+            
+            console.log('Profile - Checking wali kelas for guru:', req.user.id, 'Current year:', currentYear);
+            
+            // Check for wali kelas assignment in current academic year
+            const [waliAssignment] = await db.query(`
+                SELECT kelas, tahun_ajaran
+                FROM wali_kelas_assignment
+                WHERE guru_id = ? AND tahun_ajaran = ?
+                LIMIT 1
+            `, [req.user.id, currentYear]);
+            
+            console.log('Profile - Wali assignment result:', waliAssignment);
+            
+            if (waliAssignment.length > 0) {
+                userData.wali_kelas = waliAssignment[0].kelas;
+                console.log('Profile - Set wali_kelas from current year:', userData.wali_kelas);
+            } else {
+                // If no assignment in current year, check if there's any assignment at all
+                // This handles cases where assignment was made for a different year
+                const [anyAssignment] = await db.query(`
+                    SELECT kelas, tahun_ajaran
+                    FROM wali_kelas_assignment
+                    WHERE guru_id = ?
+                    ORDER BY tahun_ajaran DESC
+                    LIMIT 1
+                `, [req.user.id]);
+                
+                console.log('Profile - Any assignment result:', anyAssignment);
+                
+                if (anyAssignment.length > 0) {
+                    userData.wali_kelas = anyAssignment[0].kelas;
+                    console.log('Profile - Set wali_kelas from any assignment:', userData.wali_kelas);
+                } else {
+                    userData.wali_kelas = null;
+                    console.log('Profile - No wali kelas assignment found');
+                }
+            }
+        }
+
         res.json(userData);
     } catch (error) {
         console.error(error);

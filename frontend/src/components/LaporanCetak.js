@@ -197,17 +197,21 @@ function LaporanCetak({ user }) {
   }, []);
 
   const checkWaliKelasStatus = async () => {
+    console.log('LaporanCetak - Checking wali kelas status, user:', user);
     if (user?.role === 'guru') {
       try {
         const token = localStorage.getItem('token');
+        console.log('LaporanCetak - Calling /wali-kelas/my-class');
         const response = await axios.get('/wali-kelas/my-class', {
           headers: { Authorization: `Bearer ${token}` }
         });
+        console.log('LaporanCetak - Wali kelas response:', response.data);
         setIsWaliKelas(true);
         setWaliKelasInfo(response.data);
         setSelectedClass(response.data.kelas); // Auto-select their class
+        console.log('LaporanCetak - Set selectedClass to:', response.data.kelas);
       } catch (error) {
-        console.log('Teacher is not a wali kelas:', error);
+        console.log('LaporanCetak - Teacher is not a wali kelas:', error);
         setIsWaliKelas(false);
       }
     }

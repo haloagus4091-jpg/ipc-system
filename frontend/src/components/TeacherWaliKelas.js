@@ -1,12 +1,27 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 
+function getIpcDetailRows(points = {}) {
+  return [
+    ['Prestasi', (Number(points.prestasi_akademik) || 0) + (Number(points.prestasi_nonakademik) || 0)],
+    ['Perilaku', ['tanggung_jawab', 'disiplin', 'kepedulian', 'kemandirian', 'spiritual', 'kejujuran', 'kepercayaan_diri']
+      .reduce((sum, key) => sum + (Number(points[key]) || 0), 0)],
+    ['Organisasi', Number(points.organisasi) || 0],
+    ['Kepanitiaan', Number(points.kepanitiaan) || 0],
+    ['Event', Number(points.event) || 0],
+    ['Pelanggaran', -(['pelanggaran_ringan', 'pelanggaran_sedang', 'pelanggaran_berat']
+      .reduce((sum, key) => sum + (Number(points[key]) || 0), 0))]
+  ];
+}
+
 function TeacherWaliKelas() {
   const [classData, setClassData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [selectedStudent, setSelectedStudent] = useState(null);
   const [showStudentDetail, setShowStudentDetail] = useState(false);
+  const [loadingIpcDetail, setLoadingIpcDetail] = useState(false);
+  const [ipcDetail, setIpcDetail] = useState(null);
 
   useEffect(() => {
     fetchMyClass();
@@ -27,9 +42,23 @@ function TeacherWaliKelas() {
     }
   };
 
-  const handleViewStudentDetail = (student) => {
+  const handleViewStudentDetail = async (student) => {
     setSelectedStudent(student);
     setShowStudentDetail(true);
+    setLoadingIpcDetail(true);
+    setIpcDetail(null);
+    
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.get(`/reports/ipc-card/${student.id}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setIpcDetail(response.data);
+    } catch (error) {
+      console.error('Error fetching IPC detail:', error);
+    } finally {
+      setLoadingIpcDetail(false);
+    }
   };
 
   const getIpcColor = (ipc) => {
@@ -443,17 +472,74 @@ function TeacherWaliKelas() {
                   <div style={{ fontSize: '12px', color: '#666' }}>Perilaku Positif</div>
                 </div>
                 <div style={{ 
-                  backgroundColor: getIpcColor(selectedStudent.ipc_total || 80) + '20', 
+                  backgroundColor: '#ffe0b2', 
                   padding: '15px', 
                   borderRadius: '8px',
                   textAlign: 'center'
                 }}>
-                  <div style={{ fontSize: '24px', fontWeight: 'bold', color: getIpcColor(selectedStudent.ipc_total || 80) }}>
-                    {selectedStudent.ipc_total || 80}
+                  <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#e67e22' }}>
+                    {selectedStudent.stats.kepanitiaan}
                   </div>
-                  <div style={{ fontSize: '12px', color: '#666' }}>Total IPC</div>
+                  <div style={{ fontSize: '12px', color: '#666' }}>Kepanitiaan</div>
                 </div>
               </div>
+            </div>
+
+            <div style={{ marginBottom: '20px' }}>
+              <h4 style={{ marginBottom: '15px', color: '#9b59b6' }}>Detail IPC</h4>
+              {loadingIpcDetail ? (
+                <div style={{ textAlign: 'center', padding: '20px' }}>
+                  <div className="spinner" style={{ 
+                    border: '4px solid #f3f3f3',
+                    borderTop: '4px solid #9b59b6',
+                    borderRadius: '50%',
+                    width: '30px',
+                    height: '30px',
+                    animation: 'spin 1s linear infinite',
+                    margin: '0 auto 10px'
+                  }}></div>
+                  <p style={{ color: '#666' }}>Memuat detail IPC...</p>
+                </div>
+              ) : ipcDetail ? (
+                <div style={{ 
+                  backgroundColor: '#f8f9fa', 
+                  padding: '15px', 
+                  borderRadius: '8px'
+                }}>
+                  <div style={{ display: 'grid', gap: '8px', marginBottom: '15px' }}>
+                    {getIpcDetailRows(ipcDetail.points || {}).map(([label, value]) => (
+                      <div key={label} style={{ display: 'flex', justifyContent: 'space-between', gap: '8px', padding: '8px', backgroundColor: 'white', borderRadius: '4px' }}>
+                        <span style={{ fontWeight: '500' }}>{label}</span>
+                        <strong style={{ color: value < 0 ? '#e74c3c' : '#27ae60' }}>
+                          {value > 0 ? '+' : ''}{value}
+                        </strong>
+                      </div>
+                    ))}
+                  </div>
+                  <div style={{ 
+                    padding: '15px', 
+                    backgroundColor: getIpcColor(selectedStudent.ipc_total || 80), 
+                    borderRadius: '8px',
+                    textAlign: 'center',
+                    color: 'white'
+                  }}>
+                    <div style={{ fontSize: '32px', fontWeight: 'bold', marginBottom: '5px' }}>
+                      {selectedStudent.ipc_total || 80}
+                    </div>
+                    <div style={{ fontSize: '14px' }}>Total IPC</div>
+                  </div>
+                </div>
+              ) : (
+                <div style={{ 
+                  padding: '20px', 
+                  backgroundColor: '#fff3cd', 
+                  borderRadius: '8px',
+                  textAlign: 'center',
+                  color: '#856404'
+                }}>
+                  Gagal memuat detail IPC
+                </div>
+              )}
             </div>
           </div>
         </div>
