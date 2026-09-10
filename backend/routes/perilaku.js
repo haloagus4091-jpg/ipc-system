@@ -70,8 +70,8 @@ router.post('/', auth, checkInputAccess('perilaku'), async (req, res) => {
             kepercayaan_diri
         });
         const point = karakter_siswa
-            ? calculatePerilakuPoints(karakter_siswa)
-            : calculatePerilakuPointsFromFields({
+            ? await calculatePerilakuPoints(karakter_siswa)
+            : await calculatePerilakuPointsFromFields({
                 tanggung_jawab,
                 disiplin,
                 kepedulian,
@@ -219,8 +219,8 @@ router.put('/:id', auth, async (req, res) => {
             kepercayaan_diri
         });
         const point = karakter_siswa
-            ? calculatePerilakuPoints(karakter_siswa)
-            : calculatePerilakuPointsFromFields({
+            ? await calculatePerilakuPoints(karakter_siswa)
+            : await calculatePerilakuPointsFromFields({
                 tanggung_jawab,
                 disiplin,
                 kepedulian,

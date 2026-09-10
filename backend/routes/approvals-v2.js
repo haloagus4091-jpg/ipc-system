@@ -215,7 +215,7 @@ router.post('/event/submit', auth, checkInputAccess('event'), upload.single('fot
         // SUPERADMIN: Direct submit to main table
         if (userRole === 'superadmin') {
             console.log('Event - Superadmin direct submission');
-            const point = calculateEventPoints(tingkat);
+            const point = await calculateEventPoints(tingkat);
             
             // Move photo to organized folder if exists
             let finalFotoPath = foto_path;
@@ -368,7 +368,7 @@ router.post('/kepanitiaan/submit', auth, checkInputAccess('kepanitiaan'), upload
         // SUPERADMIN: Direct submit to main table
         if (userRole === 'superadmin') {
             console.log('Kepanitiaan - Superadmin direct submission');
-            const point = calculateKepanitiaanPoints(jabatan_kepanitiaan);
+            const point = await calculateKepanitiaanPoints(jabatan_kepanitiaan);
             
             // Move photo to organized folder if exists
             let finalFotoPath = foto_path;
@@ -493,9 +493,9 @@ router.put('/superadmin/:type/:id', auth, superAdminOnly, async (req, res) => {
             if (type === 'prestasi') {
                 pointChange = await calculatePrestasiPoints(data.juara, data.kategori);
             } else if (type === 'event') {
-                pointChange = calculateEventPoints(data.tingkat);
+                pointChange = await calculateEventPoints(data.tingkat);
             } else if (type === 'kepanitiaan') {
-                pointChange = calculateKepanitiaanPoints(data[pointField]);
+                pointChange = await calculateKepanitiaanPoints(data[pointField]);
             } else {
                 pointChange = await calculateOrganisasiPoints(data.kategori_organisasi, data[pointField]);
             }

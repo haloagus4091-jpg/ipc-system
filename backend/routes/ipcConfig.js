@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { auth, superAdminOnly } = require('../middleware/auth');
 const db = require('../config/database');
+const { clearConfigCache } = require('../utils/ipcConfig');
 
 async function getOrganisasiOptions(activeOnly = false) {
     const [rows] = await db.query(
@@ -332,12 +333,14 @@ router.post('/', auth, superAdminOnly, async (req, res) => {
                     'INSERT INTO ipc_pelanggaran_detail (name, level_id, is_active) VALUES (?, ?, ?)',
                     [field1, level[0].id, is_active !== undefined ? is_active : true]
                 );
+                clearConfigCache();
                 return res.status(201).json((await getPelanggaranConfigs()).find(item => item.id === `detail-${result.insertId}`));
             }
             const [result] = await db.query(
                 'INSERT INTO ipc_pelanggaran_level (name, point_value, description, is_active) VALUES (?, ?, ?, ?)',
                 [field1, point_value, description || null, is_active !== undefined ? is_active : true]
             );
+            clearConfigCache();
             return res.status(201).json((await getPelanggaranConfigs()).find(item => item.id === `level-${result.insertId}`));
         }
         
@@ -350,6 +353,7 @@ router.post('/', auth, superAdminOnly, async (req, res) => {
             VALUES (?, ?, ?, ?, ?, ?, ?)
         `, [category, field1, field2 || null, point_value, description || null, is_active !== undefined ? is_active : true, userId]);
         
+        clearConfigCache();
         const [newConfig] = await db.query('SELECT * FROM ipc_config WHERE id = ?', [result.insertId]);
         res.status(201).json(newConfig[0]);
     } catch (error) {
@@ -377,6 +381,7 @@ router.put('/:id', auth, superAdminOnly, async (req, res) => {
                 ? [point_value, description ?? null, is_active, pelanggaranId.value]
                 : [is_active, pelanggaranId.value];
             await db.query(`UPDATE ${table} SET ${fieldUpdates.join(', ')} WHERE id = ?`, values);
+            clearConfigCache();
             return res.json((await getPelanggaranConfigs()).find(item => item.id === id));
         }
         
@@ -386,7 +391,7 @@ router.put('/:id', auth, superAdminOnly, async (req, res) => {
             return res.status(404).json({ message: 'Configuration not found' });
         }
         
-        const [result] = await db.query(`
+        await db.query(`
             UPDATE ipc_config
             SET category = ?, field1 = ?, field2 = ?, point_value = ?, description = ?, is_active = ?, updated_by = ?
             WHERE id = ?
@@ -401,6 +406,7 @@ router.put('/:id', auth, superAdminOnly, async (req, res) => {
             id
         ]);
         
+        clearConfigCache();
         const [updatedConfig] = await db.query('SELECT * FROM ipc_config WHERE id = ?', [id]);
         res.json(updatedConfig[0]);
     } catch (error) {
@@ -420,9 +426,11 @@ router.delete('/:id', auth, superAdminOnly, async (req, res) => {
         if (pelanggaranId) {
             const table = pelanggaranId.type === 'level' ? 'ipc_pelanggaran_level' : 'ipc_pelanggaran_detail';
             const [result] = await db.query(`DELETE FROM ${table} WHERE id = ?`, [pelanggaranId.value]);
-            return result.affectedRows
-                ? res.json({ message: 'Configuration deleted successfully' })
-                : res.status(404).json({ message: 'Configuration not found' });
+            if (result.affectedRows) {
+                clearConfigCache();
+                return res.json({ message: 'Configuration deleted successfully' });
+            }
+            return res.status(404).json({ message: 'Configuration not found' });
         }
         
         const [result] = await db.query('DELETE FROM ipc_config WHERE id = ?', [id]);
@@ -431,6 +439,7 @@ router.delete('/:id', auth, superAdminOnly, async (req, res) => {
             return res.status(404).json({ message: 'Configuration not found' });
         }
         
+        clearConfigCache();
         res.json({ message: 'Configuration deleted successfully' });
     } catch (error) {
         console.error('Error deleting IPC configuration:', error);
@@ -442,8 +451,7 @@ router.delete('/:id', auth, superAdminOnly, async (req, res) => {
 router.post('/reset-defaults', auth, superAdminOnly, async (req, res) => {
     try {
         const userId = req.user.id;
-        
-        // Delete all existing configurations
+
         await db.query('DELETE FROM ipc_config');
         await db.query('DELETE FROM ipc_pelanggaran_detail');
         await db.query('DELETE FROM ipc_pelanggaran_level');
@@ -453,153 +461,74 @@ router.post('/reset-defaults', auth, superAdminOnly, async (req, res) => {
                    ('sedang', -5, 'Point untuk pelanggaran sedang', TRUE),
                    ('berat', -25, 'Point untuk pelanggaran berat', TRUE)
         `);
-        
-        // Insert default configurations from schema file
-        // This should match the data in ipc_config_schema.sql
-        let defaults = [
-            // PRESTASI - Akademik Kecamatan
-            { category: 'prestasi', field1: 'akademik', field2: 'kecamatan', field3: 'juara 1', point_value: 50, description: 'Juara 1 akademik tingkat kecamatan' },
-            { category: 'prestasi', field1: 'akademik', field2: 'kecamatan', field3: 'juara 2', point_value: 40, description: 'Juara 2 akademik tingkat kecamatan' },
-            { category: 'prestasi', field1: 'akademik', field2: 'kecamatan', field3: 'juara 3', point_value: 30, description: 'Juara 3 akademik tingkat kecamatan' },
-            { category: 'prestasi', field1: 'akademik', field2: 'kecamatan', field3: 'harapan 1', point_value: 25, description: 'Harapan 1 akademik tingkat kecamatan' },
-            { category: 'prestasi', field1: 'akademik', field2: 'kecamatan', field3: 'harapan 2', point_value: 20, description: 'Harapan 2 akademik tingkat kecamatan' },
-            { category: 'prestasi', field1: 'akademik', field2: 'kecamatan', field3: 'harapan 3', point_value: 15, description: 'Harapan 3 akademik tingkat kecamatan' },
-            { category: 'prestasi', field1: 'akademik', field2: 'kecamatan', field3: 'finalis', point_value: 10, description: 'Finalis akademik tingkat kecamatan' },
-            { category: 'prestasi', field1: 'akademik', field2: 'kecamatan', field3: 'peserta', point_value: 5, description: 'Peserta akademik tingkat kecamatan' },
-            // PRESTASI - Akademik Kabupaten
-            { category: 'prestasi', field1: 'akademik', field2: 'kabupaten', field3: 'juara 1', point_value: 60, description: 'Juara 1 akademik tingkat kabupaten' },
-            { category: 'prestasi', field1: 'akademik', field2: 'kabupaten', field3: 'juara 2', point_value: 50, description: 'Juara 2 akademik tingkat kabupaten' },
-            { category: 'prestasi', field1: 'akademik', field2: 'kabupaten', field3: 'juara 3', point_value: 40, description: 'Juara 3 akademik tingkat kabupaten' },
-            { category: 'prestasi', field1: 'akademik', field2: 'kabupaten', field3: 'harapan 1', point_value: 35, description: 'Harapan 1 akademik tingkat kabupaten' },
-            { category: 'prestasi', field1: 'akademik', field2: 'kabupaten', field3: 'harapan 2', point_value: 30, description: 'Harapan 2 akademik tingkat kabupaten' },
-            { category: 'prestasi', field1: 'akademik', field2: 'kabupaten', field3: 'harapan 3', point_value: 25, description: 'Harapan 3 akademik tingkat kabupaten' },
-            { category: 'prestasi', field1: 'akademik', field2: 'kabupaten', field3: 'finalis', point_value: 15, description: 'Finalis akademik tingkat kabupaten' },
-            { category: 'prestasi', field1: 'akademik', field2: 'kabupaten', field3: 'peserta', point_value: 8, description: 'Peserta akademik tingkat kabupaten' },
-            // PRESTASI - Non-Akademik Kecamatan
-            { category: 'prestasi', field1: 'nonakademik', field2: 'kecamatan', field3: 'juara 1', point_value: 40, description: 'Juara 1 non-akademik tingkat kecamatan' },
-            { category: 'prestasi', field1: 'nonakademik', field2: 'kecamatan', field3: 'juara 2', point_value: 30, description: 'Juara 2 non-akademik tingkat kecamatan' },
-            { category: 'prestasi', field1: 'nonakademik', field2: 'kecamatan', field3: 'juara 3', point_value: 25, description: 'Juara 3 non-akademik tingkat kecamatan' },
-            { category: 'prestasi', field1: 'nonakademik', field2: 'kecamatan', field3: 'harapan 1', point_value: 20, description: 'Harapan 1 non-akademik tingkat kecamatan' },
-            { category: 'prestasi', field1: 'nonakademik', field2: 'kecamatan', field3: 'harapan 2', point_value: 15, description: 'Harapan 2 non-akademik tingkat kecamatan' },
-            { category: 'prestasi', field1: 'nonakademik', field2: 'kecamatan', field3: 'harapan 3', point_value: 10, description: 'Harapan 3 non-akademik tingkat kecamatan' },
-            { category: 'prestasi', field1: 'nonakademik', field2: 'kecamatan', field3: 'finalis', point_value: 8, description: 'Finalis non-akademik tingkat kecamatan' },
-            { category: 'prestasi', field1: 'nonakademik', field2: 'kecamatan', field3: 'peserta', point_value: 4, description: 'Peserta non-akademik tingkat kecamatan' },
-            
-            // PERILAKU
-            { category: 'perilaku', field1: 'tanggung_jawab', field2: 'sangat baik', field3: null, point_value: 5, description: 'Karakter tanggung jawab sangat baik' },
-            { category: 'perilaku', field1: 'tanggung_jawab', field2: 'baik', field3: null, point_value: 4, description: 'Karakter tanggung jawab baik' },
-            { category: 'perilaku', field1: 'tanggung_jawab', field2: 'cukup baik', field3: null, point_value: 3, description: 'Karakter tanggung jawab cukup baik' },
-            { category: 'perilaku', field1: 'tanggung_jawab', field2: 'kurang baik', field3: null, point_value: 1, description: 'Karakter tanggung jawab kurang baik' },
-            { category: 'perilaku', field1: 'disiplin', field2: 'sangat baik', field3: null, point_value: 5, description: 'Karakter disiplin sangat baik' },
-            { category: 'perilaku', field1: 'disiplin', field2: 'baik', field3: null, point_value: 4, description: 'Karakter disiplin baik' },
-            { category: 'perilaku', field1: 'disiplin', field2: 'cukup baik', field3: null, point_value: 3, description: 'Karakter disiplin cukup baik' },
-            { category: 'perilaku', field1: 'disiplin', field2: 'kurang baik', field3: null, point_value: 1, description: 'Karakter disiplin kurang baik' },
-            { category: 'perilaku', field1: 'kepedulian', field2: 'sangat baik', field3: null, point_value: 5, description: 'Karakter kepedulian sangat baik' },
-            { category: 'perilaku', field1: 'kepedulian', field2: 'baik', field3: null, point_value: 4, description: 'Karakter kepedulian baik' },
-            { category: 'perilaku', field1: 'kepedulian', field2: 'cukup baik', field3: null, point_value: 3, description: 'Karakter kepedulian cukup baik' },
-            { category: 'perilaku', field1: 'kepedulian', field2: 'kurang baik', field3: null, point_value: 1, description: 'Karakter kepedulian kurang baik' },
-            { category: 'perilaku', field1: 'kemandirian', field2: 'sangat baik', field3: null, point_value: 5, description: 'Karakter kemandirian sangat baik' },
-            { category: 'perilaku', field1: 'kemandirian', field2: 'baik', field3: null, point_value: 4, description: 'Karakter kemandirian baik' },
-            { category: 'perilaku', field1: 'kemandirian', field2: 'cukup baik', field3: null, point_value: 3, description: 'Karakter kemandirian cukup baik' },
-            { category: 'perilaku', field1: 'kemandirian', field2: 'kurang baik', field3: null, point_value: 1, description: 'Karakter kemandirian kurang baik' },
-            { category: 'perilaku', field1: 'spiritual', field2: 'sangat baik', field3: null, point_value: 5, description: 'Karakter spiritual sangat baik' },
-            { category: 'perilaku', field1: 'spiritual', field2: 'baik', field3: null, point_value: 4, description: 'Karakter spiritual baik' },
-            { category: 'perilaku', field1: 'spiritual', field2: 'cukup baik', field3: null, point_value: 3, description: 'Karakter spiritual cukup baik' },
-            { category: 'perilaku', field1: 'spiritual', field2: 'kurang baik', field3: null, point_value: 1, description: 'Karakter spiritual kurang baik' },
-            { category: 'perilaku', field1: 'kejujuran', field2: 'sangat baik', field3: null, point_value: 5, description: 'Karakter kejujuran sangat baik' },
-            { category: 'perilaku', field1: 'kejujuran', field2: 'baik', field3: null, point_value: 4, description: 'Karakter kejujuran baik' },
-            { category: 'perilaku', field1: 'kejujuran', field2: 'cukup baik', field3: null, point_value: 3, description: 'Karakter kejujuran cukup baik' },
-            { category: 'perilaku', field1: 'kejujuran', field2: 'kurang baik', field3: null, point_value: 1, description: 'Karakter kejujuran kurang baik' },
-            { category: 'perilaku', field1: 'kepercayaan_diri', field2: 'sangat baik', field3: null, point_value: 5, description: 'Karakter kepercayaan diri sangat baik' },
-            { category: 'perilaku', field1: 'kepercayaan_diri', field2: 'baik', field3: null, point_value: 4, description: 'Karakter kepercayaan diri baik' },
-            { category: 'perilaku', field1: 'kepercayaan_diri', field2: 'cukup baik', field3: null, point_value: 3, description: 'Karakter kepercayaan diri cukup baik' },
-            { category: 'perilaku', field1: 'kepercayaan_diri', field2: 'kurang baik', field3: null, point_value: 1, description: 'Karakter kepercayaan diri kurang baik' },
-            
-            // PELANGGARAN
-            { category: 'pelanggaran', field1: 'ringan', field2: null, field3: null, point_value: -1, description: 'Point untuk pelanggaran ringan' },
-            { category: 'pelanggaran', field1: 'sedang', field2: null, field3: null, point_value: -5, description: 'Point untuk pelanggaran sedang' },
-            { category: 'pelanggaran', field1: 'berat', field2: null, field3: null, point_value: -25, description: 'Point untuk pelanggaran berat' },
-            
-            // KEPANITIAAN
-            { category: 'kepanitiaan', field1: 'ketua', field2: null, field3: null, point_value: 10, description: 'Ketua kepanitiaan' },
-            { category: 'kepanitiaan', field1: 'wakil ketua', field2: null, field3: null, point_value: 8, description: 'Wakil ketua kepanitiaan' },
-            { category: 'kepanitiaan', field1: 'sekretaris', field2: null, field3: null, point_value: 7, description: 'Sekretaris kepanitiaan' },
-            { category: 'kepanitiaan', field1: 'bendahara', field2: null, field3: null, point_value: 7, description: 'Bendahara kepanitiaan' },
-            { category: 'kepanitiaan', field1: 'koordinator', field2: null, field3: null, point_value: 5, description: 'Koordinator kepanitiaan' },
-            { category: 'kepanitiaan', field1: 'anggota', field2: null, field3: null, point_value: 3, description: 'Anggota kepanitiaan' },
-            
-            // ORGANISASI
-            { category: 'organisasi', field1: 'OSIS', field2: 'ketua', field3: null, point_value: 10, description: 'Ketua OSIS' },
-            { category: 'organisasi', field1: 'OSIS', field2: 'wakil ketua', field3: null, point_value: 8, description: 'Wakil ketua OSIS' },
-            { category: 'organisasi', field1: 'OSIS', field2: 'sekretaris', field3: null, point_value: 7, description: 'Sekretaris OSIS' },
-            { category: 'organisasi', field1: 'OSIS', field2: 'bendahara', field3: null, point_value: 7, description: 'Bendahara OSIS' },
-            { category: 'organisasi', field1: 'OSIS', field2: 'koordinator', field3: null, point_value: 5, description: 'Koordinator OSIS' },
-            { category: 'organisasi', field1: 'OSIS', field2: 'anggota', field3: null, point_value: 3, description: 'Anggota OSIS' },
-            { category: 'organisasi', field1: 'KY', field2: 'ketua', field3: null, point_value: 10, description: 'Ketua KY' },
-            { category: 'organisasi', field1: 'KY', field2: 'wakil ketua', field3: null, point_value: 8, description: 'Wakil ketua KY' },
-            { category: 'organisasi', field1: 'KY', field2: 'sekretaris', field3: null, point_value: 7, description: 'Sekretaris KY' },
-            { category: 'organisasi', field1: 'KY', field2: 'bendahara', field3: null, point_value: 7, description: 'Bendahara KY' },
-            { category: 'organisasi', field1: 'KY', field2: 'koordinator', field3: null, point_value: 5, description: 'Koordinator KY' },
-            { category: 'organisasi', field1: 'KY', field2: 'anggota', field3: null, point_value: 3, description: 'Anggota KY' },
-            { category: 'organisasi', field1: 'MPK', field2: 'ketua', field3: null, point_value: 10, description: 'Ketua MPK' },
-            { category: 'organisasi', field1: 'MPK', field2: 'wakil ketua', field3: null, point_value: 8, description: 'Wakil ketua MPK' },
-            { category: 'organisasi', field1: 'MPK', field2: 'sekretaris', field3: null, point_value: 7, description: 'Sekretaris MPK' },
-            { category: 'organisasi', field1: 'MPK', field2: 'bendahara', field3: null, point_value: 7, description: 'Bendahara MPK' },
-            { category: 'organisasi', field1: 'MPK', field2: 'koordinator', field3: null, point_value: 5, description: 'Koordinator MPK' },
-            { category: 'organisasi', field1: 'MPK', field2: 'anggota', field3: null, point_value: 3, description: 'Anggota MPK' },
-            { category: 'organisasi', field1: 'PRAMUKA', field2: 'ketua', field3: null, point_value: 10, description: 'Ketua PRAMUKA' },
-            { category: 'organisasi', field1: 'PRAMUKA', field2: 'wakil ketua', field3: null, point_value: 8, description: 'Wakil ketua PRAMUKA' },
-            { category: 'organisasi', field1: 'PRAMUKA', field2: 'sekretaris', field3: null, point_value: 7, description: 'Sekretaris PRAMUKA' },
-            { category: 'organisasi', field1: 'PRAMUKA', field2: 'bendahara', field3: null, point_value: 7, description: 'Bendahara PRAMUKA' },
-            { category: 'organisasi', field1: 'PRAMUKA', field2: 'koordinator', field3: null, point_value: 5, description: 'Koordinator PRAMUKA' },
-            { category: 'organisasi', field1: 'PRAMUKA', field2: 'anggota', field3: null, point_value: 3, description: 'Anggota PRAMUKA' },
-            { category: 'organisasi', field1: 'PKS', field2: 'ketua', field3: null, point_value: 10, description: 'Ketua PKS' },
-            { category: 'organisasi', field1: 'PKS', field2: 'wakil ketua', field3: null, point_value: 8, description: 'Wakil ketua PKS' },
-            { category: 'organisasi', field1: 'PKS', field2: 'sekretaris', field3: null, point_value: 7, description: 'Sekretaris PKS' },
-            { category: 'organisasi', field1: 'PKS', field2: 'bendahara', field3: null, point_value: 7, description: 'Bendahara PKS' },
-            { category: 'organisasi', field1: 'PKS', field2: 'koordinator', field3: null, point_value: 5, description: 'Koordinator PKS' },
-            { category: 'organisasi', field1: 'PKS', field2: 'anggota', field3: null, point_value: 3, description: 'Anggota PKS' },
-            { category: 'organisasi', field1: 'PMR', field2: 'ketua', field3: null, point_value: 10, description: 'Ketua PMR' },
-            { category: 'organisasi', field1: 'PMR', field2: 'wakil ketua', field3: null, point_value: 8, description: 'Wakil ketua PMR' },
-            { category: 'organisasi', field1: 'PMR', field2: 'sekretaris', field3: null, point_value: 7, description: 'Sekretaris PMR' },
-            { category: 'organisasi', field1: 'PMR', field2: 'bendahara', field3: null, point_value: 7, description: 'Bendahara PMR' },
-            { category: 'organisasi', field1: 'PMR', field2: 'koordinator', field3: null, point_value: 5, description: 'Koordinator PMR' },
-            { category: 'organisasi', field1: 'PMR', field2: 'anggota', field3: null, point_value: 3, description: 'Anggota PMR' },
-            { category: 'organisasi', field1: 'PASKIBRAKA', field2: 'ketua', field3: null, point_value: 10, description: 'Ketua PASKIBRAKA' },
-            { category: 'organisasi', field1: 'PASKIBRAKA', field2: 'wakil ketua', field3: null, point_value: 8, description: 'Wakil ketua PASKIBRAKA' },
-            { category: 'organisasi', field1: 'PASKIBRAKA', field2: 'sekretaris', field3: null, point_value: 7, description: 'Sekretaris PASKIBRAKA' },
-            { category: 'organisasi', field1: 'PASKIBRAKA', field2: 'bendahara', field3: null, point_value: 7, description: 'Bendahara PASKIBRAKA' },
-            { category: 'organisasi', field1: 'PASKIBRAKA', field2: 'koordinator', field3: null, point_value: 5, description: 'Koordinator PASKIBRAKA' },
-            { category: 'organisasi', field1: 'PASKIBRAKA', field2: 'anggota', field3: null, point_value: 3, description: 'Anggota PASKIBRAKA' },
-            
-            // EVENT
-            { category: 'event', field1: 'sekolah', field2: null, field3: null, point_value: 5, description: 'Event tingkat sekolah' },
-            { category: 'event', field1: 'kecamatan', field2: null, field3: null, point_value: 10, description: 'Event tingkat kecamatan' },
-            { category: 'event', field1: 'kabupaten', field2: null, field3: null, point_value: 15, description: 'Event tingkat kabupaten' },
-            { category: 'event', field1: 'provinsi', field2: null, field3: null, point_value: 20, description: 'Event tingkat provinsi' },
-            { category: 'event', field1: 'nasional', field2: null, field3: null, point_value: 25, description: 'Event tingkat nasional' },
-            { category: 'event', field1: 'internasional', field2: null, field3: null, point_value: 30, description: 'Event tingkat internasional' }
+
+        const juaraList = [
+            ['juara 1', 50, 60],
+            ['juara 2', 40, 50],
+            ['juara 3', 30, 40],
+            ['juara harapan 1', 25, 35],
+            ['juara harapan 2', 20, 30],
+            ['juara harapan 3', 15, 25],
+            ['finalis', 10, 15],
+            ['peserta', 5, 8]
         ];
-        
-        const prestasiDefaults = defaults
-            .filter(config => config.category === 'prestasi')
-            .reduce((grouped, config) => {
-                const key = `${config.field2}:${config.field3}`;
-                if (!grouped[key] || config.point_value > grouped[key].point_value) {
-                    grouped[key] = {
-                        ...config,
-                        field1: config.field2,
-                        field2: config.field3,
-                        field3: null,
-                        description: `${config.field3} tingkat ${config.field2}`
-                    };
-                }
-                return grouped;
-            }, {});
-        defaults = [
-            ...defaults.filter(config => config.category !== 'prestasi'),
-            ...Object.values(prestasiDefaults)
+        const perilakuChars = [
+            'tanggung_jawab', 'disiplin', 'kepedulian', 'kemandirian',
+            'spiritual', 'kejujuran', 'kepercayaan_diri'
         ];
+        const perilakuRatings = [
+            ['sangat baik', 5], ['baik', 4], ['cukup baik', 3], ['kurang baik', 1]
+        ];
+        const jabatanList = [
+            ['ketua', 10], ['wakil ketua', 8], ['sekretaris', 7],
+            ['bendahara', 7], ['koordinator', 5], ['anggota', 3]
+        ];
+        const orgs = ['OSIS', 'KY', 'MPK', 'PRAMUKA', 'PKS', 'PMR', 'PASKIBRAKA'];
+        const events = [
+            ['sekolah', 5], ['kecamatan', 10], ['kabupaten', 15],
+            ['provinsi', 20], ['nasional', 25], ['internasional', 30]
+        ];
+
+        const defaults = [];
+        for (const [juara, kec, kab] of juaraList) {
+            defaults.push({
+                category: 'prestasi', field1: 'kecamatan', field2: juara,
+                point_value: kec, description: `${juara} tingkat kecamatan`
+            });
+            defaults.push({
+                category: 'prestasi', field1: 'kabupaten', field2: juara,
+                point_value: kab, description: `${juara} tingkat kabupaten`
+            });
+        }
+        for (const ch of perilakuChars) {
+            for (const [rating, pts] of perilakuRatings) {
+                defaults.push({
+                    category: 'perilaku', field1: ch, field2: rating,
+                    point_value: pts,
+                    description: `Karakter ${ch.replace(/_/g, ' ')} ${rating}`
+                });
+            }
+        }
+        for (const [jab, pts] of jabatanList) {
+            defaults.push({
+                category: 'kepanitiaan', field1: jab, field2: null,
+                point_value: pts, description: `${jab} kepanitiaan`
+            });
+        }
+        for (const org of orgs) {
+            for (const [jab, pts] of jabatanList) {
+                defaults.push({
+                    category: 'organisasi', field1: org, field2: jab,
+                    point_value: pts, description: `${jab} ${org}`
+                });
+            }
+        }
+        for (const [tingkat, pts] of events) {
+            defaults.push({
+                category: 'event', field1: tingkat, field2: null,
+                point_value: pts, description: `Event tingkat ${tingkat}`
+            });
+        }
 
         for (const config of defaults) {
             await db.query(`
@@ -607,7 +536,23 @@ router.post('/reset-defaults', auth, superAdminOnly, async (req, res) => {
                 VALUES (?, ?, ?, ?, ?, TRUE, ?)
             `, [config.category, config.field1, config.field2, config.point_value, config.description, userId]);
         }
-        
+
+        await db.query(`
+            INSERT IGNORE INTO ipc_organisasi (name)
+            SELECT DISTINCT field1 FROM ipc_config
+            WHERE category = 'organisasi' AND field1 IS NOT NULL
+        `);
+        await db.query(`
+            INSERT IGNORE INTO ipc_perilaku_karakter (name)
+            SELECT DISTINCT field1 FROM ipc_config
+            WHERE category = 'perilaku' AND field1 IS NOT NULL
+        `);
+        await db.query(`
+            INSERT IGNORE INTO ipc_perilaku_tingkat (name) VALUES
+            ('sangat baik'), ('baik'), ('cukup baik'), ('kurang baik')
+        `);
+
+        clearConfigCache();
         res.json({ message: 'Configurations reset to defaults successfully' });
     } catch (error) {
         console.error('Error resetting IPC configurations:', error);

@@ -68,7 +68,7 @@ router.post('/', auth, upload.single('foto'), async (req, res) => {
             foto = newFileName;
         }
 
-        const point = calculateKepanitiaanPoints(jabatan_kepanitiaan);
+        const point = await calculateKepanitiaanPoints(jabatan_kepanitiaan);
 
         const [result] = await db.query(
             'INSERT INTO kepanitiaan (user_id, nama, nis, kelas, grha, jabatan_kepanitiaan, foto, kategori_kepanitiaan, point) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
@@ -190,7 +190,7 @@ router.put('/:id', auth, upload.single('foto'), async (req, res) => {
         }
 
         // Recalculate points if jabatan_kepanitiaan changed
-        const point = calculateKepanitiaanPoints(jabatan_kepanitiaan);
+        const point = await calculateKepanitiaanPoints(jabatan_kepanitiaan);
 
         await db.query(
             'UPDATE kepanitiaan SET nama = ?, nis = ?, kelas = ?, grha = ?, jabatan_kepanitiaan = ?, kategori_kepanitiaan = ?, foto = ?, point = ? WHERE id = ?',

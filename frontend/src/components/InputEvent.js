@@ -35,14 +35,12 @@ function InputEvent() {
     'Airsanya', 'Daksina', 'Genya', 'Madhya', 'Nairiti', 'Pascima', 'Purwa', 'Uttara', 'Wayabhya'
   ];
 
-  const tingkatOptions = [
-    { value: 'sekolah', label: 'Sekolah' },
-    { value: 'kecamatan', label: 'Kecamatan' },
-    { value: 'kabupaten', label: 'Kabupaten' },
-    { value: 'provinsi', label: 'Provinsi' },
-    { value: 'nasional', label: 'Nasional' },
-    { value: 'internasional', label: 'Internasional' }
-  ];
+  const tingkatOptions = (ipcConfig.event || [])
+    .filter(config => config.field1)
+    .map(config => ({
+      value: config.field1,
+      label: config.field1.charAt(0).toUpperCase() + config.field1.slice(1)
+    }));
 
   useEffect(() => {
     fetchUserSubmissions();
@@ -124,6 +122,14 @@ function InputEvent() {
         headers: { Authorization: `Bearer ${token}` }
       });
       setIpcConfig(response.data);
+      const firstTingkat = response.data.event?.[0]?.field1;
+      if (firstTingkat) {
+        setFormData(prev => {
+          if (prev.tingkat) return prev;
+          return { ...prev, tingkat: firstTingkat };
+        });
+        setCalculatedPoint(response.data.event[0].point_value || 0);
+      }
     } catch (error) {
       console.error('Error fetching IPC config:', error);
     }

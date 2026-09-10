@@ -68,7 +68,7 @@ router.post('/', auth, upload.single('foto'), async (req, res) => {
             foto = newFileName;
         }
 
-        const point = calculateEventPoints(tingkat);
+        const point = await calculateEventPoints(tingkat);
 
         const [result] = await db.query(
             'INSERT INTO event (user_id, nama, nis, kelas, grha, nama_event, tingkat, foto, point) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
@@ -189,7 +189,7 @@ router.put('/:id', auth, upload.single('foto'), async (req, res) => {
         }
 
         // Recalculate points if tingkat changed
-        const point = calculateEventPoints(tingkat);
+        const point = await calculateEventPoints(tingkat);
 
         await db.query(
             'UPDATE event SET nama = ?, nis = ?, kelas = ?, grha = ?, nama_event = ?, tingkat = ?, foto = ?, point = ? WHERE id = ?',

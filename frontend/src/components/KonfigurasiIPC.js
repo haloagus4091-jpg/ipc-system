@@ -726,14 +726,14 @@ function KonfigurasiIPC() {
                     : getHeaderLabel1(activeCategory)} *
                 </label>
                 {activeCategory === 'prestasi' && (
-                  <select name="field1" required className="form-control" style={{ fontSize: 14 }}>
-                    <option value="">Pilih Tingkat Lomba</option>
-                    <option value="kecamatan">Kecamatan</option>
-                    <option value="kabupaten">Kabupaten</option>
-                    <option value="provinsi">Provinsi</option>
-                    <option value="nasional">Nasional</option>
-                    <option value="internasional">Internasional</option>
-                  </select>
+                  <input
+                    type="text"
+                    name="field1"
+                    required
+                    className="form-control"
+                    placeholder="Contoh: kecamatan, kabupaten, provinsi, nasional"
+                    style={{ fontSize: 14 }}
+                  />
                 )}
                 {activeCategory === 'perilaku' && (
                   <select name="field1" required className="form-control" style={{ fontSize: 14 }}>
@@ -785,15 +785,14 @@ function KonfigurasiIPC() {
                   </select>
                 )}
                 {activeCategory === 'event' && (
-                  <select name="field1" required className="form-control" style={{ fontSize: 14 }}>
-                    <option value="">Pilih Tingkat Event</option>
-                    <option value="sekolah">Sekolah</option>
-                    <option value="kecamatan">Kecamatan</option>
-                    <option value="kabupaten">Kabupaten</option>
-                    <option value="provinsi">Provinsi</option>
-                    <option value="nasional">Nasional</option>
-                    <option value="internasional">Internasional</option>
-                  </select>
+                  <input
+                    type="text"
+                    name="field1"
+                    required
+                    className="form-control"
+                    placeholder="Contoh: sekolah, kecamatan, kabupaten, provinsi"
+                    style={{ fontSize: 14 }}
+                  />
                 )}
               </div>
               {showAddField2 && (
@@ -802,17 +801,14 @@ function KonfigurasiIPC() {
                     {activeCategory === 'pelanggaran' ? 'Tingkat Pelanggaran' : getHeaderLabel2(activeCategory)} *
                   </label>
                   {activeCategory === 'prestasi' && (
-                    <select name="field2" required className="form-control" style={{ fontSize: 14 }}>
-                      <option value="">Pilih Juara Lomba</option>
-                      <option value="juara 1">Juara 1</option>
-                      <option value="juara 2">Juara 2</option>
-                      <option value="juara 3">Juara 3</option>
-                      <option value="juara harapan 1">Juara Harapan 1</option>
-                      <option value="juara harapan 2">Juara Harapan 2</option>
-                      <option value="juara harapan 3">Juara Harapan 3</option>
-                      <option value="finalis">Finalis</option>
-                      <option value="peserta">Peserta</option>
-                    </select>
+                    <input
+                      type="text"
+                      name="field2"
+                      required
+                      className="form-control"
+                      placeholder="Contoh: juara 1, juara 2, finalis, peserta"
+                      style={{ fontSize: 14 }}
+                    />
                   )}
                   {activeCategory === 'pelanggaran' && pelanggaranAddType === 'detail' && (
                     <select name="field2" required className="form-control" style={{ fontSize: 14 }}>

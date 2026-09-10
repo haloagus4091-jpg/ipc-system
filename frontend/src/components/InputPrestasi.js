@@ -34,8 +34,13 @@ function InputPrestasi() {
   const [ipcConfig, setIpcConfig] = useState([]);
   const [calculatedPoint, setCalculatedPoint] = useState(0);
   const prestasiConfigs = ipcConfig.prestasi || [];
-  const tingkatLombaOptions = [...new Set(prestasiConfigs.map(config => config.field1))];
-  const juaraLombaOptions = [...new Set(prestasiConfigs.map(config => config.field2))];
+  const tingkatLombaOptions = [...new Set(prestasiConfigs.map(config => config.field1).filter(Boolean))];
+  const juaraLombaOptions = [...new Set(
+    prestasiConfigs
+      .filter(config => !formData.kategori || config.field1 === formData.kategori)
+      .map(config => config.field2)
+      .filter(Boolean)
+  )];
   const [students, setStudents] = useState([]);
 
   const grhaOptions = [
@@ -256,6 +261,16 @@ function InputPrestasi() {
     // Calculate point when tingkat lomba or juara changes
     if (name === 'kategori' || name === 'juara') {
       const newFormData = { ...formData, [name]: value };
+      // When tingkat changes, keep juara only if it exists for that tingkat
+      if (name === 'kategori') {
+        const juaraForTingkat = (ipcConfig.prestasi || [])
+          .filter(c => c.field1 === value)
+          .map(c => c.field2);
+        if (!juaraForTingkat.includes(newFormData.juara)) {
+          newFormData.juara = juaraForTingkat[0] || '';
+          setFormData(newFormData);
+        }
+      }
       const point = calculatePoint(newFormData.kategori, newFormData.juara);
       setCalculatedPoint(point);
     }
