@@ -129,11 +129,7 @@ function InputPelanggaran() {
       fetchStudentDataByName(value);
     }
 
-    // Calculate point when jenis_pelanggaran changes
-    if (name === 'jenis_pelanggaran') {
-      const point = calculatePoint(value);
-      setCalculatedPoint(point);
-    }
+
   };
 
   const handleStudentSelect = (selectedOption) => {
@@ -155,6 +151,24 @@ function InputPelanggaran() {
         grha: ''
       }));
       setIsAutoFilled(false);
+    }
+  };
+
+  const handleJenisSelect = (selectedOption) => {
+    if (selectedOption) {
+      setFormData(prev => ({ ...prev, jenis_pelanggaran: selectedOption.value }));
+      setCalculatedPoint(calculatePoint(selectedOption.value));
+    } else {
+      setFormData(prev => ({ ...prev, jenis_pelanggaran: '' }));
+      setCalculatedPoint(0);
+    }
+  };
+
+  const handleEditJenisSelect = (selectedOption) => {
+    if (selectedOption) {
+      editModal.setEditFormData({ ...editModal.editFormData, jenis_pelanggaran: selectedOption.value });
+    } else {
+      editModal.setEditFormData({ ...editModal.editFormData, jenis_pelanggaran: '' });
     }
   };
 
@@ -407,7 +421,6 @@ function InputPelanggaran() {
                 })
               }}
             />
-            {isAutoFilled && <p className="form-helper-text">Data diisi otomatis dari NIS</p>}
           </div>
           <div className="form-group">
             <label>NIS <span className="required">*</span></label>
@@ -425,7 +438,6 @@ function InputPelanggaran() {
                 })
               }}
             />
-            <p className="form-helper-text">Masukkan NIS untuk mengisi data siswa secara otomatis</p>
           </div>
         </div>
 
@@ -437,15 +449,15 @@ function InputPelanggaran() {
               name="kelas" 
               value={formData.kelas} 
               onChange={handleChange} 
-              placeholder="Auto-filled from student data"
+              placeholder="Data diisi otomatis"
+              disabled
               required
             />
-            <small style={{ color: '#666', fontSize: '12px' }}>Auto-filled from student data</small>
           </div>
           <div className="form-group">
             <label>Grha</label>
-            <select name="grha" value={formData.grha} onChange={handleChange}>
-              <option value="">Pilih Grha</option>
+            <select name="grha" value={formData.grha} disabled required onChange={handleChange}>
+              <option value="">Data diisi otomatis</option>
               {grhaOptions.map(grha => (
                 <option key={grha} value={grha}>{grha}</option>
               ))}
@@ -467,12 +479,23 @@ function InputPelanggaran() {
 
         <div className="form-group">
           <label>Detail Pelanggaran</label>
-          <select name="jenis_pelanggaran" value={formData.jenis_pelanggaran} onChange={handleChange}>
-            <option value="">Pilih Detail Pelanggaran</option>
-            {jenisOptions.map(jenis => (
-              <option key={jenis.value} value={jenis.value}>{jenis.label} {formData.jenis_pelanggaran === jenis.value && calculatedPoint ? `(${calculatedPoint} point)` : ''}</option>
-            ))}
-          </select>
+          <Select
+            value={jenisOptions.find(jenis => jenis.value === formData.jenis_pelanggaran) || null}
+            onChange={handleJenisSelect}
+            options={jenisOptions.map(jenis => ({
+              value: jenis.value,
+              label: jenis.point > 0 ? `${jenis.label} (${jenis.point} point)` : jenis.label
+            }))}
+            placeholder="Pilih Detail Pelanggaran"
+            isSearchable
+            isClearable
+            styles={{
+              control: (provided) => ({
+                ...provided,
+                minHeight: '40px'
+              })
+            }}
+          />
         </div>
 
         <div className="form-group" style={{ 
@@ -571,14 +594,23 @@ function InputPelanggaran() {
           </div>
           <div className="form-group">
             <label>Detail Pelanggaran</label>
-            <select 
-              value={editModal.editFormData.jenis_pelanggaran || ''} 
-              onChange={(e) => editModal.setEditFormData({ ...editModal.editFormData, jenis_pelanggaran: e.target.value })}
-            >
-              {jenisOptions.map(jenis => (
-                <option key={jenis.value} value={jenis.value}>{jenis.label}</option>
-              ))}
-            </select>
+            <Select
+              value={jenisOptions.find(jenis => jenis.value === editModal.editFormData.jenis_pelanggaran) || null}
+              onChange={handleEditJenisSelect}
+              options={jenisOptions.map(jenis => ({
+                value: jenis.value,
+                label: jenis.point > 0 ? `${jenis.label} (${jenis.point} point)` : jenis.label
+              }))}
+              placeholder="Pilih Detail Pelanggaran"
+              isSearchable
+              isClearable
+              styles={{
+                control: (provided) => ({
+                  ...provided,
+                  minHeight: '40px'
+                })
+              }}
+            />
           </div>
         </div>
 

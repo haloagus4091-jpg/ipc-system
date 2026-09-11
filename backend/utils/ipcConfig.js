@@ -108,46 +108,46 @@ function getDefaultConfig() {
   return {
     prestasi: {
       juara: {
-        'juara 1': 50,
-        'juara 2': 40,
-        'juara 3': 30,
-        'juara harapan 1': 25,
-        'juara harapan 2': 20,
-        'juara harapan 3': 15,
-        finalis: 10,
-        peserta: 5
+        'juara_i': 5,
+        'juara_ii': 4,
+        'juara_iii': 3,
+        'harapan_i': 2,
+        'harapan_ii': 2,
+        'harapan_iii': 1,
+        finalis: 1,
+        peserta: 1
       },
       byKey: {}
     },
     organisasi: {
       jabatan: {
-        ketua: 10,
-        'wakil ketua': 8,
-        sekretaris: 7,
-        bendahara: 7,
-        koordinator: 5,
-        anggota: 3
+        ketua: 5,
+        'wakil ketua': 4,
+        sekretaris: 4,
+        bendahara: 3,
+        koordinator: 2,
+        anggota: 1
       },
       byKey: {}
     },
     kepanitiaan: {
       jabatan: {
-        ketua: 10,
-        'wakil ketua': 8,
-        sekretaris: 7,
-        bendahara: 7,
-        koordinator: 5,
-        anggota: 3
+        ketua: 5,
+        'wakil ketua': 4,
+        sekretaris: 4,
+        bendahara: 3,
+        koordinator: 2,
+        anggota: 1
       }
     },
     event: {
       tingkat: {
-        sekolah: 5,
-        kecamatan: 10,
-        kabupaten: 15,
-        provinsi: 20,
-        nasional: 25,
-        internasional: 30
+        sekolah: 2,
+        kecamatan: 4,
+        kabupaten: 6,
+        provinsi: 8,
+        nasional: 10,
+        internasional: 12
       }
     },
     pelanggaran: {
@@ -160,9 +160,9 @@ function getDefaultConfig() {
     perilaku: {
       karakter: {
         'kurang baik': 1,
-        'cukup baik': 3,
-        baik: 4,
-        'sangat baik': 5
+        'cukup baik': 2,
+        baik: 3,
+        'sangat baik': 4
       },
       byKey: {}
     }

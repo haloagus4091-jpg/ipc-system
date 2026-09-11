@@ -6,41 +6,41 @@ const db = require('../config/database');
 
 // Default values as fallback — aligned with ipc_config_schema.sql
 const PRESTASI_POINTS = {
-    'juara 1': { kecamatan: 50, kabupaten: 60, provinsi: 70, nasional: 80, internasional: 90 },
-    'juara 2': { kecamatan: 40, kabupaten: 50, provinsi: 60, nasional: 70, internasional: 80 },
-    'juara 3': { kecamatan: 30, kabupaten: 40, provinsi: 50, nasional: 60, internasional: 70 },
-    'juara harapan 1': { kecamatan: 25, kabupaten: 35, provinsi: 45, nasional: 55, internasional: 65 },
-    'juara harapan 2': { kecamatan: 20, kabupaten: 30, provinsi: 40, nasional: 50, internasional: 60 },
-    'juara harapan 3': { kecamatan: 15, kabupaten: 25, provinsi: 35, nasional: 45, internasional: 55 },
-    'finalis': { kecamatan: 10, kabupaten: 15, provinsi: 20, nasional: 25, internasional: 30 },
-    'peserta': { kecamatan: 5, kabupaten: 8, provinsi: 12, nasional: 15, internasional: 20 }
+    'juara_i': { sekolah: 5, kecamatan: 8, kabupaten: 12, provinsi: 30, nasional: 40, internasional: 50 },
+    'juara_ii': { sekolah: 4, kecamatan: 7, kabupaten: 10, provinsi: 25, nasional: 35, internasional: 45 },
+    'juara_iii': { sekolah: 3, kecamatan: 6, kabupaten: 8, provinsi: 20, nasional: 30, internasional: 40 },
+    'harapan_i': { sekolah: 2, kecamatan: 5, kabupaten: 7, provinsi: 15, nasional: 25, internasional: 35 },
+    'harapan_ii': { sekolah: 2, kecamatan: 4, kabupaten: 6, provinsi: 12, nasional: 20, internasional: 30 },
+    'harapan_iii': { sekolah: 1, kecamatan: 3, kabupaten: 5, provinsi: 10, nasional: 15, internasional: 25 },
+    'finalis': { sekolah: 1, kecamatan: 2, kabupaten: 4, provinsi: 8, nasional: 15, internasional: 20 },
+    'peserta': { sekolah: 1, kecamatan: 1, kabupaten: 3, provinsi: 5, nasional: 10, internasional: 15 }
 };
 
 const EVENT_POINTS = {
-    'sekolah': 5,
-    'kecamatan': 10,
-    'kabupaten': 15,
-    'provinsi': 20,
-    'nasional': 25,
-    'internasional': 30
+    'sekolah': 2,
+    'kecamatan': 4,
+    'kabupaten': 6,
+    'provinsi': 8,
+    'nasional': 10,
+    'internasional': 12
 };
 
 const ORGANISASI_POINTS = {
-    'ketua': 10,
-    'wakil ketua': 8,
-    'sekretaris': 7,
-    'bendahara': 7,
-    'koordinator': 5,
-    'anggota': 3
+    'ketua': 5,
+    'wakil ketua': 4,
+    'sekretaris': 4,
+    'bendahara': 3,
+    'koordinator': 2,
+    'anggota': 1
 };
 
 const KEPANITIAAN_POINTS = {
-    'ketua': 10,
-    'wakil ketua': 8,
-    'sekretaris': 7,
-    'bendahara': 7,
-    'koordinator': 5,
-    'anggota': 3
+    'ketua': 5,
+    'wakil ketua': 4,
+    'sekretaris': 4,
+    'bendahara': 3,
+    'koordinator': 2,
+    'anggota': 1
 };
 
 const PELANGGARAN_POINTS = {
@@ -51,9 +51,9 @@ const PELANGGARAN_POINTS = {
 
 const PERILAKU_POINTS = {
     'kurang baik': 1,
-    'cukup baik': 3,
-    'baik': 4,
-    'sangat baik': 5
+    'cukup baik': 2,
+    'baik': 3,
+    'sangat baik': 4
 };
 
 const PERILAKU_CHARACTER_FIELDS = [
@@ -75,6 +75,26 @@ const PERILAKU_CHARACTER_LABELS = {
     kejujuran: 'Kejujuran',
     kepercayaan_diri: 'Kepercayaan Diri'
 };
+
+const FIXED_TINGKAT_OPTIONS = [
+    'sekolah',
+    'kecamatan',
+    'kabupaten',
+    'provinsi',
+    'nasional',
+    'internasional'
+];
+
+const FIXED_JUARA_LOMBA_OPTIONS = [
+    'peserta',
+    'finalis',
+    'harapan_iii',
+    'harapan_ii',
+    'harapan_i',
+    'juara_iii',
+    'juara_ii',
+    'juara_i'
+];
 
 const normalizeKey = (value) => (value || '').toString().trim().toLowerCase();
 
@@ -376,5 +396,7 @@ module.exports = {
     PERILAKU_CHARACTER_FIELDS,
     PERILAKU_CHARACTER_LABELS,
     normalizePrestasiJenis,
-    lookupPerilakuPoint
+    lookupPerilakuPoint,
+    FIXED_TINGKAT_OPTIONS,
+    FIXED_JUARA_LOMBA_OPTIONS
 };

@@ -489,7 +489,6 @@ function InputKepanitiaan() {
                 })
               }}
             />
-            {isAutoFilled && <p className="form-helper-text">Data diisi otomatis dari NIS</p>}
           </div>
           <div className="form-group">
             <label>NIS <span className="required">*</span></label>
@@ -507,7 +506,6 @@ function InputKepanitiaan() {
                 })
               }}
             />
-            <p className="form-helper-text">Masukkan NIS untuk mengisi data siswa secara otomatis</p>
           </div>
         </div>
 
@@ -519,15 +517,15 @@ function InputKepanitiaan() {
               name="kelas" 
               value={formData.kelas} 
               onChange={handleChange} 
-              placeholder="Auto-filled from student data"
+              placeholder="Data diisi otomatis"
+              disabled
               required
             />
-            <small style={{ color: '#666', fontSize: '12px' }}>Auto-filled from student data</small>
           </div>
           <div className="form-group">
             <label>Grha</label>
-            <select name="grha" value={formData.grha} onChange={handleChange}>
-              <option value="">Pilih Grha</option>
+            <select name="grha" value={formData.grha} disabled required onChange={handleChange}>
+              <option value="">Data diisi otomatis</option>
               {grhaOptions.map(grha => (
                 <option key={grha} value={grha}>{grha}</option>
               ))}

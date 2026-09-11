@@ -389,7 +389,6 @@ function InputPerilaku() {
                 })
               }}
             />
-            {isAutoFilled && <p className="form-helper-text">Data diisi otomatis dari NIS</p>}
           </div>
           <div className="form-group">
             <label>NIS <span className="required">*</span></label>
@@ -407,7 +406,6 @@ function InputPerilaku() {
                 })
               }}
             />
-            <p className="form-helper-text">Masukkan NIS untuk mengisi data siswa secara otomatis</p>
           </div>
         </div>
 
@@ -419,15 +417,16 @@ function InputPerilaku() {
               name="kelas" 
               value={formData.kelas} 
               onChange={handleChange} 
+              placeholder="Data diisi otomatis"
+              required
               disabled
               style={{ backgroundColor: '#f0f0f0', cursor: 'not-allowed' }}
             />
-            <small style={{ color: '#666', fontSize: '12px' }}>Auto-filled from student data</small>
           </div>
           <div className="form-group">
             <label>Grha</label>
-            <select name="grha" value={formData.grha} onChange={handleChange}>
-              <option value="">Pilih Grha</option>
+            <select name="grha" value={formData.grha} disabled required onChange={handleChange}>
+              <option value="">Data diisi otomatis</option>
               {grhaOptions.map(grha => (
                 <option key={grha} value={grha}>{grha}</option>
               ))}
@@ -569,9 +568,10 @@ function InputPerilaku() {
               value={editModal.editFormData.kelas || ''} 
               onChange={(e) => editModal.setEditFormData({ ...editModal.editFormData, kelas: e.target.value })}
               disabled
+              required
+              placeholder="Data diisi otomatis"
               style={{ backgroundColor: '#f0f0f0', cursor: 'not-allowed' }}
             />
-            <small style={{ color: '#666', fontSize: '12px' }}>Auto-filled from student data</small>
           </div>
         </div>
 
@@ -579,9 +579,10 @@ function InputPerilaku() {
           <label>Grha</label>
           <select 
             value={editModal.editFormData.grha || ''} 
+            disabled required
             onChange={(e) => editModal.setEditFormData({ ...editModal.editFormData, grha: e.target.value })}
           >
-            <option value="">Pilih Grha</option>
+            <option value="">Data diisi otomatis</option>
             {grhaOptions.map(grha => (
               <option key={grha} value={grha}>{grha}</option>
             ))}

@@ -12,7 +12,7 @@ function InputEvent() {
     kelas: '',
     grha: '',
     nama_event: '',
-    tingkat: 'sekolah'
+    tingkat: 'kecamatan'
   });
   const [foto, setFoto] = useState(null);
   const [message, setMessage] = useState('');
@@ -35,12 +35,31 @@ function InputEvent() {
     'Airsanya', 'Daksina', 'Genya', 'Madhya', 'Nairiti', 'Pascima', 'Purwa', 'Uttara', 'Wayabhya'
   ];
 
-  const tingkatOptions = (ipcConfig.event || [])
-    .filter(config => config.field1)
-    .map(config => ({
-      value: config.field1,
-      label: config.field1.charAt(0).toUpperCase() + config.field1.slice(1)
-    }));
+  const FIXED_TINGKAT_OPTIONS = [
+    'sekolah',
+    'kecamatan',
+    'kabupaten',
+    'provinsi',
+    'nasional',
+    'internasional'
+  ];
+
+  const formatDisplayText = (text) => {
+    return text
+      .replace(/_/g, ' ')
+      .replace(/\b\w+\b/g, word => {
+        // Check if word is Roman numeral (I, II, III, etc.)
+        if (/^[ivx]+$/.test(word.toLowerCase())) {
+          return word.toUpperCase();
+        }
+        return word.charAt(0).toUpperCase() + word.slice(1);
+      });
+  };
+
+  const tingkatOptions = FIXED_TINGKAT_OPTIONS.map(tingkat => ({
+    value: tingkat,
+    label: tingkat.charAt(0).toUpperCase() + tingkat.slice(1)
+  }));
 
   useEffect(() => {
     fetchUserSubmissions();
@@ -288,7 +307,7 @@ function InputEvent() {
         kelas: '',
         grha: '',
         nama_event: '',
-        tingkat: 'sekolah'
+        tingkat: 'kecamatan'
       });
       setFoto(null);
       setIsAutoFilled(false);
@@ -495,7 +514,6 @@ function InputEvent() {
                 })
               }}
             />
-            {isAutoFilled && <p className="form-helper-text">Data diisi otomatis dari NIS</p>}
           </div>
           <div className="form-group">
             <label>NIS <span className="required">*</span></label>
@@ -513,7 +531,6 @@ function InputEvent() {
                 })
               }}
             />
-            <p className="form-helper-text">Masukkan NIS untuk mengisi data siswa secara otomatis</p>
           </div>
         </div>
 
@@ -525,14 +542,14 @@ function InputEvent() {
               name="kelas" 
               value={formData.kelas} 
               onChange={handleChange} 
-              placeholder="Auto-filled from student data"
+              placeholder="Data diisi otomatis"
+              disabled
               required
             />
-            <small style={{ color: '#666', fontSize: '12px' }}>Auto-filled from student data</small>
           </div>
           <div className="form-group">
             <label>Grha</label>
-            <select name="grha" value={formData.grha} onChange={handleChange}>
+            <select name="grha" value={formData.grha} disabled required onChange={handleChange}>
               <option value="">Pilih Grha</option>
               {grhaOptions.map(grha => (
                 <option key={grha} value={grha}>{grha}</option>
@@ -556,8 +573,8 @@ function InputEvent() {
         <div className="form-group">
           <label>Tingkat Event</label>
           <select name="tingkat" value={formData.tingkat} onChange={handleChange}>
-            {tingkatOptions.map(tingkat => (
-              <option key={tingkat.value} value={tingkat.value}>{tingkat.label} {formData.tingkat === tingkat.value && calculatedPoint ? `(${calculatedPoint} point)` : ''}</option>
+            {FIXED_TINGKAT_OPTIONS.map(tingkat => (
+              <option key={tingkat} value={tingkat}>{formatDisplayText(tingkat)} {formData.tingkat === tingkat && calculatedPoint ? `(${calculatedPoint} point)` : ''}</option>
             ))}
           </select>
         </div>
@@ -637,9 +654,10 @@ function InputEvent() {
               value={editModal.editFormData.kelas || ''} 
               onChange={(e) => editModal.setEditFormData({ ...editModal.editFormData, kelas: e.target.value })}
               disabled
+              placeholder="Data diisi otomatis"
+              required
               style={{ backgroundColor: '#f0f0f0', cursor: 'not-allowed' }}
             />
-            <small style={{ color: '#666', fontSize: '12px' }}>Auto-filled from student data</small>
           </div>
         </div>
 
@@ -647,9 +665,10 @@ function InputEvent() {
           <label>Grha</label>
           <select 
             value={editModal.editFormData.grha || ''} 
+            disabled required
             onChange={(e) => editModal.setEditFormData({ ...editModal.editFormData, grha: e.target.value })}
           >
-            <option value="">Pilih Grha</option>
+            <option value="">Data diisi otomatis</option>
             {grhaOptions.map(grha => (
               <option key={grha} value={grha}>{grha}</option>
             ))}
@@ -672,8 +691,8 @@ function InputEvent() {
               value={editModal.editFormData.tingkat || ''} 
               onChange={(e) => editModal.setEditFormData({ ...editModal.editFormData, tingkat: e.target.value })}
             >
-              {tingkatOptions.map(tingkat => (
-                <option key={tingkat.value} value={tingkat.value}>{tingkat.label}</option>
+              {FIXED_TINGKAT_OPTIONS.map(tingkat => (
+                <option key={tingkat} value={tingkat}>{formatDisplayText(tingkat)}</option>
               ))}
             </select>
           </div>

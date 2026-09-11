@@ -29,6 +29,17 @@ function getIpcDetailRows(points = {}) {
   ];
 }
 
+function formatDisplayText(text) {
+  return text
+    .replace(/_/g, ' ')
+    .replace(/\b\w+\b/g, word => {
+      if (/^[ivx]+$/.test(word.toLowerCase())) {
+        return word.toUpperCase();
+      }
+      return word.charAt(0).toUpperCase() + word.slice(1);
+    });
+}
+
 // Create axios instance dengan base URL
 const apiClient = axios.create({
   baseURL: API_BASE_URL,
@@ -57,6 +68,8 @@ function WaliKelas() {
   const [showMismatches, setShowMismatches] = useState(false);
   const [mismatches, setMismatches] = useState(null);
   const [loadingMismatches, setLoadingMismatches] = useState(false);
+  const [studentHistory, setStudentHistory] = useState([]);
+  const [loadingHistory, setLoadingHistory] = useState(false);
   
   const currentAcademicYear = getCurrentAcademicYear();
   const academicYearOptions = getAcademicYearOptions();
@@ -163,9 +176,40 @@ function WaliKelas() {
     setShowClassDetail(true);
   };
 
-  const handleViewStudentDetail = (student) => {
+  const handleViewStudentDetail = async (student) => {
     setSelectedStudent(student);
     setShowStudentDetail(true);
+    setLoadingHistory(true);
+    try {
+      const response = await apiClient.get(`/users/${student.id}/ipc-history`);
+      setStudentHistory(response.data);
+    } catch (err) {
+      console.error('Error fetching student history:', err);
+      setStudentHistory([]);
+    } finally {
+      setLoadingHistory(false);
+    }
+  };
+
+  const groupHistoryByCategory = (history = []) => {
+    const grouped = {};
+    const categoryOrder = ['prestasi', 'perilaku', 'organisasi', 'kepanitiaan', 'event', 'pelanggaran', 'initial', 'manual'];
+    
+    categoryOrder.forEach(cat => {
+      grouped[cat] = [];
+    });
+    
+    history.forEach(record => {
+      const jenis = record.jenis_perubahan || 'initial';
+      if (!grouped[jenis]) {
+        grouped[jenis] = [];
+      }
+      grouped[jenis].push(record);
+    });
+    
+    return categoryOrder
+      .filter(cat => grouped[cat] && grouped[cat].length > 0)
+      .map(cat => ({ category: cat, records: grouped[cat] }));
   };
 
   const handleCheckMismatches = async () => {
@@ -690,7 +734,7 @@ function WaliKelas() {
       {/* DETAIL SISWA MODAL */}
       {showStudentDetail && selectedStudent && (
         <div className="modal-overlay" style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px', zIndex: 50 }} onClick={(e) => { if (e.target === e.currentTarget) setShowStudentDetail(false) }}>
-          <div className="modal-content" style={{ background: '#fff', borderRadius: '14px', width: '100%', maxWidth: '420px', maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 20px 50px rgba(15,23,42,.25)' }}>
+          <div className="modal-content" style={{ background: '#fff', borderRadius: '14px', width: '100%', maxWidth: '520px', maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 20px 50px rgba(15,23,42,.25)' }}>
             <div className="modal-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', padding: '18px 20px', borderBottom: '1px solid #f1f5f9' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                 <div style={{ width: '52px', height: '52px', borderRadius: '50%', background: '#fff', border: '2px solid #2563eb', color: '#2563eb', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '26px', overflow: 'hidden' }}>
@@ -729,6 +773,71 @@ function WaliKelas() {
                   ))}
                 </div>
               </div>
+
+              <div style={{ background: '#f8fafc', borderRadius: '10px', padding: '12px 16px' }}>
+                <div style={{ fontSize: '.72rem', fontWeight: 700, color: '#64748b', marginBottom: '8px' }}>Riwayat IPC</div>
+                {loadingHistory ? (
+                  <div style={{ textAlign: 'center', padding: '10px' }}>
+                    <div className="spinner" style={{ margin: '0 auto 8px', border: '2px solid #e2e8f0', borderTop: '2px solid #2563eb', borderRadius: '50%', width: '20px', height: '20px' }}></div>
+                    <div style={{ fontSize: '.75rem', color: '#64748b' }}>Memuat...</div>
+                  </div>
+                ) : studentHistory.length === 0 ? (
+                  <div style={{ fontSize: '.85rem', color: '#94a3b8', textAlign: 'center', padding: '6px' }}>Belum ada riwayat</div>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', maxHeight: '320px', overflowY: 'auto' }}>
+                    {groupHistoryByCategory(studentHistory).map(group => {
+                      const categoryIcons = {
+                        prestasi: '🏆',
+                        perilaku: '✅',
+                        organisasi: '👥',
+                        kepanitiaan: '🤝',
+                        event: '📅',
+                        pelanggaran: '⚠️',
+                        initial: '🔄',
+                        manual: '✏️'
+                      };
+                      const categoryLabels = {
+                        prestasi: 'Prestasi',
+                        perilaku: 'Perilaku',
+                        organisasi: 'Organisasi',
+                        kepanitiaan: 'Kepanitiaan',
+                        event: 'Event',
+                        pelanggaran: 'Pelanggaran',
+                        initial: 'Initial',
+                        manual: 'Manual'
+                      };
+                      return (
+                        <div key={group.category} style={{ border: '1px solid #e2e8f0', borderRadius: '8px'}}>
+                          <div style={{ background: '#f1f5f9', padding: '8px 12px', fontSize: '.75rem', fontWeight: 700, color: '#334155', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <span>{categoryIcons[group.category] || '📄'}</span>
+                            <span>{categoryLabels[group.category] || group.category}</span>
+                            <span style={{ marginLeft: 'auto', fontSize: '.68rem', color: '#64748b' }}>{group.records.length} record</span>
+                          </div>
+                          <div style={{ display: 'flex', flexDirection: 'column' }}>
+                            {group.records.map(record => (
+                              <div key={record.id} style={{ padding: '10px 12px', borderTop: '1px solid #f1f5f9', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '8px' }}>
+                                  <span style={{ color: '#334155', fontSize: '.78rem', wordBreak: 'break-word', flex: 1 }}>
+                                    {formatDisplayText(record.keterangan || '-')}
+                                  </span>
+                                  <span style={{ fontWeight: 700, color: record.point_change > 0 ? '#16a34a' : record.point_change < 0 ? '#ef4444' : '#64748b', fontSize: '.78rem', whiteSpace: 'nowrap' }}>
+                                    {record.point_change > 0 ? '+' : ''}{record.point_change}
+                                  </span>
+                                </div>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '.68rem', color: '#94a3b8' }}>
+                                  <span>{new Date(record.created_at).toLocaleString('id-ID')}</span>
+                                  <span>{record.ipc_sebelum} → {record.ipc_sesudah}</span>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+
               <div style={{ background: '#f8fafc', borderRadius: '10px', padding: '12px 16px' }}>
                 <div style={{ fontSize: '.72rem', fontWeight: 700, color: '#64748b', marginBottom: '4px' }}>Total IPC</div>
                 <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '44px', height: '44px', borderRadius: '50%', background: '#0891b2', color: '#fff', fontWeight: 700, fontSize: '1rem' }}>{selectedStudent.ipc_total || 80}</span>

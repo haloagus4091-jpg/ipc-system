@@ -14,8 +14,8 @@ function InputPrestasi() {
     kelas: '',
     pembina: '',
     grha: '',
-    juara: 'juara 1',
-    kategori: 'kecamatan'
+    juara: 'juara_i',
+    kategori: 'sekolah'
   });
   const [foto, setFoto] = useState(null);
   const [message, setMessage] = useState('');
@@ -34,13 +34,38 @@ function InputPrestasi() {
   const [ipcConfig, setIpcConfig] = useState([]);
   const [calculatedPoint, setCalculatedPoint] = useState(0);
   const prestasiConfigs = ipcConfig.prestasi || [];
-  const tingkatLombaOptions = [...new Set(prestasiConfigs.map(config => config.field1).filter(Boolean))];
-  const juaraLombaOptions = [...new Set(
-    prestasiConfigs
-      .filter(config => !formData.kategori || config.field1 === formData.kategori)
-      .map(config => config.field2)
-      .filter(Boolean)
-  )];
+  const FIXED_TINGKAT_OPTIONS = [
+    'kecamatan',
+    'kabupaten',
+    'provinsi',
+    'nasional',
+    'internasional'
+  ];
+  const FIXED_JUARA_LOMBA_OPTIONS = [
+    'peserta',
+    'finalis',
+    'harapan_iii',
+    'harapan_ii',
+    'harapan_i',
+    'juara_iii',
+    'juara_ii',
+    'juara_i'
+  ];
+
+  const formatDisplayText = (text) => {
+    return text
+      .replace(/_/g, ' ')
+      .replace(/\b\w+\b/g, word => {
+        // Check if word is Roman numeral (I, II, III, etc.)
+        if (/^[ivx]+$/.test(word.toLowerCase())) {
+          return word.toUpperCase();
+        }
+        return word.charAt(0).toUpperCase() + word.slice(1);
+      });
+  };
+
+  const tingkatLombaOptions = FIXED_TINGKAT_OPTIONS;
+  const juaraLombaOptions = FIXED_JUARA_LOMBA_OPTIONS;
   const [students, setStudents] = useState([]);
 
   const grhaOptions = [
@@ -209,8 +234,8 @@ function InputPrestasi() {
         headers: { Authorization: `Bearer ${token}` }
       });
       setIpcConfig(response.data);
-      const firstTingkat = response.data.prestasi?.[0]?.field1 || 'kecamatan';
-      const firstJuara = response.data.prestasi?.[0]?.field2 || 'juara 1';
+      const firstTingkat = response.data.prestasi?.[0]?.field1 || 'sekolah';
+      const firstJuara = response.data.prestasi?.[0]?.field2 || 'juara_i';
       setFormData(prev => ({ ...prev, kategori: firstTingkat, juara: firstJuara }));
       setCalculatedPoint(calculatePoint(firstTingkat, firstJuara, response.data));
     } catch (error) {
@@ -396,8 +421,8 @@ function InputPrestasi() {
         kelas: '',
         pembina: '',
         grha: '',
-        juara: 'juara 1',
-        kategori: 'kecamatan'
+        juara: 'juara_i',
+        kategori: 'sekolah'
       });
       setFoto(null);
       setIsAutoFilled(false);
@@ -476,8 +501,8 @@ function InputPrestasi() {
                       <td>{item.nama}</td>
                       <td>{item.nis}</td>
                       <td>{item.nama_lomba}</td>
-                      <td>{item.juara}</td>
-                      <td>{item.kategori}</td>
+                      <td>{formatDisplayText(item.juara)}</td>
+                      <td>{formatDisplayText(item.kategori)}</td>
                       <td>{item.pembina || '-'}</td>
                       <td>{item.point}</td>
                       <td>{getStatusBadge(item)}</td>
@@ -517,7 +542,6 @@ function InputPrestasi() {
                 })
               }}
             />
-            {isAutoFilled && <p className="form-helper-text">Data diisi otomatis dari NIS</p>}
           </div>
           <div className="form-group">
             <label>NIS <span className="required">*</span></label>
@@ -535,7 +559,6 @@ function InputPrestasi() {
                 })
               }}
             />
-            <p className="form-helper-text">Masukkan NIS untuk mengisi data siswa secara otomatis</p>
           </div>
         </div>
         
@@ -547,20 +570,18 @@ function InputPrestasi() {
               name="kelas" 
               value={formData.kelas} 
               onChange={handleChange} 
+              placeholder="Data diisi otomatis"
               disabled
               style={{ backgroundColor: '#f0f0f0', cursor: 'not-allowed' }}
             />
-            <small style={{ color: '#666', fontSize: '12px' }}>Auto-filled from student data</small>
           </div>
           <div className="form-group">
             <label>Grha</label>
-            <select name="grha" value={formData.grha} onChange={handleChange}>
-              <option value="">Pilih Grha</option>
+            <select name="grha" value={formData.grha} disabled onChange={handleChange}>
               {grhaOptions.map(grha => (
                 <option key={grha} value={grha}>{grha}</option>
               ))}
             </select>
-            <p className="form-helper-text">Data diisi otomatis dari NIS</p>
           </div>
         </div>
 
@@ -600,7 +621,7 @@ function InputPrestasi() {
             <label>Juara</label>
             <select name="juara" value={formData.juara} onChange={handleChange}>
               {juaraLombaOptions.map(juara => (
-                <option key={juara} value={juara}>{juara}</option>
+                <option key={juara} value={juara}>{formatDisplayText(juara)}</option>
               ))}
             </select>
           </div>
@@ -608,7 +629,7 @@ function InputPrestasi() {
             <label>Tingkat Lomba</label>
             <select name="kategori" value={formData.kategori} onChange={handleChange}>
               {tingkatLombaOptions.map(tingkat => (
-                <option key={tingkat} value={tingkat}>{tingkat}</option>
+                <option key={tingkat} value={tingkat}>{formatDisplayText(tingkat)}</option>
               ))}
             </select>
           </div>
@@ -668,6 +689,7 @@ function InputPrestasi() {
             type="text"
             value={editModal.editFormData.nis || ''}
             onChange={(e) => editModal.setEditFormData({ ...editModal.editFormData, nis: e.target.value })}
+            disabled
             placeholder="NIS"
           />
         </div>
@@ -681,7 +703,6 @@ function InputPrestasi() {
             disabled
             style={{ backgroundColor: '#f0f0f0', cursor: 'not-allowed' }}
           />
-          <small style={{ color: '#666', fontSize: '12px' }}>Auto-filled from student data</small>
         </div>
 
         <div className="form-group">
@@ -723,8 +744,8 @@ function InputPrestasi() {
         <div className="form-group">
           <label>Juara</label>
           <select name="juara" value={editModal.editFormData.juara} onChange={(e) => editModal.setEditFormData({ ...editModal.editFormData, juara: e.target.value })}>
-            {juaraLombaOptions.map(juara => (
-              <option key={juara} value={juara}>{juara}</option>
+            {FIXED_JUARA_LOMBA_OPTIONS.map(juara => (
+              <option key={juara} value={juara}>{formatDisplayText(juara)}</option>
             ))}
           </select>
         </div>
@@ -732,8 +753,8 @@ function InputPrestasi() {
         <div className="form-group">
           <label>Tingkat Lomba</label>
           <select name="kategori" value={editModal.editFormData.kategori} onChange={(e) => editModal.setEditFormData({ ...editModal.editFormData, kategori: e.target.value })}>
-            {tingkatLombaOptions.map(tingkat => (
-              <option key={tingkat} value={tingkat}>{tingkat}</option>
+            {FIXED_TINGKAT_OPTIONS.map(tingkat => (
+              <option key={tingkat} value={tingkat}>{formatDisplayText(tingkat)}</option>
             ))}
           </select>
         </div>
@@ -761,7 +782,7 @@ function InputPrestasi() {
                   <tr key={item.id}>
                     <td>{new Date(item.created_at).toLocaleDateString('id-ID')}</td>
                     <td>{item.nama_lomba}</td>
-                    <td>{item.juara}</td>
+                    <td>{formatDisplayText(item.juara)}</td>
                     <td>{item.pembina || '-'}</td>
                     <td>{getStatusBadge(item)}</td>
                   </tr>
