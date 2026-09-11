@@ -248,7 +248,7 @@ router.post('/event/submit', auth, checkInputAccess('event'), upload.single('fot
             `INSERT INTO event_approvals
             (user_id, nama, nis, kelas, grha, pembina, nama_event, tingkat, foto_path)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-            [userId, nama, nis, kelas, grha, pembina, nama_event, tingkat, foto_path]
+            [userId, nama, nis, calculatedClass, grha, pembina, nama_event, tingkat, foto_path]
         );
 
         // Create notification for superadmin only

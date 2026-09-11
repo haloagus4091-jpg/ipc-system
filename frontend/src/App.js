@@ -23,6 +23,7 @@ import DriveViewer from './components/DriveViewer';
 import Notifications from './components/Notifications';
 import LaporanCetak from './components/LaporanCetak';
 import KonfigurasiIPC from './components/KonfigurasiIPC';
+import SchoolConfig from './components/SchoolConfig';
 import axios from 'axios';
 import API_BASE_URL from './config';
 
@@ -203,6 +204,11 @@ function App() {
         <Route path="/konfigurasi-ipc" element={
           <ProtectedRoute allowedRoles={['superadmin']}>
             {(user) => <MainLayout user={user}><KonfigurasiIPC /></MainLayout>}
+          </ProtectedRoute>
+        } />
+        <Route path="/school-config" element={
+          <ProtectedRoute allowedRoles={['superadmin']}>
+            {(user) => <MainLayout user={user}><SchoolConfig /></MainLayout>}
           </ProtectedRoute>
         } />
       </Routes>

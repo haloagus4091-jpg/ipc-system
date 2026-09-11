@@ -48,26 +48,46 @@ const THIN_BORDER = {
 // Helper: Calculate totals - MUST MATCH BACKEND CALCULATION
 function hitungTotal(s) {
   // Point awal (default 80 if not specified)
-  const pointAwal = Number(s.point_awal) || 80;
-
-  const jumlahPrestasi = (Number(s.prestasi_akademik) || 0) + (Number(s.prestasi_nonakademik) || 0);
-  const jumlahKarakter =
-    (Number(s.tanggung_jawab) || 0) +
-    (Number(s.disiplin) || 0) +
-    (Number(s.kepedulian) || 0) +
-    (Number(s.kemandirian) || 0) + // Added kemandirian
-    (Number(s.spiritual) || 0) +
-    (Number(s.kejujuran) || 0) +
-    (Number(s.kepercayaan_diri) || 0);
-  const jumlahKeaktifan =
-    (Number(s.organisasi) || 0) + (Number(s.kepanitiaan) || 0) + (Number(s.event) || 0);
-  const jumlahPelanggaran =
-    (Number(s.pelanggaran_ringan) || 0) + (Number(s.pelanggaran_sedang) || 0) + (Number(s.pelanggaran_berat) || 0);
-
-  // Total IPC = Point Awal + Prestasi + Karakter + Keaktifan - Pelanggaran
-  const totalIPC = pointAwal + jumlahPrestasi + jumlahKarakter + jumlahKeaktifan - jumlahPelanggaran;
-
-  return { jumlahPrestasi, jumlahKarakter, jumlahKeaktifan, jumlahPelanggaran, totalIPC, pointAwal };
+  const ipcAwal = s.ipc_awal || 80;
+  
+  // Prestasi
+  const prestasiAkademik = Number(s.prestasi_akademik) || 0;
+  const prestasiNonakademik = Number(s.prestasi_nonakademik) || 0;
+  
+  // Perilaku (7 karakter)
+  const tanggungJawab = Number(s.tanggung_jawab) || 0;
+  const disiplin = Number(s.disiplin) || 0;
+  const kepedulian = Number(s.kepedulian) || 0;
+  const kemandirian = Number(s.kemandirian) || 0;
+  const spiritual = Number(s.spiritual) || 0;
+  const kejujuran = Number(s.kejujuran) || 0;
+  const kepercayaanDiri = Number(s.kepercayaan_diri) || 0;
+  
+  // Keaktifan
+  const organisasi = Number(s.organisasi) || 0;
+  const kepanitiaan = Number(s.kepanitiaan) || 0;
+  const event = Number(s.event) || 0;
+  
+  // Pelanggaran
+  const pelanggaranRingan = Number(s.pelanggaran_ringan) || 0;
+  const pelanggaranSedang = Number(s.pelanggaran_sedang) || 0;
+  const pelanggaranBerat = Number(s.pelanggaran_berat) || 0;
+  
+  const totalPrestasi = prestasiAkademik + prestasiNonakademik;
+  const totalKarakter = tanggungJawab + disiplin + kepedulian + kemandirian + spiritual + kejujuran + kepercayaanDiri;
+  const totalKeaktifan = organisasi + kepanitiaan + event;
+  const totalPelanggaran = pelanggaranRingan + pelanggaranSedang + pelanggaranBerat;
+  
+  const ipcTotal = ipcAwal + totalPrestasi + totalKarakter + totalKeaktifan + totalPelanggaran;
+  
+  return {
+    ipcAwal,
+    totalPrestasi,
+    totalKarakter,
+    totalKeaktifan,
+    totalPelanggaran,
+    ipcTotal
+  };
 }
 
 // Helper: Style cell
@@ -189,10 +209,12 @@ function LaporanCetak({ user }) {
   const [isWaliKelas, setIsWaliKelas] = useState(false);
   const [waliKelasInfo, setWaliKelasInfo] = useState(null);
   const [excelLoading, setExcelLoading] = useState(false);
+  const [schoolConfig, setSchoolConfig] = useState(null);
   
   useEffect(() => {
     checkWaliKelasStatus();
     fetchStudents();
+    fetchSchoolConfig();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -283,6 +305,26 @@ function LaporanCetak({ user }) {
       setClassStudents(response.data);
     } catch (error) {
       console.error('Error fetching class students:', error);
+    }
+  };
+
+  const fetchSchoolConfig = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.get('/school-config', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setSchoolConfig(response.data);
+    } catch (error) {
+      console.error('Error fetching school config:', error);
+      // Use default values if fetch fails
+      setSchoolConfig({
+        school_name: 'SMK Negeri Bali Mandara',
+        school_description: 'Sistem Index Prestasi Citra (IPC) • Panel Admin',
+        principal_name: 'Nama Kepala Sekolah',
+        principal_nip: '',
+        logo_url: null
+      });
     }
   };
 
@@ -575,18 +617,18 @@ function LaporanCetak({ user }) {
       doc.text(`Kubutambahan, ${formatDate()}`, rightX, finalY);
 
       doc.setFont('times', 'bold');
-      doc.text('Kepala SMK Negeri Bali Mandara', leftX, finalY + 5);
+      doc.text('Kepala Sekolah', leftX, finalY + 5);
       doc.text('Wali Kelas', rightX, finalY + 5);
 
       // Ruang tanda tangan
       const ttdY = finalY + 22;
       doc.setFont('times', 'bold');
-      doc.text('Ketut Susila Widiarsana, S.Pd., M.Pd.', leftX, ttdY);
+      doc.text(schoolConfig?.principal_name || 'Ketut Susila Widiarsana, S.Pd., M.Pd.', leftX, ttdY);
       doc.text(waliKelasData.nama || 'Wali Kelas Belum Ditentukan', rightX, ttdY);
 
       doc.setFont('times', 'normal');
       doc.setFontSize(9);
-      doc.text('NIP. 19831101 200803 1 001', leftX, ttdY + 5);
+      doc.text(schoolConfig?.principal_nip || 'NIP. 19831101 200803 1 001', leftX, ttdY + 5);
       if (waliKelasData.nip) {
         doc.text(`NIP. ${waliKelasData.nip}`, rightX, ttdY + 5);
       }
@@ -650,7 +692,7 @@ function LaporanCetak({ user }) {
         sheet.getCell(1, 1).alignment = { horizontal: "center" };
 
         sheet.mergeCells(2, 1, 2, totalCols);
-        sheet.getCell(2, 1).value = "SMK NEGERI BALI MANDARA";
+        sheet.getCell(2, 1).value = schoolConfig?.school_name || "SMK NEGERI BALI MANDARA";
         sheet.getCell(2, 1).font = { bold: true };
         sheet.getCell(2, 1).alignment = { horizontal: "center" };
 
@@ -1035,17 +1077,17 @@ function LaporanCetak({ user }) {
         
         doc.setFont('times', 'bold');
         doc.setFontSize(8);
-        doc.text('Kepala SMK Negeri Bali Mandara', leftSigX, sigY + 5);
+        doc.text('Kepala Sekolah', leftSigX, sigY + 5);
         doc.text('Wali Kelas', rightSigX, sigY + 5);
         
         doc.setFont('times', 'bold');
         doc.setFontSize(8);
-        doc.text('Ketut Susila Widiarsana, S.Pd., M.Pd.', leftSigX, sigY + 20);
+        doc.text(schoolConfig?.principal_name || 'Ketut Susila Widiarsana, S.Pd., M.Pd.', leftSigX, sigY + 20);
         doc.text(wali?.nama || 'Wali Kelas Belum Ditentukan', rightSigX, sigY + 20);
         
         doc.setFont('times', 'normal');
         doc.setFontSize(7);
-        doc.text('NIP. 19831101 200803 1 001', leftSigX, sigY + 25);
+        doc.text(schoolConfig?.principal_nip || 'NIP. 19831101 200803 1 001', leftSigX, sigY + 25);
         if (wali?.nip) {
           doc.text(`NIP. ${wali.nip}`, rightSigX, sigY + 25);
         }

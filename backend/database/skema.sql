@@ -478,6 +478,21 @@ CREATE TABLE notifications (
 -- ==================== DRIVE LINKS TABLE ====================
 -- REMOVED: Google Drive integration replaced with local server storage
 
+-- ==================== SCHOOL CONFIGURATION TABLE ====================
+
+-- School Configuration Table
+DROP TABLE IF EXISTS school_config;
+CREATE TABLE school_config (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    school_name VARCHAR(255) DEFAULT 'SMK Negeri Bali Mandara',
+    school_description VARCHAR(255) DEFAULT 'Sistem Index Prestasi Citra (IPC) • Panel Admin',
+    principal_name VARCHAR(255) DEFAULT 'Nama Kepala Sekolah',
+    principal_nip VARCHAR(50) DEFAULT '',
+    logo_url VARCHAR(255) DEFAULT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+
 -- ==================== INPUT ACCESS CONTROL TABLES ====================
 
 -- Input Access Control Table

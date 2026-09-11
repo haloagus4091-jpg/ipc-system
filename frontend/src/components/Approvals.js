@@ -165,8 +165,8 @@ function Approvals() {
             <thead>
               <tr>
                 <th>Tipe</th>
-                <th>User</th>
-                <th>Nama</th>
+                <th>Diajukan Oleh</th>
+                <th>Nama Siswa</th>
                 <th>NIS</th>
                 <th>Detail</th>
                 <th>Tanggal</th>
@@ -181,7 +181,7 @@ function Approvals() {
                       {item.type.toUpperCase()}
                     </span>
                   </td>
-                  <td>{item.user_name}</td>
+                  <td>{item.user_name || item.submitted_by || 'Unknown'}</td>
                   <td>{item.nama}</td>
                   <td>{item.nis}</td>
                   <td>
