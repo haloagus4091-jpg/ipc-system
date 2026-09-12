@@ -4,6 +4,28 @@ const db = require('../config/database');
 const { auth } = require('../middleware/auth');
 const path = require('path');
 
+// GET public school branding
+router.get('/public', async (req, res) => {
+  try {
+    const [rows] = await db.query(
+      'SELECT school_name, school_description, logo_url FROM school_config LIMIT 1'
+    );
+
+    if (rows.length === 0) {
+      return res.json({
+        school_name: 'SMK Negeri Bali Mandara',
+        school_description: 'Sistem Index Prestasi Citra (IPC) • Panel Admin',
+        logo_url: null
+      });
+    }
+
+    res.json(rows[0]);
+  } catch (error) {
+    console.error('Error fetching public school config:', error);
+    res.status(500).json({ error: 'Failed to fetch school configuration' });
+  }
+});
+
 // Apply auth middleware to all routes
 router.use(auth);
 
@@ -101,7 +123,8 @@ router.post('/upload-logo', async (req, res) => {
       fs.mkdirSync(uploadDir, { recursive: true });
     }
     
-    const uploadPath = path.join(uploadDir, `${Date.now()}_${logo.name}`);
+    const timestamp = Date.now();
+    const uploadPath = path.join(uploadDir, `${timestamp}_${logo.name}`);
 
     console.log('Upload directory:', uploadDir);
     console.log('Upload path:', uploadPath);
@@ -123,7 +146,7 @@ router.post('/upload-logo', async (req, res) => {
         console.error('File does NOT exist after upload');
       }
 
-      const logoUrl = `/uploads/logos/${Date.now()}_${logo.name}`;
+      const logoUrl = `/uploads/logos/${timestamp}_${logo.name}`;
 
       console.log('Logo URL to save:', logoUrl);
 
