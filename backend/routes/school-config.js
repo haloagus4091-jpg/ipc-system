@@ -3,6 +3,25 @@ const router = express.Router();
 const db = require('../config/database');
 const { auth } = require('../middleware/auth');
 const path = require('path');
+const fs = require('fs');
+const multer = require('multer');
+
+// Configure multer for logo uploads
+const logoStorage = multer.diskStorage({
+    destination: (req, file, cb) => {
+        const uploadDir = path.join(__dirname, '../uploads/logos');
+        if (!fs.existsSync(uploadDir)) {
+            fs.mkdirSync(uploadDir, { recursive: true });
+        }
+        cb(null, uploadDir);
+    },
+    filename: (req, file, cb) => {
+        const timestamp = Date.now();
+        cb(null, `${timestamp}_${file.originalname}`);
+    }
+});
+
+const logoUpload = multer({ storage: logoStorage });
 
 // GET public school branding
 router.get('/public', async (req, res) => {
@@ -22,7 +41,7 @@ router.get('/public', async (req, res) => {
     res.json(rows[0]);
   } catch (error) {
     console.error('Error fetching public school config:', error);
-    res.status(500).json({ error: 'Failed to fetch school configuration' });
+    res.status(500).json({ message: 'Failed to fetch school configuration' });
   }
 });
 
@@ -55,7 +74,7 @@ router.get('/', async (req, res) => {
     res.json(rows[0]);
   } catch (error) {
     console.error('Error fetching school config:', error);
-    res.status(500).json({ error: 'Failed to fetch school configuration' });
+    res.status(500).json({ message: 'Failed to fetch school configuration' });
   }
 });
 
@@ -94,82 +113,48 @@ router.put('/', async (req, res) => {
     res.json(rows[0]);
   } catch (error) {
     console.error('Error updating school config:', error);
-    res.status(500).json({ error: 'Failed to update school configuration' });
+    res.status(500).json({ message: 'Failed to update school configuration' });
   }
 });
 
 // Upload logo endpoint
-router.post('/upload-logo', async (req, res) => {
+router.post('/upload-logo', logoUpload.single('logo'), async (req, res) => {
   try {
     if (req.user.role !== 'superadmin') {
-      return res.status(403).json({ error: 'Only superadmin can upload logo' });
+      return res.status(403).json({ message: 'Only superadmin can upload logo' });
     }
     
-    if (!req.files || !req.files.logo) {
-      return res.status(400).json({ error: 'No file uploaded' });
+    if (!req.file) {
+      return res.status(400).json({ message: 'No file uploaded' });
     }
     
-    const logo = req.files.logo;
     const allowedTypes = ['image/jpeg', 'image/png', 'image/jpg'];
     
-    if (!allowedTypes.includes(logo.mimetype)) {
-      return res.status(400).json({ error: 'Only JPEG and PNG images are allowed' });
+    if (!allowedTypes.includes(req.file.mimetype)) {
+      return res.status(400).json({ message: 'Only JPEG and PNG images are allowed' });
     }
-    
-    // Create uploads/logos directory if it doesn't exist
-    const fs = require('fs');
-    const uploadDir = path.join(__dirname, '../uploads/logos');
-    if (!fs.existsSync(uploadDir)) {
-      fs.mkdirSync(uploadDir, { recursive: true });
+
+    const logoUrl = `/uploads/logos/${req.file.filename}`;
+
+    // Update school config with new logo
+    const [existing] = await db.query('SELECT id FROM school_config LIMIT 1');
+
+    if (existing.length > 0) {
+      await db.query(
+        'UPDATE school_config SET logo_url = ?, updated_at = NOW() WHERE id = ?',
+        [logoUrl, existing[0].id]
+      );
+    } else {
+      await db.query(
+        'INSERT INTO school_config (logo_url, created_at, updated_at) VALUES (?, NOW(), NOW())',
+        [logoUrl]
+      );
     }
-    
-    const timestamp = Date.now();
-    const uploadPath = path.join(uploadDir, `${timestamp}_${logo.name}`);
 
-    console.log('Upload directory:', uploadDir);
-    console.log('Upload path:', uploadPath);
-    console.log('Logo file:', logo.name);
-
-    logo.mv(uploadPath, async (err) => {
-      if (err) {
-        console.error('Error uploading logo:', err);
-        return res.status(500).json({ error: 'Failed to upload logo' });
-      }
-
-      console.log('File saved successfully to:', uploadPath);
-
-      // Check if file exists
-      const fs = require('fs');
-      if (fs.existsSync(uploadPath)) {
-        console.log('File exists after upload');
-      } else {
-        console.error('File does NOT exist after upload');
-      }
-
-      const logoUrl = `/uploads/logos/${timestamp}_${logo.name}`;
-
-      console.log('Logo URL to save:', logoUrl);
-
-      // Update school config with new logo
-      const [existing] = await db.query('SELECT id FROM school_config LIMIT 1');
-
-      if (existing.length > 0) {
-        await db.query(
-          'UPDATE school_config SET logo_url = ?, updated_at = NOW() WHERE id = ?',
-          [logoUrl, existing[0].id]
-        );
-      } else {
-        await db.query(
-          'INSERT INTO school_config (logo_url, created_at, updated_at) VALUES (?, NOW(), NOW())',
-          [logoUrl]
-        );
-      }
-
-      res.json({ logoUrl });
-    });
+    res.json({ logoUrl });
   } catch (error) {
     console.error('Error in logo upload:', error);
-    res.status(500).json({ error: 'Failed to upload logo' });
+    res.status(500).json({ message: 'Failed to upload logo' });
   }
 });
 

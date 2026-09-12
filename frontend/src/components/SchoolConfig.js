@@ -1,6 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import API_BASE_URL from '../config';
+
+const buildAssetUrl = (path) => {
+  if (!path) return null;
+  const base = API_BASE_URL.replace('/api', '');
+  return path.startsWith('/') ? `${base}${path}` : `${base}/${path}`;
+};
 
 function SchoolConfig() {
   const [config, setConfig] = useState({
@@ -12,8 +18,10 @@ function SchoolConfig() {
   });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [message, setMessage] = useState(null);
   const [user, setUser] = useState(null);
+  const mountedRef = useRef(true);
 
   // CSS Variables
   const BG = '#eef1f7';
@@ -22,75 +30,123 @@ function SchoolConfig() {
   const TEXT = '#1b2033';
   const MUTED = '#727a8c';
   const BLUE = '#2f5fe8';
-  const GREEN = '#16a875';
-  const RED = '#e34848';
   const RADIUS = '16px';
   const SHADOW = '0 1px 2px rgba(20,25,45,.04), 0 10px 26px -14px rgba(20,25,45,.14)';
 
   useEffect(() => {
+    mountedRef.current = true;
     const userData = localStorage.getItem('user');
     if (userData) {
       setUser(JSON.parse(userData));
     }
     fetchConfig();
+    return () => { mountedRef.current = false; };
   }, []);
 
   const fetchConfig = async () => {
     try {
-      const token = localStorage.getItem('token');
-      const response = await axios.get('/school-config', {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      setConfig(response.data);
+      const response = await axios.get('/school-config');
+      if (mountedRef.current) {
+        setConfig(response.data);
+      }
     } catch (error) {
-      console.error('Error fetching school config:', error);
-      setMessage({ type: 'error', text: 'Gagal memuat konfigurasi sekolah' });
+      if (mountedRef.current) {
+        setMessage({ type: 'error', text: 'Gagal memuat konfigurasi sekolah' });
+      }
     } finally {
-      setLoading(false);
+      if (mountedRef.current) {
+        setLoading(false);
+      }
     }
   };
 
+  const validateConfig = () => {
+    if (!config.school_name.trim()) {
+      setMessage({ type: 'error', text: 'Nama sekolah wajib diisi' });
+      return false;
+    }
+    if (!config.principal_name.trim()) {
+      setMessage({ type: 'error', text: 'Nama kepala sekolah wajib diisi' });
+      return false;
+    }
+    if (!config.principal_nip.trim()) {
+      setMessage({ type: 'error', text: 'NIP kepala sekolah wajib diisi' });
+      return false;
+    }
+    if (!/^\d{18}$/.test(config.principal_nip.replace(/\s/g, ''))) {
+      setMessage({ type: 'error', text: 'NIP harus berupa 18 digit angka' });
+      return false;
+    }
+    return true;
+  };
+
   const handleSave = async () => {
+    if (!validateConfig()) return;
     setSaving(true);
     setMessage(null);
     try {
-      const token = localStorage.getItem('token');
-      console.log('Saving config:', config);
-      const response = await axios.put('/school-config', config, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      console.log('Save response:', response.data);
-      await fetchConfig(); // Refresh config after save
-      setMessage({ type: 'success', text: 'Konfigurasi sekolah berhasil disimpan!' });
+      await axios.put('/school-config', config);
+      if (mountedRef.current) {
+        await fetchConfig();
+        setMessage({ type: 'success', text: 'Konfigurasi sekolah berhasil disimpan!' });
+      }
     } catch (error) {
-      console.error('Error saving school config:', error);
-      setMessage({ type: 'error', text: 'Gagal menyimpan konfigurasi sekolah' });
+      if (mountedRef.current) {
+        const errorText = error.response?.data?.error || 'Gagal menyimpan konfigurasi sekolah';
+        setMessage({ type: 'error', text: errorText });
+      }
     } finally {
-      setSaving(false);
+      if (mountedRef.current) {
+        setSaving(false);
+      }
     }
+  };
+
+  const validateLogoFile = (file) => {
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/jpg'];
+    const maxSize = 2 * 1024 * 1024; // 2MB
+    
+    if (!allowedTypes.includes(file.type)) {
+      return 'Hanya file JPEG dan PNG yang diizinkan';
+    }
+    if (file.size > maxSize) {
+      return 'Ukuran file maksimal 2MB';
+    }
+    return null;
   };
 
   const handleLogoUpload = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
 
+    const validationError = validateLogoFile(file);
+    if (validationError) {
+      setMessage({ type: 'error', text: validationError });
+      e.target.value = '';
+      return;
+    }
+
     const formData = new FormData();
     formData.append('logo', file);
 
+    setUploading(true);
+    setMessage(null);
     try {
-      const token = localStorage.getItem('token');
-      const response = await axios.post('/school-config/upload-logo', formData, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'multipart/form-data'
-        }
-      });
-      console.log('Logo upload response:', response.data);
-      await fetchConfig(); // Refresh config from database after upload
-      setMessage({ type: 'success', text: 'Logo berhasil diupload!' });
+      await axios.post('/school-config/upload-logo', formData);
+      if (mountedRef.current) {
+        await fetchConfig();
+        setMessage({ type: 'success', text: 'Logo berhasil diupload!' });
+      }
     } catch (error) {
-      console.error('Error uploading logo:', error);
-      setMessage({ type: 'error', text: 'Gagal mengupload logo' });
+      if (mountedRef.current) {
+        const errorText = error.response?.data?.error || 'Gagal mengupload logo';
+        setMessage({ type: 'error', text: errorText });
+      }
+    } finally {
+      if (mountedRef.current) {
+        setUploading(false);
+        e.target.value = '';
+      }
     }
   };
 
@@ -199,7 +255,7 @@ function SchoolConfig() {
           }}>Informasi Sekolah</h3>
           
           <div style={{ marginBottom: '18px' }}>
-            <label style={{
+            <label htmlFor="school-name" style={{
               display: 'block',
               fontSize: '13px',
               fontWeight: '600',
@@ -207,6 +263,7 @@ function SchoolConfig() {
               marginBottom: '6px'
             }}>Nama Sekolah</label>
             <input
+              id="school-name"
               type="text"
               value={config.school_name}
               onChange={(e) => setConfig({ ...config, school_name: e.target.value })}
@@ -226,7 +283,7 @@ function SchoolConfig() {
           </div>
 
           <div style={{ marginBottom: '18px' }}>
-            <label style={{
+            <label htmlFor="school-description" style={{
               display: 'block',
               fontSize: '13px',
               fontWeight: '600',
@@ -234,6 +291,7 @@ function SchoolConfig() {
               marginBottom: '6px'
             }}>Deskripsi Sekolah</label>
             <textarea
+              id="school-description"
               value={config.school_description}
               onChange={(e) => setConfig({ ...config, school_description: e.target.value })}
               rows={3}
@@ -270,7 +328,7 @@ function SchoolConfig() {
           }}>Informasi Kepala Sekolah</h3>
           
           <div style={{ marginBottom: '18px' }}>
-            <label style={{
+            <label htmlFor="principal-name" style={{
               display: 'block',
               fontSize: '13px',
               fontWeight: '600',
@@ -278,6 +336,7 @@ function SchoolConfig() {
               marginBottom: '6px'
             }}>Nama Kepala Sekolah</label>
             <input
+              id="principal-name"
               type="text"
               value={config.principal_name}
               onChange={(e) => setConfig({ ...config, principal_name: e.target.value })}
@@ -297,7 +356,7 @@ function SchoolConfig() {
           </div>
 
           <div style={{ marginBottom: '18px' }}>
-            <label style={{
+            <label htmlFor="principal-nip" style={{
               display: 'block',
               fontSize: '13px',
               fontWeight: '600',
@@ -305,6 +364,7 @@ function SchoolConfig() {
               marginBottom: '6px'
             }}>NIP Kepala Sekolah</label>
             <input
+              id="principal-nip"
               type="text"
               value={config.principal_nip}
               onChange={(e) => setConfig({ ...config, principal_nip: e.target.value })}
@@ -339,70 +399,72 @@ function SchoolConfig() {
             color: TEXT
           }}>Logo Sekolah</h3>
           
-          <div style={{
-            marginBottom: '18px',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '16px'
-          }}>
-            {config.logo_url ? (
-              <img
-                src={`${API_BASE_URL.replace('/api', '')}${config.logo_url}`}
-                alt="Logo Sekolah"
-                style={{
-                  width: '80px',
-                  height: '80px',
-                  objectFit: 'contain',
-                  borderRadius: '12px',
-                  border: `1px solid ${BORDER}`,
-                  padding: '8px',
-                  background: '#fff'
-                }}
-              />
-            ) : (
-              <div style={{
-                width: '80px',
-                height: '80px',
-                borderRadius: '12px',
-                border: `1px solid ${BORDER}`,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                background: '#f8f9fa',
-                color: MUTED,
-                fontSize: '12px'
-              }}>
-                No Logo
-              </div>
-            )}
-            <div>
-              <div style={{ fontSize: '13px', color: MUTED, marginBottom: '8px' }}>
-                {config.logo_url ? 'Logo saat ini' : 'Belum ada logo'}
-              </div>
-              <label style={{
-                display: 'inline-block',
-                padding: '8px 16px',
-                background: BLUE,
-                color: '#fff',
-                borderRadius: '8px',
-                fontSize: '13px',
-                fontWeight: '600',
-                cursor: 'pointer',
-                transition: 'filter 0.15s ease'
-              }}
-              onMouseEnter={(e) => e.currentTarget.style.filter = 'brightness(1.07)'}
-              onMouseLeave={(e) => e.currentTarget.style.filter = 'brightness(1)'}
-              >
-                Upload Logo Baru
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={handleLogoUpload}
-                  style={{ display: 'none' }}
-                />
-              </label>
-            </div>
-          </div>
+<div style={{
+             marginBottom: '18px',
+             display: 'flex',
+             alignItems: 'center',
+             gap: '16px'
+           }}>
+             {config.logo_url ? (
+               <img
+                 src={buildAssetUrl(config.logo_url)}
+                 alt="Logo Sekolah"
+                 style={{
+                   width: '80px',
+                   height: '80px',
+                   objectFit: 'contain',
+                   borderRadius: '12px',
+                   border: `1px solid ${BORDER}`,
+                   padding: '8px',
+                   background: '#fff'
+                 }}
+               />
+             ) : (
+               <div style={{
+                 width: '80px',
+                 height: '80px',
+                 borderRadius: '12px',
+                 border: `1px solid ${BORDER}`,
+                 display: 'flex',
+                 alignItems: 'center',
+                 justifyContent: 'center',
+                 background: '#f8f9fa',
+                 color: MUTED,
+                 fontSize: '12px'
+               }}>
+                 No Logo
+               </div>
+             )}
+             <div>
+               <div style={{ fontSize: '13px', color: MUTED, marginBottom: '8px' }}>
+                 {config.logo_url ? 'Logo saat ini' : 'Belum ada logo'}
+               </div>
+               <label style={{
+                 display: 'inline-block',
+                 padding: '8px 16px',
+                 background: uploading ? MUTED : BLUE,
+                 color: '#fff',
+                 borderRadius: '8px',
+                 fontSize: '13px',
+                 fontWeight: '600',
+                 cursor: uploading ? 'not-allowed' : 'pointer',
+                 transition: 'filter 0.15s ease',
+                 opacity: uploading ? 0.7 : 1
+               }}
+               onMouseEnter={(e) => !uploading && (e.currentTarget.style.filter = 'brightness(1.07)')}
+               onMouseLeave={(e) => e.currentTarget.style.filter = 'brightness(1)'}
+               >
+                 {uploading ? 'Mengupload...' : 'Upload Logo Baru'}
+                 <input
+                   type="file"
+                   accept="image/*"
+                   onChange={handleLogoUpload}
+                   disabled={uploading}
+                   style={{ display: 'none' }}
+                 />
+               </label>
+             </div>
+           </div>
         </div>
       </div>
 

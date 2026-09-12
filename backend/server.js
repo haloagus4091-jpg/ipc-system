@@ -2,7 +2,6 @@ const express = require('express');
 const cors = require('cors');
 const dotenv = require('dotenv');
 const path = require('path');
-const fileUpload = require('express-fileupload');
 const { 
   securityHeaders, 
   apiLimiter, 
@@ -82,13 +81,6 @@ app.use(cors(corsOptions));
 
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
-
-// File upload middleware
-app.use(fileUpload({
-  createParentPath: true,
-  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB max file size
-  useTempFiles: false // Disable temp files for Windows compatibility
-}));
 
 // Static folder for uploads - with CORS headers for images
 app.use('/uploads', (req, res, next) => {

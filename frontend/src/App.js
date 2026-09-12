@@ -29,6 +29,15 @@ import API_BASE_URL from './config';
 
 axios.defaults.baseURL = API_BASE_URL;
 
+// Axios interceptor to add Authorization header automatically
+axios.interceptors.request.use((config) => {
+  const token = localStorage.getItem('token');
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
+
 function ProtectedRoute({ children, allowedRoles }) {
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState(null);
@@ -63,9 +72,7 @@ function ProtectedRoute({ children, allowedRoles }) {
     // Fetch fresh user data from server to get latest wali_kelas status (background)
     const fetchFreshUserData = async () => {
       try {
-        const response = await axios.get('/profile', {
-          headers: { Authorization: `Bearer ${token}` }
-        });
+        const response = await axios.get('/profile');
         
         // Merge fresh data with existing user data
         const freshUser = { ...parsedUser, ...response.data };

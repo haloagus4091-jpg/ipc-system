@@ -264,4 +264,47 @@ router.put('/:id', auth, async (req, res) => {
     }
 });
 
+// Delete perilaku (superadmin only)
+router.delete('/:id', auth, superAdminOnly, async (req, res) => {
+    try {
+        const perilakuId = req.params.id;
+        
+        const [perilaku] = await db.query('SELECT * FROM perilaku WHERE id = ?', [perilakuId]);
+        if (perilaku.length === 0) {
+            return res.status(404).json({ message: 'Perilaku not found' });
+        }
+
+        const perilakuData = perilaku[0];
+
+        // If approved, revert IPC change
+        if (perilakuData.status === 'approved') {
+            const [user] = await db.query('SELECT ipc_total FROM users WHERE id = ?', [perilakuData.user_id]);
+            const ipcSebelum = user[0].ipc_total;
+            const ipcSesudah = ipcSebelum - perilakuData.point;
+            
+            await db.query('UPDATE users SET ipc_total = ? WHERE id = ?', [ipcSesudah, perilakuData.user_id]);
+            
+            // Log IPC history
+            await db.query(
+                'INSERT INTO ipc_history (user_id, jenis_perubahan, point_change, ipc_sebelum, ipc_sesudah, keterangan) VALUES (?, ?, ?, ?, ?, ?)',
+                [perilakuData.user_id, 'perilaku_delete', -perilakuData.point, ipcSebelum, ipcSesudah, `Delete Perilaku: ${perilakuData.karakter_siswa}`]
+            );
+        }
+
+        // Delete from database
+        await db.query('DELETE FROM perilaku WHERE id = ?', [perilakuId]);
+
+        // Log activity
+        await db.query(
+            'INSERT INTO activity_logs (user_id, action, details) VALUES (?, ?, ?)',
+            [req.user.id, 'Delete Perilaku', `Deleted perilaku ID ${perilakuId}`]
+        );
+
+        res.json({ message: 'Perilaku deleted successfully' });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Server error' });
+    }
+});
+
 module.exports = router;
