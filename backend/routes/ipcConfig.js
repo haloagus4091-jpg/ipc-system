@@ -447,122 +447,22 @@ router.delete('/:id', auth, superAdminOnly, async (req, res) => {
     }
 });
 
-// Reset to default configurations
-router.post('/reset-defaults', auth, superAdminOnly, async (req, res) => {
+// Delete all configurations by category
+router.delete('/all/:category', auth, superAdminOnly, async (req, res) => {
     try {
-        const userId = req.user.id;
+        const { category } = req.params;
 
-        await db.query('DELETE FROM ipc_config');
-        await db.query('DELETE FROM ipc_pelanggaran_detail');
-        await db.query('DELETE FROM ipc_pelanggaran_level');
-        await db.query(`
-            INSERT INTO ipc_pelanggaran_level (name, point_value, description, is_active)
-            VALUES ('ringan', -1, 'Point untuk pelanggaran ringan', TRUE),
-                   ('sedang', -5, 'Point untuk pelanggaran sedang', TRUE),
-                   ('berat', -25, 'Point untuk pelanggaran berat', TRUE)
-        `);
-
-        const juaraList = [
-            ['juara_i', 50, 60],
-            ['juara_ii', 40, 50],
-            ['juara_iii', 30, 40],
-            ['harapan_i', 25, 35],
-            ['harapan_ii', 20, 30],
-            ['harapan_iii', 15, 25],
-            ['finalis', 10, 15],
-            ['peserta', 5, 8]
-        ];
-        const { FIXED_TINGKAT_OPTIONS, FIXED_JUARA_LOMBA_OPTIONS, PRESTASI_POINTS, EVENT_POINTS, ORGANISASI_POINTS, KEPANITIAAN_POINTS, PERILAKU_POINTS } = require('../constants/points');
-        const perilakuChars = [
-            'tanggung_jawab', 'disiplin', 'kepedulian', 'kemandirian',
-            'spiritual', 'kejujuran', 'kepercayaan_diri'
-        ];
-        const perilakuRatings = [
-            ['sangat baik', 4], ['baik', 3], ['cukup baik', 2], ['kurang baik', 1]
-        ];
-        const jabatanList = [
-            ['ketua', 5], ['wakil ketua', 4], ['sekretaris', 4],
-            ['bendahara', 3], ['koordinator', 2], ['anggota', 1]
-        ];
-        const orgs = ['OSIS', 'KY', 'MPK', 'PRAMUKA', 'PKS', 'PMR', 'PASKIBRAKA'];
-
-        const defaults = [];
-        for (const juara of FIXED_JUARA_LOMBA_OPTIONS) {
-            for (const tingkat of FIXED_TINGKAT_OPTIONS) {
-                const juaraKey = juara.toLowerCase();
-                const tingkatKey = tingkat;
-                const pointValue = PRESTASI_POINTS[juaraKey]?.[tingkatKey] || 0;
-                defaults.push({
-                    category: 'prestasi', field1: tingkat, field2: juara,
-                    point_value: pointValue,
-                    description: `${juara.replace(/_/g, ' ')} tingkat ${tingkat}`
-                });
-            }
+        if (category === 'pelanggaran') {
+            await db.query('DELETE FROM ipc_pelanggaran_detail');
+            await db.query('DELETE FROM ipc_pelanggaran_level');
+        } else {
+            await db.query('DELETE FROM ipc_config WHERE category = ?', [category]);
         }
-        for (const ch of perilakuChars) {
-            for (const [rating, pts] of perilakuRatings) {
-                const ratingKey = rating.toLowerCase();
-                const pointValue = PERILAKU_POINTS[ratingKey] || pts;
-                defaults.push({
-                    category: 'perilaku', field1: ch, field2: rating,
-                    point_value: pointValue,
-                    description: `Karakter ${ch.replace(/_/g, ' ')} ${rating}`
-                });
-            }
-        }
-        for (const [jab, pts] of jabatanList) {
-            const jabatanKey = jab.toLowerCase();
-            const pointValue = KEPANITIAAN_POINTS[jabatanKey] || pts;
-            defaults.push({
-                category: 'kepanitiaan', field1: jab, field2: null,
-                point_value: pointValue, description: `${jab} kepanitiaan`
-            });
-        }
-        for (const org of orgs) {
-            for (const [jab, pts] of jabatanList) {
-                const jabatanKey = jab.toLowerCase();
-                const pointValue = ORGANISASI_POINTS[jabatanKey] || pts;
-                defaults.push({
-                    category: 'organisasi', field1: org, field2: jab,
-                    point_value: pointValue, description: `${jab} ${org}`
-                });
-            }
-        }
-        for (const tingkat of FIXED_TINGKAT_OPTIONS) {
-            const tingkatKey = tingkat;
-            const pointValue = EVENT_POINTS[tingkatKey] || 0;
-            defaults.push({
-                category: 'event', field1: tingkat, field2: null,
-                point_value: pointValue, description: `Event tingkat ${tingkat}`
-            });
-        }
-
-        for (const config of defaults) {
-            await db.query(`
-                INSERT INTO ipc_config (category, field1, field2, point_value, description, is_active, updated_by)
-                VALUES (?, ?, ?, ?, ?, TRUE, ?)
-            `, [config.category, config.field1, config.field2, config.point_value, config.description, userId]);
-        }
-
-        await db.query(`
-            INSERT IGNORE INTO ipc_organisasi (name)
-            SELECT DISTINCT field1 FROM ipc_config
-            WHERE category = 'organisasi' AND field1 IS NOT NULL
-        `);
-        await db.query(`
-            INSERT IGNORE INTO ipc_perilaku_karakter (name)
-            SELECT DISTINCT field1 FROM ipc_config
-            WHERE category = 'perilaku' AND field1 IS NOT NULL
-        `);
-        await db.query(`
-            INSERT IGNORE INTO ipc_perilaku_tingkat (name) VALUES
-            ('sangat baik'), ('baik'), ('cukup baik'), ('kurang baik')
-        `);
 
         clearConfigCache();
-        res.json({ message: 'Configurations reset to defaults successfully' });
+        res.json({ message: `All ${category} configurations deleted successfully` });
     } catch (error) {
-        console.error('Error resetting IPC configurations:', error);
+        console.error('Error deleting IPC configurations by category:', error);
         res.status(500).json({ message: 'Server error' });
     }
 });

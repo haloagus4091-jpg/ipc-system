@@ -321,7 +321,7 @@ function LaporanCetak({ user }) {
       setSchoolConfig({
         school_name: 'SMK Negeri Bali Mandara',
         school_description: 'Sistem Index Prestasi Citra (IPC) • Panel Admin',
-        principal_name: 'Nama Kepala Sekolah',
+        principal_name: '',
         principal_nip: '',
         logo_url: null
       });
@@ -330,6 +330,9 @@ function LaporanCetak({ user }) {
 
   const generateClassReportPdf = async (students) => {
     try {
+      // Refresh school config to get latest data
+      await fetchSchoolConfig();
+
       const doc = new jsPDF({
         orientation: 'landscape',
         unit: 'mm',
@@ -617,18 +620,19 @@ function LaporanCetak({ user }) {
       doc.text(`Kubutambahan, ${formatDate()}`, rightX, finalY);
 
       doc.setFont('times', 'bold');
-      doc.text('Kepala Sekolah', leftX, finalY + 5);
+      const schoolName = schoolConfig?.school_name || 'SMK Negeri Bali Mandara';
+      doc.text(`Kepala ${schoolName.replace('SMK Negeri', 'SMKN')}`, leftX, finalY + 5);
       doc.text('Wali Kelas', rightX, finalY + 5);
 
       // Ruang tanda tangan
       const ttdY = finalY + 22;
       doc.setFont('times', 'bold');
-      doc.text(schoolConfig?.principal_name || 'Ketut Susila Widiarsana, S.Pd., M.Pd.', leftX, ttdY);
+      doc.text(schoolConfig?.principal_name || '', leftX, ttdY);
       doc.text(waliKelasData.nama || 'Wali Kelas Belum Ditentukan', rightX, ttdY);
 
       doc.setFont('times', 'normal');
       doc.setFontSize(9);
-      doc.text(schoolConfig?.principal_nip || 'NIP. 19831101 200803 1 001', leftX, ttdY + 5);
+      doc.text(schoolConfig?.principal_nip ? `NIP. ${schoolConfig.principal_nip}` : '', leftX, ttdY + 5);
       if (waliKelasData.nip) {
         doc.text(`NIP. ${waliKelasData.nip}`, rightX, ttdY + 5);
       }
@@ -641,6 +645,9 @@ function LaporanCetak({ user }) {
   };
 
   const generateExcelBlob = async () => {
+    // Refresh school config to get latest data
+    await fetchSchoolConfig();
+
     if (reportType === 'individual') {
       // For individual report, we'll handle separately if needed
       return null;
@@ -811,6 +818,9 @@ function LaporanCetak({ user }) {
 
   // eslint-disable-next-line no-unused-vars
   const generatePdfBlob = async () => {
+    // Refresh school config to get latest data
+    await fetchSchoolConfig();
+
     let data = [];
 
     if (reportType === 'individual') {
@@ -1077,17 +1087,18 @@ function LaporanCetak({ user }) {
         
         doc.setFont('times', 'bold');
         doc.setFontSize(8);
-        doc.text('Kepala Sekolah', leftSigX, sigY + 5);
+        const schoolName = schoolConfig?.school_name || 'SMK Negeri Bali Mandara';
+        doc.text(`Kepala ${schoolName.replace('SMK Negeri', 'SMKN')}`, leftSigX, sigY + 5);
         doc.text('Wali Kelas', rightSigX, sigY + 5);
         
         doc.setFont('times', 'bold');
         doc.setFontSize(8);
-        doc.text(schoolConfig?.principal_name || 'Ketut Susila Widiarsana, S.Pd., M.Pd.', leftSigX, sigY + 20);
+        doc.text(schoolConfig?.principal_name || '', leftSigX, sigY + 20);
         doc.text(wali?.nama || 'Wali Kelas Belum Ditentukan', rightSigX, sigY + 20);
-        
+
         doc.setFont('times', 'normal');
         doc.setFontSize(7);
-        doc.text(schoolConfig?.principal_nip || 'NIP. 19831101 200803 1 001', leftSigX, sigY + 25);
+        doc.text(schoolConfig?.principal_nip ? `NIP. ${schoolConfig.principal_nip}` : '', leftSigX, sigY + 25);
         if (wali?.nip) {
           doc.text(`NIP. ${wali.nip}`, rightSigX, sigY + 25);
         }

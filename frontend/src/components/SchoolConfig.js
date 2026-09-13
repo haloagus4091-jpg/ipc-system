@@ -73,10 +73,6 @@ function SchoolConfig() {
       setMessage({ type: 'error', text: 'NIP kepala sekolah wajib diisi' });
       return false;
     }
-    if (!/^\d{18}$/.test(config.principal_nip.replace(/\s/g, ''))) {
-      setMessage({ type: 'error', text: 'NIP harus berupa 18 digit angka' });
-      return false;
-    }
     return true;
   };
 

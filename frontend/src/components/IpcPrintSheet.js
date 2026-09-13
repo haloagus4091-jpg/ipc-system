@@ -1,5 +1,5 @@
 import React from 'react';
-import { IPC_PRINT_BRANDING } from './ipcPrintBranding';
+import { getIpcPrintBranding } from './ipcPrintBranding';
 
 function formatTahunPelajaran(date = new Date()) {
   const year = date.getFullYear();
@@ -15,7 +15,8 @@ function formatPrintDate(date = new Date()) {
   return date.toLocaleDateString('id-ID', options);
 }
 
-function IpcPrintSheet({ student, wali, points, ipcTotal, printDate = new Date() }) {
+function IpcPrintSheet({ student, wali, points, ipcTotal, printDate = new Date(), schoolConfig = {} }) {
+  const branding = getIpcPrintBranding(schoolConfig);
   const breakdown = points || {
     point_awal: student?.ipc_awal ?? 80,
     prestasi_akademik: 0,
@@ -227,10 +228,10 @@ function IpcPrintSheet({ student, wali, points, ipcTotal, printDate = new Date()
       <section className="signatures">
         <div className="signature-block">
           <p>Kubutambahan, {formatPrintDate(printDate)}</p>
-          <p className="signature-title">Kepala SMK Negeri Bali Mandara</p>
+          <p className="signature-title">{branding.kepalaSekolah.titleLine}</p>
           <div className="signature-space"></div>
-          <p className="signature-name">{IPC_PRINT_BRANDING.kepalaSekolah.nama}</p>
-          <p className="signature-nip">NIP. {IPC_PRINT_BRANDING.kepalaSekolah.nip}</p>
+          <p className="signature-name">{branding.kepalaSekolah.nama}</p>
+          <p className="signature-nip">{branding.kepalaSekolah.nip ? `NIP. ${branding.kepalaSekolah.nip}` : ''}</p>
         </div>
         <div className="signature-block">
           <p>Kubutambahan, {formatPrintDate(printDate)}</p>

@@ -356,7 +356,6 @@ function Dashboard() {
               display: 'inline-flex',
               alignItems: 'center',
               gap: '7px',
-              border: 'none',
               borderRadius: '10px',
               padding: '10px 16px',
               fontSize: '13.5px',
@@ -773,10 +772,7 @@ function Dashboard() {
             overflow: 'hidden',
             transition: 'max-height 0.35s ease'
           }}>
-            Selamat datang di sistem Index Prestasi Citra SMK Negeri Bali Mandara. IPC hadir untuk mencatat dan
-            mengapresiasi setiap pencapaian siswa secara transparan — dari prestasi akademik dan non-akademik,
-            keterlibatan organisasi, hingga kepanitiaan. Semoga sistem ini mendorong seluruh siswa untuk terus
-            berprestasi dan berkontribusi bagi sekolah.
+            {schoolConfig?.school_description || 'Selamat datang di sistem Index Prestasi Citra SMK Negeri Bali Mandara. IPC hadir untuk mencatat dan mengapresiasi setiap pencapaian siswa secara transparan — dari prestasi akademik dan non-akademik, keterlibatan organisasi, hingga kepanitiaan. Semoga sistem ini mendorong seluruh siswa untuk terus berprestasi dan berkontribusi bagi sekolah.'}
           </p>
           <button 
             onClick={() => setNoteExpanded(!noteExpanded)}

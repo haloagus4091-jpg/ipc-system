@@ -207,19 +207,20 @@ function KonfigurasiIPC() {
     }
   };
 
-  const handleResetDefaults = async () => {
-    if (!window.confirm('Apakah Anda yakin ingin mereset semua konfigurasi ke nilai default? Semua perubahan yang Anda buat akan hilang.')) return;
+  const handleDeleteAll = async () => {
+    const categoryLabel = categories.find(c => c.key === activeCategory)?.label || activeCategory;
+    if (!window.confirm(`Apakah Anda yakin ingin menghapus SEMUA konfigurasi ${categoryLabel}? Tindakan ini tidak dapat dibatalkan.`)) return;
 
     try {
       setSaving(true);
       const token = localStorage.getItem('token');
-      await axios.post('/ipc-config/reset-defaults', {}, {
+      await axios.delete(`/ipc-config/all/${activeCategory}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      setMessage('Konfigurasi berhasil direset ke nilai default!');
+      setMessage(`Semua konfigurasi ${categoryLabel} berhasil dihapus!`);
       fetchConfigs();
     } catch (error) {
-      setMessage(error.response?.data?.message || 'Gagal mereset konfigurasi');
+      setMessage(error.response?.data?.message || 'Gagal menghapus konfigurasi');
     } finally {
       setSaving(false);
     }
@@ -361,12 +362,12 @@ function KonfigurasiIPC() {
           <h3 style={{ margin: 0 }}>Kategori Konfigurasi</h3>
           <div style={{ display: 'flex', gap: 8 }}>
             <button
-              onClick={handleResetDefaults}
+              onClick={handleDeleteAll}
               disabled={saving}
-              className="btn btn-warning"
+              className="btn btn-danger"
               style={{ display: 'flex', alignItems: 'center', gap: 6 }}
             >
-              🔄 Reset ke Default
+              🗑️ Hapus Semua
             </button>
             <button
               onClick={fetchConfigs}

@@ -1,14 +1,20 @@
 /**
- * Branding for Individual Point Card (IPC) print — edit to match your school letterhead.
+ * Branding for Individual Point Card (IPC) print — uses school config dynamically.
  * Values mirror the reference PDF (Hasil_Cetak_IPC.pdf).
  */
-export const IPC_PRINT_BRANDING = {
-  schoolLine1: 'SMK Negeri Bali Mandara',
-  schoolLine2: 'SMK NEGERI BALI MANDARA',
-  placeName: 'Kubutambahan',
-  kepalaSekolah: {
-    titleLine: 'Kepala SMKN Bali Mandara',
-    nama: 'Ketut Susila Widiarsana, S.Pd., M.Pd',
-    nip: '19831101.200803.1.001',
-  },
+export const getIpcPrintBranding = (schoolConfig = {}) => {
+  const schoolName = schoolConfig.school_name || 'SMK Negeri Bali Mandara';
+  const principalName = schoolConfig.principal_name || '';
+  const principalNip = schoolConfig.principal_nip || '';
+
+  return {
+    schoolLine1: schoolName,
+    schoolLine2: schoolName.toUpperCase(),
+    placeName: 'Kubutambahan',
+    kepalaSekolah: {
+      titleLine: `Kepala ${schoolName.replace('SMK Negeri', 'SMKN')}`,
+      nama: principalName,
+      nip: principalNip,
+    },
+  };
 };

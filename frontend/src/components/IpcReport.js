@@ -19,43 +19,62 @@ function formatPrintDate(date = new Date()) {
 function IpcReport({ studentId, onClose }) {
   const [studentData, setStudentData] = useState(null);
   const [ipcData, setIpcData] = useState(null);
+  const [schoolConfig, setSchoolConfig] = useState(null);
   const [loading, setLoading] = useState(true);
   const [printDate, setPrintDate] = useState(formatPrintDate());
 
   useEffect(() => {
     fetchReportData();
+    fetchSchoolConfig();
   }, [studentId]);
 
   const fetchReportData = async () => {
     try {
       const token = localStorage.getItem('token');
-      
+
       // Fetch student data
       const studentResponse = await axios.get(`/users/${studentId}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      
+
       // Fetch IPC card data (includes breakdown)
       const ipcResponse = await axios.get(`/reports/ipc-card/${studentId}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      
+
       // Extract wali kelas data from IPC card response
       const waliKelasData = ipcResponse.data.wali || { nama: null, nip: null };
-      
+
       // Merge wali kelas data into student data
       const studentDataWithWali = {
         ...studentResponse.data,
         wali_kelas_nama: waliKelasData.nama,
         wali_kelas_nip: waliKelasData.nip
       };
-      
+
       setStudentData(studentDataWithWali);
       setIpcData(ipcResponse.data.points);
     } catch (error) {
       console.error('Error fetching report data:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchSchoolConfig = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.get('/school-config', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setSchoolConfig(response.data);
+    } catch (error) {
+      console.error('Error fetching school config:', error);
+      setSchoolConfig({
+        school_name: 'SMK Negeri Bali Mandara',
+        principal_name: '',
+        principal_nip: ''
+      });
     }
   };
 
@@ -275,10 +294,10 @@ function IpcReport({ studentId, onClose }) {
         <div className="signatures">
           <div className="signature-block">
             <p>Kubutambahan, {formatPrintDate()}</p>
-            <p className="signature-title">Kepala SMK Negeri Bali Mandara</p>
+            <p className="signature-title">Kepala {schoolConfig?.school_name || 'SMK Negeri Bali Mandara'}</p>
             <div className="signature-space"></div>
-            <p className="signature-name">Ketut Susila Widiarsana, S.Pd., M.Pd.</p>
-            <p className="signature-nip">NIP. 19831101 200803 1 001</p>
+            <p className="signature-name">{schoolConfig?.principal_name || ''}</p>
+            <p className="signature-nip">{schoolConfig?.principal_nip ? `NIP. ${schoolConfig.principal_nip}` : ''}</p>
           </div>
           <div className="signature-block">
             <p>Kubutambahan, {formatPrintDate()}</p>
